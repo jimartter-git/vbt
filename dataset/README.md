@@ -22,7 +22,7 @@ Lift codes: `SQ` squat · `BN` bench · `DL` deadlift (extend as needed).
 | File | Grain | Notes |
 |---|---|---|
 | `sets.csv` | one row per real set | date, lift, load (kg canonical + as-entered), your rep count + **subjective RPE** (the prior's label) |
-| `rep_metrics.csv` | one row per (set, vendor, rep, metric) | long/tidy — gaps are free; `rep_index` blank = set-level; `flag` carries imputed/missed/phantom/low_confidence |
+| `rep_metrics.csv` | one row per (set, vendor, rep, metric) | long/tidy — gaps are free; `flag` carries imputed/missed/phantom/low_confidence. Two rep keys: `rep_index` (vendor's own count) + `true_rep` (physical rep — the alignment key) |
 | `raw_files.csv` | pointers | to bulk time-series in `raw/` (WL txt, watch/AirPods) |
 | `priors/{lift}_rpe_velocity.csv` | per RPE | your hand-built velocity→RPE curves (hardcode/min/avg/max), **SmartBarbell-frame** |
 | `schema.sql` | — | SQLite DDL (the DB is a rebuilt artifact, gitignored) |
@@ -31,6 +31,29 @@ Vendors: `vitruve · stance · smartbarbell · metric · wl_analysis · watch_im
 Adding the watch/AirPods later is purely additive — they're just more vendors,
 and their per-rep summaries land in `rep_metrics.csv` alongside the commercial
 devices (your `VelocitySource` contract, realized as data).
+
+## Rep identity & robust derived metrics
+
+Two rep numberings, deliberately kept separate:
+
+- **`rep_index`** — the k-th rep *as that vendor counted it* (provenance).
+- **`true_rep`** — the **physical** rep number. This is the cross-vendor key.
+  It equals `rep_index` *unless* a vendor mis/under-counts; if a vendor drops a
+  **middle** rep, its `rep_index` shifts but `true_rep` stays anchored to the
+  real sequence (assert/infer the mapping — same problem as fusion alignment).
+
+Consequence: a vendor that captured only 7 of 8 reps simply has **no
+`true_rep = 8` row** — correctly housed among 8-rep sets, never masquerading as
+comparable on rep 8.
+
+Rules for any calculated measure (enforced in `compare.py`):
+1. **Align on `true_rep`**, never `rep_index`, across vendors.
+2. **Reference the *best* rep, not rep 1** (warm-in often makes rep 2–3 fastest).
+3. **State the window.** Velocity loss is labelled with the rep it runs to, and a
+   **common-window** version (reps every vendor observed) gives apples-to-apples
+   cross-vendor comparison.
+4. **Derive on the fly** from the per-rep rows — never freeze a loss number that
+   hides which reps it used.
 
 ## Entry workflow (multimodal in, normalized out)
 

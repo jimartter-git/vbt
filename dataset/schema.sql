@@ -22,7 +22,10 @@ CREATE TABLE IF NOT EXISTS sets (
 CREATE TABLE IF NOT EXISTS rep_metrics (
   set_id      TEXT NOT NULL REFERENCES sets(set_id),
   vendor      TEXT NOT NULL,        -- vitruve|stance|smartbarbell|metric|wl_analysis|watch_imu|airpods_imu
-  rep_index   INTEGER,              -- 1-based; NULL = set-level (e.g. velocity_loss)
+  rep_index   INTEGER,              -- the vendor's OWN rep ordering (provenance)
+  true_rep    INTEGER,              -- the PHYSICAL rep number (cross-vendor alignment key);
+                                    -- equals rep_index unless a vendor mis/under-counts, then
+                                    -- assert/infer the mapping. NULL = set-level.
   metric      TEXT NOT NULL,        -- mean_velocity|peak_velocity|rom|time_to_peak|ecc_power|concentric_time|...
   value       REAL,
   unit        TEXT,                 -- m/s | cm | s | W | % | count
@@ -32,6 +35,7 @@ CREATE TABLE IF NOT EXISTS rep_metrics (
 CREATE INDEX IF NOT EXISTS idx_rm_set    ON rep_metrics(set_id);
 CREATE INDEX IF NOT EXISTS idx_rm_vendor ON rep_metrics(vendor);
 CREATE INDEX IF NOT EXISTS idx_rm_metric ON rep_metrics(metric);
+CREATE INDEX IF NOT EXISTS idx_rm_true   ON rep_metrics(true_rep);
 
 -- Pointers to bulk time-series that don't belong in rows (WL per-frame txt,
 -- watch ~200Hz, AirPods). Files live in dataset/raw/ (gitignored, local).

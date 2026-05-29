@@ -106,15 +106,18 @@ def main() -> int:
     rows = []
     for r in reps:
         for metric in ("mean_velocity", "peak_velocity", "rom"):
+            # Default true_rep = rep_index (WL segments the whole set). If WL's
+            # count disagrees with your true rep count, fix true_rep afterward.
             rows.append(dict(set_id=args.set_id, vendor="wl_analysis",
-                             rep_index=r["rep_index"], metric=metric,
+                             rep_index=r["rep_index"], true_rep=r["rep_index"],
+                             metric=metric,
                              value=r[metric], unit=("cm" if metric == "rom" else "m/s"),
                              flag="", confidence=""))
     for r in reps:
         print(f"  rep {r['rep_index']}: mean {r['mean_velocity']}  peak {r['peak_velocity']}  rom {r['rom']}cm")
 
     if args.append:
-        header = ["set_id", "vendor", "rep_index", "metric", "value", "unit", "flag", "confidence"]
+        header = ["set_id", "vendor", "rep_index", "true_rep", "metric", "value", "unit", "flag", "confidence"]
         with open(REPS_CSV, "a", newline="") as f:
             w = csv.DictWriter(f, fieldnames=header)
             for row in rows:

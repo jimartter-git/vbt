@@ -21,7 +21,7 @@ SET_ID = "20260529-DL-1"
 
 SETS_HEADER = ["set_id", "date", "lift", "load_kg", "load_entered", "load_unit",
                "set_index", "target_reps", "actual_reps", "rpe_actual", "notes"]
-REPS_HEADER = ["set_id", "vendor", "rep_index", "metric", "value", "unit", "flag", "confidence"]
+REPS_HEADER = ["set_id", "vendor", "rep_index", "true_rep", "metric", "value", "unit", "flag", "confidence"]
 
 set_row = {
     "set_id": SET_ID, "date": "2026-05-29", "lift": "deadlift",
@@ -49,16 +49,20 @@ def build_rows():
         for i, v in enumerate(values, start=1):
             if v is None:
                 continue
-            rows.append(dict(set_id=SET_ID, vendor=vendor, rep_index=i,
+            # true_rep == rep_index here: every vendor's ordering aligns with the
+            # physical sequence (SmartBarbell dropped the LAST rep, not a middle
+            # one, so its 1-7 map to true 1-7). When a vendor drops a middle rep,
+            # set true_rep to the asserted/inferred physical number instead.
+            rows.append(dict(set_id=SET_ID, vendor=vendor, rep_index=i, true_rep=i,
                              metric=metric, value=v, unit=unit, flag="", confidence=""))
-    # SmartBarbell's phantom rep 8 (app emitted an all-zero row) — kept as a
-    # flagged signal for the plausibility layer, not a real measurement.
-    rows.append(dict(set_id=SET_ID, vendor="smartbarbell", rep_index=8,
+    # SmartBarbell's phantom 8th row (app emitted an all-zero rep) — its attempt
+    # at true rep 8; flagged, kept out of stats, but it marks that rep 8 existed.
+    rows.append(dict(set_id=SET_ID, vendor="smartbarbell", rep_index=8, true_rep=8,
                      metric="mean_velocity", value=0.0, unit="m/s",
                      flag="phantom", confidence=0))
     # WL Analysis: only the set-level average is transcribed (per-frame txt not
     # yet ingested — run wl_import.py once you have the export).
-    rows.append(dict(set_id=SET_ID, vendor="wl_analysis", rep_index="",
+    rows.append(dict(set_id=SET_ID, vendor="wl_analysis", rep_index="", true_rep="",
                      metric="mean_velocity", value=0.40, unit="m/s",
                      flag="set_avg_only", confidence=""))
     return rows
