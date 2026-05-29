@@ -110,19 +110,25 @@ Most apps treat output as final. We don't:
 Confidence isn't only per-source — it's **per-metric**. Real-set evidence (Metric,
 deadlift 330×8): **time-to-peak velocity** trended cleanly and monotonically
 (0.8→1.3 s) and was *most decisive on the terminal rep* — exactly where mean
-velocity was a disputed mess across apps. **Eccentric power** on the same reps was
-noise (a 614 W rep-7 spike, 2× its neighbours — a tracking artifact). So:
+velocity was a disputed mess across apps. **Eccentric power** on the same reps
+still threw an outlier (a 614 W rep-7 spike, 2× its neighbours) despite being
+purpose-built to de-noise eccentric *velocity* — so even a "robust" metric needs a
+trust weight. So:
 
 - Carry a **per-metric trust weight**, not just a per-source one. Lean on clean
-  channels (mean velocity, time-to-peak); down-weight artifact-prone ones
-  (eccentric power, peak velocity).
+  channels (mean velocity, time-to-peak); down-weight noisy ones (peak velocity is
+  explicitly noise-prone; eccentric power can still spike).
 - **Time-domain fatigue metrics (time-to-peak, tempo) are more robust on grindy
-  terminal reps than magnitude metrics (velocity, power)** — and the terminal reps
-  are the most fatigue-relevant *and* the least reliably measured. Corroborate:
-  velocity ↓ *and* time-to-peak ↑ gives a robust read when either alone is noisy.
-- Video velocity carries **proportional bias** (error grows with rep velocity), so
-  cross-source calibration must be **velocity-dependent**, not a single offset.
-  See `vbt-reference.md` §1.
+  terminal reps than magnitude metrics (velocity, power)** — confirmed in the
+  literature ("time-to-peak is one of the first metrics to deteriorate under
+  fatigue"). The terminal reps are the most fatigue-relevant *and* least reliably
+  measured. Corroborate: velocity ↓ *and* time-to-peak ↑ is robust when either
+  alone is noisy.
+- Cross-source velocity error looks like a **roughly constant offset**, not a
+  velocity-proportional one (full-text validation + our own Metric≈Stance+~0.045
+  data), so calibration can **start as a simple offset/linear fit** — keep a
+  velocity term available but verify the Bland-Altman slope first. See
+  `vbt-reference.md` §1.
 
 ## Confidence in the UX
 

@@ -1,101 +1,120 @@
 # VBT reference & competitive landscape
 
-> **Sourcing caveat.** Compiled May 2026 primarily from web-search snippets
-> (this environment blocked full-text fetch of metric.coach *and* PMC/NSCA/
-> journals). Treat numbers as field-consensus / vendor-stated, **not
-> independently verified** — re-pull the primaries (links below) before relying
-> on exact figures. Where a claim is single-snippet it's marked *(unverified)*.
+> **Sourcing.** Compiled May 2026. Sections 1–9 were first drafted from
+> web-search snippets, then **corrected against full-text PDFs** the user
+> supplied (21 papers/articles). Caveats remain: several "validation" PDFs are
+> Metric's own *blog summaries* of studies (vendor-authored), not the peer-
+> reviewed papers; only Renner 2025 (PLOS ONE) and Šagovac 2024 (thesis) are
+> independent primary sources here. Items still unconfirmed are marked
+> *(unverified)*.
 
 ## 1. Accuracy benchmarks & calibration targets
 
-| Tool | Modality | Reported accuracy (vs criterion) |
-|---|---|---|
-| GymAware (gold standard LPT) | tethered linear transducer | r ≈ 0.90–1.0, SEE 0.01–0.08 m/s |
-| Metric (Taber 2023, beta v0.5.4) | phone CV | velocity r 0.67–0.95, ICC 0.79–0.94, bias <0.06 m/s; ROM bias <2 cm |
-| Metric (Deakin/PeerJ 2024, later build) | phone CV | velocity agreement **poor-to-moderate**; **proportional bias ↑ with velocity**; failed ICC≥0.997/CV≤3.5%; rep detection >95% |
+Independent / vendor validations of **Metric** (phone CV), newest-relevant first:
 
-**Key lesson for our calibration:** video velocity error is **velocity-dependent**
-(proportional bias), not a constant offset. The watch↔Vitruve and any video↔truth
-correction must be modeled across the velocity range, not as a single scalar.
-This is almost certainly why Metric/SmartBarbell/Stance diverged most on the fast
-early reps of the test set.
+| Study (source type) | Setup | Velocity result | Notes |
+|---|---|---|---|
+| **Renner, Mitter & Baca 2025** — PLOS ONE *(independent)* | Qwik/Metric/MyLift vs Vicon + RepOne LPT; n=20 powerlifters, 589 reps, squat/bench/DL 45–90% | Metric bias: bench +0.07, DL +0.14, squat −0.28 m/s; RMSE 0.04–0.08 | **Metric missed ~17% of deadlift reps** + 16 ghost reps; Qwik best, 0 missed |
+| **Trowell 2024** *(vendor summary; PeerJ/Deakin unconfirmed)* | Metric v0.6.0 vs Vicon; n=24, squat+bench only, 5 angles 0/±10/±20° | Lin's CCC 0.83–0.93; **consistent +0.06–0.13 m/s overestimation**, worst at ±20° | rep detect >99% squat, 94–97% bench; "not a valid velocity tool at v0.6" |
+| **Šagovac 2024** — MSc thesis *(independent-ish)* | Metric v4.5.0 vs **Vitruve LPT**; n=15, bench, 45/60/75% | r=0.93 mean vel; ICC 0.89–0.97; bias +0.01±0.06 | 100% rep detection |
+| **Taber et al. 2023** — IJSC *(vendor summary)* | Metric v0.5.4 vs 3D mocap; ~800 reps, bench/squat/DL | r 0.67–0.95; ICC 0.79–0.98; bias 0.01–0.02 (fast squat +0.06) | ROM bias <2 cm |
+| **Metric internal** *(marketing)* | v0.3 vs OptiTrack; **n=1**, 48 reps | r=0.984 | single-subject; ignore for accuracy |
 
-Primaries to re-pull: Taber et al. 2023, *Int J Strength Cond* 3(1),
-DOI 10.47206/ijsc.v3i1.263 (open PDF on journal.iusca.org) · Deakin 2024,
-PeerJ 17789 / PMC11283170.
+**Calibration design (corrected):** the evidence points to a **roughly constant
+systematic offset** (over- or under-estimation depending on build), *not* a
+velocity-proportional error — and in our own cross-app test Metric tracked
+Stance at ~+0.045 m/s nearly constantly. So **start with a simple offset / linear
+fit** for watch↔Vitruve correction; keep a velocity term *available* and confirm
+with a Bland-Altman regression slope before assuming it's needed. Error that *does*
+grow is with **camera angle** (video) — not our concern for the watch, but a
+reason video sources need a setup-quality confidence signal.
+
+Gold-standard comparator: GymAware (tethered LPT) r ≈ 0.90–1.0, SEE 0.01–0.08 m/s.
+Lesson from Renner: **video VBT systematically struggles with deadlift rep
+detection** (~17% missed) — exactly the dropped-rep failure we saw in SmartBarbell.
 
 ## 2. Competitive landscape (tools currently in personal testing)
 
 | Tool | Modality | Output | Export | Strengths | Failure modes |
 |---|---|---|---|---|---|
-| **Vitruve** (arriving) | on-bar device | per-rep mean/peak, ROM, +TtP/accel-index | **CSV/Excel** (Teams); enterprise API | calibration ground truth | barbell-only; strap |
-| **Stance** | on-bar device | per-rep mean/peak; "Readiness" | none found (extract) | drift-free, caught all 8 reps | barbell-only |
-| **Metric** | phone CV (plate) | rep table + velocity trace + bar-path; 60+ exercises | video only (no CSV found) | best video pipeline; matched on-bar shape | lighting/glare/contrast; non-circular plates; velocity proportional bias |
-| **SmartBarbell** | phone CV (region) | tidy rep table + bar path | in-app share | robust to angle (region track) | dropped the grindy last rep; reads low mid-set; phantom 0.00 rows |
-| **WL Analysis** | phone CV (plate) | **per-frame** velocity/accel/disp/power/force | **txt** (per-frame or averages) | richest raw signal (≈ our pipeline) | no rep table; "lbs" label is actually kg |
+| **Vitruve** (arriving) | on-bar device | per-rep mean/peak, ROM | **CSV/Excel** (Teams); enterprise API | calibration ground truth | barbell-only; strap |
+| **Stance** | on-bar device | per-rep mean/peak; "Readiness" | none found (extract) | drift-free; caught all 8 reps | barbell-only |
+| **Metric** | phone CV (plate) | rep table + velocity trace + bar-path; 60+ exercises; reads ~high | video only (no CSV) | best video pipeline; ~constant offset vs device | lighting/glare/angle; non-circular plates; ~17% DL reps missed (Renner) |
+| **SmartBarbell** | phone CV (region) | tidy rep table + bar path | in-app share | robust to angle | dropped grindy last rep; phantom 0.00 rows |
+| **WL Analysis** | phone CV (plate) | **per-frame** velocity/accel/disp/power/force | **txt** (per-frame or avg) | richest raw signal (≈ our pipeline) | no rep table; "lbs" is actually kg |
 
-Cross-app on one real 330×8 deadlift: **set-average converged (~0.38–0.45 m/s),
-per-rep diverged, the terminal rep diverged most** (Stance 0.20 / Metric 0.32 /
-SmartBarbell missed). Evidence that every source is fallible and the
-fatigue-critical last reps are where measurement is least reliable → the case for
-confidence-weighted fusion + a rep-shape prior.
+On one real 330×8 deadlift: **set-average converged (~0.38–0.45 m/s), per-rep
+diverged, terminal rep diverged most** (Stance 0.20 / Metric 0.32 / SmartBarbell
+missed). Every source is fallible and the fatigue-critical last reps are where
+measurement is least reliable → confidence-weighted fusion + a rep-shape prior.
 
 ## 3. Metric definitions (the derivable feature set from one trace + load)
 
-- **Mean concentric velocity** (m/s) — avg bar speed over the concentric phase. Most reliable; primary metric.
-- **Peak velocity** (m/s) — max instantaneous speed in a rep. Noisier; for explosive lifts.
-- **Time-to-peak velocity** (s) — how fast you accelerate to peak; an **RFD proxy**. Time-domain → robust on grindy reps (see fusion doc).
-- **Mean/peak power** (W) — load × velocity × g; mean = avg over concentric samples.
-- **Eccentric power** (W) — power absorbed controlling the descent. **Artifact-prone / noisy.**
-- **Concentric / eccentric tempo** (s) — phase durations; feed TUT.
-- **ROM** (cm) — bar displacement low→high per rep. Measured *directly* by video/BLE (no drift).
-- **Time under tension** (s) — total rep duration (concentric+eccentric+pause).
-- **Shift / bar-path deviation** — trajectory deviation (e.g. forward drift); technique flag.
+- **Mean (concentric) velocity** (m/s) — avg bar speed over concentric. Primary; most reliable (r²≈0.94 with peak).
+- **Peak velocity** (m/s) — max instantaneous; explicitly **noisy** (vibration/jerk spikes).
+- **Time-to-peak velocity** (s) — `peak_velocity_timestamp − concentric_start`; an **RFD proxy** and *"one of the first metrics to deteriorate under fatigue."*
+- **Mean/peak power** (W) — force × velocity; peak power peaks ~30–60% 1RM.
+- **Eccentric power** (W) — energy absorbed over the *active braking phase only* (peak eccentric velocity → stop). Metric's purpose-built fix for the artifact-proneness of eccentric *velocity*; can still throw outliers in practice.
+- **Concentric / eccentric tempo, top/bottom pause, time under tension** (s).
+- **ROM** (cm) — concentric displacement; measured *directly* by video/BLE (no drift).
+- **Shift / bar-path deviation** — trajectory deviation; technique flag.
 
 ## 4. Load–velocity profile (LVP) & 1RM
 
-Linear fit of best-rep velocity vs load (exercise- & lifter-specific). Extrapolate
-to the **MVT** intercept → predicted 1RM. 2-point method (≈45% & ≈85%) is a
-validated shortcut; light loads carry more error. Rule of thumb: ~+0.05 m/s at a
-fixed load ≈ ~+2.5% 1RM *(unverified)*.
+Linear fit of **best-rep velocity** vs load over ≥3 sets (warm-ups count), extended
+to the **MVT** intercept → estimated 1RM. Accuracy cited via Jidovtseff 2011
+(bench <5%) and Banyard 2018 (squat <3% error). Marginal rule appears in two forms
+in Metric's own copy — "+0.05 m/s ≈ +2.5% 1RM" *and* "≈ 5% 1RM" — i.e. **internally
+inconsistent vendor claim; don't rely on it.**
 
-## 5. Velocity zones (Mann, mean velocity — approximate)
+Expected mean velocity by %1RM (Metric): ~100% → 0.2–0.4; ~80% → 0.4–0.7; ~60% → 0.8–1.2 m/s.
 
-| Zone | m/s | Goal |
-|---|---|---|
-| Absolute strength | 0–0.50 | near-1RM |
-| Accelerative strength | 0.50–0.75 | strength/hypertrophy |
-| Strength-speed | 0.75–1.0 | |
-| Speed-strength | 1.0–1.3 | |
-| Speed/starting strength | >1.3 | |
+## 5. Velocity zones — contested
 
-Hypertrophy commonly cited ~0.4–0.75 m/s.
+The Mann 5-zone bands (strength 0–0.5, accel-strength 0.5–0.75, strength-speed
+0.75–1.0, speed-strength 1.0–1.3, speed >1.3 m/s) are widely cited **but Metric
+explicitly rejects fixed zones** ("the five velocity zones ain't it") in favor of
+each lifter's **rolling personal baseline** (e.g. vs a 6-week average). Our design
+should treat absolute zones as weak priors and lean on personalized baselines.
 
 ## 6. Velocity loss (proximity-to-failure / fatigue proxy)
 
-- Definition: % drop from fastest to last rep in a set.
-- Auto-cut thresholds: **~10%** (power, fresh), **~20%** (strength), **~30%+** (hypertrophy/volume).
-- Pareja-Blanco 2017 (VL20 vs VL40, back squat): similar strength gains; **VL20 → larger jump (CMJ) gains with ~40% fewer reps**; VL40 → more hypertrophy + shift to slower fiber phenotype. *(snippet; verify PMID 27038416)*
-- Possible sex difference: women may need higher VL (~40%) for strength/power. *(unverified)*
+- % drop from fastest to last rep in a set.
+- Metric's emphasis: **~20–25% VL ≈ RPE 8** for strength; ~10–15% ≈ RPE 6–7; **~40% ≈ failure / RPE 10**. (The generic "10/20/30% per goal" framing is field-common but Metric centers on 20–25%.)
+- Pareja-Blanco 2017 (VL20 favored for jump gains with fewer reps) was *not* in the supplied PDFs — *(unverified; pull PMID 27038416)*.
 
-## 7. Minimum velocity thresholds (mean velocity at failure/1RM)
+## 7. Minimum velocity thresholds (mean velocity at 1RM/failure)
 
-- Bench ≈ 0.15–0.17 m/s · Back squat ≈ 0.30 m/s · **Deadlift ≈ 0.25 m/s**.
-- Lift- and lifter-specific (don't reuse across lifts). The LVP y-intercept for 1RM estimation.
+Metric's own stated table (mean velocity; Novice / Intermediate / Advanced):
+
+| Lift | Nov | Int | Adv |
+|---|---|---|---|
+| Back squat | 0.40 | 0.30 | 0.25 |
+| Bench | 0.30 | 0.20 | 0.12 |
+| **Deadlift** | 0.35 | **0.20** | **0.15** |
+| Sumo DL | 0.30 | 0.20 | 0.10 |
+| OHP | 0.35 | 0.25 | 0.15 |
+| Front squat | 0.40 | 0.35 | 0.30 |
+
+**Correction:** earlier we held "deadlift MVT ≈ 0.25" — that's actually *back-squat*
+advanced. Deadlift MVT is ~**0.15–0.20**. Lift- & lifter-specific; set once and
+keep it.
 
 ## 8. Product/UX ideas worth stealing
 
-- **Readiness from first-3-reps vs 6-week baseline** — zero-input daily autoregulation.
-- **Retroactive metric backfilling** — ship a new metric, recompute it across all history so users get instant value.
-- **Per-exercise metric customization** (different highlights for squat vs bench).
-- **Video-as-artifact** — the recording is both the measurement input and the shareable coaching deliverable (bar-path overlay export).
-- **Mid-set adjustable real-time audio feedback**; **Apple Watch as a remote** to start/stop recording.
-- **🅥 marker** distinguishing velocity-trackable vs manual-entry exercises in a mixed library.
+- **Readiness from first-3-reps vs 6-week baseline** — zero-input autoregulation.
+- **Retroactive metric backfilling** — ship a metric, recompute it across all history.
+- **Configurable real-time audio feedback** (announce / target-zone chime / VL-threshold warning, 5–45%), adjustable mid-set.
+- **Dual-pass CV**: light real-time pass + accurate post-set re-analysis (un-rack events filtered post-set).
+- **Per-exercise metric defaults** (eccentric tempo on RDLs, peak power on cleans).
+- **Video-as-artifact** — recording is both sensor input and shareable coaching deliverable (bar-path overlay export).
+- **🅥 marker** distinguishing velocity-trackable vs manual-entry exercises.
 
 ## 9. Implications for our app
 
-1. **Calibration must be velocity-dependent** (proportional bias), not a single offset — fit the correction across the velocity range, anchored on Vitruve/Stance.
-2. **Per-rep confidence + per-metric reliability is an open differentiator** — no competitor clearly surfaces it.
-3. **Lean on time-domain fatigue metrics** (time-to-peak, tempo) for robustness on the grindy terminal reps where magnitude metrics get noisy.
-4. **MVT ≈ 0.25 m/s (deadlift)** is a useful built-in failure anchor for both imputation plausibility and 1RM estimation.
-5. Video competitors are **plate-dependent and lighting-sensitive**; a tracker that degrades gracefully (region/joint tracking, any-lift) is a real wedge.
+1. **Calibration: start with a constant offset / linear fit** (verify Bland-Altman slope before adding a velocity term). Not the velocity-dependent model we first assumed.
+2. **Per-rep confidence + per-metric reliability is open white space** — no competitor clearly surfaces measurement confidence.
+3. **Lean on time-domain fatigue metrics** (time-to-peak, tempo) on grindy terminal reps where magnitude metrics get noisy.
+4. **Deadlift rep detection is a known video weakness** (Renner: ~17% missed) — our fusion + rep-plausibility + (eventually) watch-as-second-source directly attack this.
+5. **Personal rolling baselines > fixed velocity zones** (Metric's own stance); MVT ≈ 0.15–0.20 deadlift as a soft failure anchor.
+6. Video competitors degrade with **angle/lighting/plate shape** — graceful degradation (region/joint tracking, any-lift) is a real wedge.
