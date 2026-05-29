@@ -105,6 +105,25 @@ Most apps treat output as final. We don't:
    "reps 2–3 look merged — did that happen?" Label exactly the high-value cases.
 4. **Define-by-example** — name a new exercise and the editor seeds its prior.
 
+## Per-metric reliability (not just per-source)
+
+Confidence isn't only per-source — it's **per-metric**. Real-set evidence (Metric,
+deadlift 330×8): **time-to-peak velocity** trended cleanly and monotonically
+(0.8→1.3 s) and was *most decisive on the terminal rep* — exactly where mean
+velocity was a disputed mess across apps. **Eccentric power** on the same reps was
+noise (a 614 W rep-7 spike, 2× its neighbours — a tracking artifact). So:
+
+- Carry a **per-metric trust weight**, not just a per-source one. Lean on clean
+  channels (mean velocity, time-to-peak); down-weight artifact-prone ones
+  (eccentric power, peak velocity).
+- **Time-domain fatigue metrics (time-to-peak, tempo) are more robust on grindy
+  terminal reps than magnitude metrics (velocity, power)** — and the terminal reps
+  are the most fatigue-relevant *and* the least reliably measured. Corroborate:
+  velocity ↓ *and* time-to-peak ↑ gives a robust read when either alone is noisy.
+- Video velocity carries **proportional bias** (error grows with rep velocity), so
+  cross-source calibration must be **velocity-dependent**, not a single offset.
+  See `vbt-reference.md` §1.
+
 ## Confidence in the UX
 
 Always surface it. "5 reps · high confidence" vs "~5 reps · tap to verify."
