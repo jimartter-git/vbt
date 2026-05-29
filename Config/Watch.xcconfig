@@ -1,0 +1,9 @@
+#include "Shared.xcconfig"
+
+WATCHOS_DEPLOYMENT_TARGET = 10.0
+TARGETED_DEVICE_FAMILY = 4
+
+// Watch app bundle id MUST be the iOS app's id + ".watchkitapp".
+PRODUCT_BUNDLE_IDENTIFIER = com.vbt.app.watchkitapp
+INFOPLIST_FILE = Watch/Resources/Info.plist
+CODE_SIGN_ENTITLEMENTS = Watch/Resources/VBTWatch.entitlements

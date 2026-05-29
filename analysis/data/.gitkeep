@@ -1,0 +1,3 @@
+# Recorded sessions land here (gitignored). Pull <sessionId>.csv off the phone
+# via the share sheet, drop it in this folder, then run:
+#   python scripts/analyze_session.py data/<sessionId>.csv

@@ -1,0 +1,59 @@
+name: VBT
+
+options:
+  bundleIdPrefix: com.vbt
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+packages:
+  VBTCore:
+    path: Packages/VBTCore
+
+targets:
+  # iOS companion: thin relay. Receives recordings from the watch over
+  # WatchConnectivity, persists them, and exposes them via the share sheet so
+  # raw CSVs reach a Mac for offline Python analysis. Embeds the watch app.
+  VBTPhone:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOS
+    configFiles:
+      Debug: Config/iOS.xcconfig
+      Release: Config/iOS.xcconfig
+    dependencies:
+      - package: VBTCore
+      - target: VBTWatch
+        embed: true
+
+  # watchOS app: runs an HKWorkoutSession to keep sensors alive, logs
+  # high-rate device motion (CMBatchedSensorManager), and transfers the
+  # recorded CSV to the phone.
+  VBTWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: Watch
+    configFiles:
+      Debug: Config/Watch.xcconfig
+      Release: Config/Watch.xcconfig
+    dependencies:
+      - package: VBTCore
+
+schemes:
+  VBTPhone:
+    build:
+      targets:
+        VBTPhone: all
+        VBTWatch: all
+    run:
+      config: Debug
+  VBTWatch:
+    build:
+      targets:
+        VBTWatch: all
+    run:
+      config: Debug

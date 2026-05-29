@@ -1,0 +1,20 @@
+// Build settings shared by all targets.
+// Per the other project's lesson: keep settings in .xcconfig, not inline in
+// project.yml, so per-target/per-config overrides stay manageable.
+
+SWIFT_VERSION = 5.9
+
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+// We hand-maintain complete Info.plist files (see Resources/), so do NOT let
+// Xcode synthesize one — this avoids the missing-CFBundleExecutable surprise.
+GENERATE_INFOPLIST_FILE = NO
+
+// Signing: left to automatic with an empty team so the project opens without a
+// provisioning profile. Set DEVELOPMENT_TEAM in Xcode (or a local override)
+// before building to a device.
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM =
+
+ENABLE_USER_SCRIPT_SANDBOXING = YES
