@@ -1,0 +1,149 @@
+# Sources & Fusion — the north-star design
+
+> Status: **vision doc, not yet built.** The PoC (watch IMU + ZUPT + Vitruve
+> calibration for deadlift) is Phase 0. This captures where we're headed so the
+> abstractions we lay down now don't fight it later. Build it in the bite-sized
+> phases at the end.
+
+## Guiding principle: best effort, always
+
+The product's value is **robustness through graceful degradation**. Any subset
+of sensors — down to a single noisy wrist — should still produce a defensible
+answer. We never refuse; we estimate and we report *confidence*.
+
+The trick that makes this work: **the learned rep-shape prior is itself an
+always-present "source"** that gets *stronger over time*, while physical sensors
+come and go. Every rep/set estimate is a confidence-weighted blend of
+(whatever sensors fired this set) + (the prior). As sensor quality drops, weight
+shifts to the prior; as it rises, sensors dominate and the prior just
+sanity-checks.
+
+```
+clean video + watch  ->  sensors dominate, prior validates
+watch only, noisy    ->  sensor weight low, PRIOR carries it
+nothing usable       ->  report low confidence, ask the user (active learning)
+```
+
+## The sources
+
+Every source implements `VelocitySource` and emits the same shape —
+`(rep boundaries, velocity profile, ROM)` — **plus a confidence/quality
+signal**. Sources are asymmetric and complementary:
+
+| Source | Measures | Rate | Strengths | Failure modes |
+|---|---|---|---|---|
+| **Watch IMU** | accel (integrates → velocity) | ~100–200 Hz | always-on, no setup; best on DL/bench | drift; squat = arm noise; wrist ≠ bar |
+| **AirPods IMU** (`CMHeadphoneMotionManager`) | head accel/attitude | ~25 Hz | 2nd independent timing/turnaround signal; squat vertical proxy | head ≠ bar; foreground-biased; low rate |
+| **Phone video** (Vision) | displacement **directly** | 60–240 fps | drift-free ROM; near-ground-truth; any angle if region-tracked | needs setup/angle; lighting; occlusion |
+| **BLE bar device** (Vitruve/Stance) | displacement **directly** | device | accurate, drift-free; calibration ground truth | must strap to bar; barbell-only |
+| **HR** (Watch / AirPods Pro 3 via HealthKit) | heart rate | ~1 Hz | rest-recovery, cardio cost context | blind to muscular strain (the whole thesis) |
+
+**Key asymmetry:** video and BLE measure displacement *directly* (no drift); the
+IMUs *integrate* (drift). So video/BLE anchor absolute ROM and the IMUs fill
+gaps and work with no camera. Each covers the other's failure mode.
+
+## The prior is learned and personal — the flywheel
+
+Cold-start from a population/exercise-class template (canonical shape, tempo
+band, ROM range, velocity range). Then refine **per-user × per-exercise** from
+their own history *and their manual corrections*. By session 20, the system
+knows what *your* deadlift looks like, so even a lone noisy watch stream is
+legible. Messy data + strong personal prior = usable.
+
+## Fusion: sources repair each other's primitives
+
+Fusion is not a final-answer vote. Sources are aligned on a **shared timeline**
+(rep-index correspondence, refined by cross-correlation) and combined by
+confidence — but the bigger win is that they **improve each other's
+primitives**:
+
+- Cross-source **turnaround consensus** (watch + AirPods + video agreeing where
+  bottom/top is) → cleaner ZUPT zero-velocity anchors → better watch velocity,
+  even when the other sources contribute no velocity of their own.
+- Drift-free sources **re-scale** the drifting ones (video ROM corrects watch
+  double-integration).
+
+This compounds: better boundaries → better velocity → tighter boundaries.
+
+## Rep segmentation: works for *any* lift
+
+Don't assume 1D vertical barbell motion. Two tiers:
+
+1. **Known exercise** → use its specific prior + dominant-motion-axis model.
+2. **Unknown / "misc"** (cable pushdown, DB, no plate) → generic **repetitive-
+   motion detection**: PCA to find the dominant motion axis, autocorrelation to
+   find cadence, segment on the periodic structure. "~8 cycles of a repeating
+   movement at ~2 s each."
+
+For uncalibratable lifts, **absolute velocity is often impossible but
+relative/trend is not** — and intra-set *relative* decline (velocity loss, tempo
+creep, ROM shrink) **is** the fatigue signal. So "any lift" ships real value via
+relative metrics; absolute-velocity calibration (Vitruve) is reserved for the
+big lifts where the wrist tracks the bar. **Discipline: never report an absolute
+m/s we can't back — show relative, and show confidence.**
+
+## Rep plausibility & re-segmentation (the SmartBarbell 2/3 fix)
+
+A rep has a canonical shape (bottom → ascend → top → optional pause → descend →
+bottom) and neighbors bound each other (duration, ROM, a *single* turnaround). A
+"rep" ~2× its neighbors' duration, or with ROM far off the set median, or with
+two velocity sign-changes, is **flagged as implausible**. In a flagged window we
+re-segment using whichever source is cleanest there (template match / DTW
+against the rep template, or another source's turnaround). Even single-source
+logic catches the SmartBarbell merge: that long "top" plateau is too long and
+velocity must cross zero inside it.
+
+## Manual editor + active learning
+
+Most apps treat output as final. We don't:
+
+1. **Boundary editor** — drag rep start/end, add/delete a rep, merge/split.
+   Immediately re-derives that set's metrics.
+2. Each correction is a **label** that refines the per-user prior → next session
+   is better. The flywheel.
+3. **Confidence-triggered prompts** — when fused confidence is low, *ask*:
+   "reps 2–3 look merged — did that happen?" Label exactly the high-value cases.
+4. **Define-by-example** — name a new exercise and the editor seeds its prior.
+
+## Confidence in the UX
+
+Always surface it. "5 reps · high confidence" vs "~5 reps · tap to verify."
+Honest, and it turns uncertainty into the active-learning opportunity above.
+
+## Architecture seams
+
+```
+Sources (VelocitySource + confidence)
+  Watch IMU · AirPods IMU · Video · BLE · HR(context)
+        │  each emits (boundaries, velocity, ROM, quality)
+        ▼
+Timeline align  ──►  Fusion (confidence-weighted; turnaround consensus)
+        │                         ▲
+        ▼                         │
+RepSegmenter (prior-aware,   MovementPrior store
+ 1..N sources, periodicity    (per user × exercise;
+ fallback for any lift)        population cold-start)
+        │                         ▲
+        ▼                         │
+Rep plausibility / re-segment     │ labels
+        │                         │
+        ▼                         │
+Per-rep metrics + CONFIDENCE ──► UX ──► Manual editor / active-learning ─┘
+        │
+        ▼
+Rep + fatigue model (velocity loss → muscular strain & recovery)
+```
+
+## Phasing (bite-sized → the dream)
+
+- **Phase 0 — done.** Watch capture (HKWorkoutSession + high-rate motion) →
+  CSV → phone; offline ZUPT velocity; Vitruve calibration for deadlift.
+- **Phase 1.** Confidence on every output; per-user prior (shape/tempo/ROM) for
+  the big 3; ship **relative** metrics (velocity loss). De-risk watch-only.
+- **Phase 2.** Manual rep editor; corrections feed the prior (flywheel).
+- **Phase 3.** Add a 2nd source (video via seeded-region tracking, or AirPods
+  IMU); fusion layer + turnaround consensus.
+- **Phase 4.** Any-lift generalization: periodicity fallback + "misc" tag.
+- **Phase 5.** Full multi-source fusion; confidence-triggered active-learning
+  prompts; HR as context into the strain model.
+```

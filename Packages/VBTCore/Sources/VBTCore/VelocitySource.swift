@@ -11,6 +11,11 @@ import Foundation
 
 /// Per-rep derived metrics. Mirrors `RepMetrics` in the Python pipeline and the
 /// "Derived metrics" contract in docs/data-schema.md.
+///
+/// `confidence` (0…1) is what makes graceful degradation and fusion possible —
+/// see docs/sources-and-fusion.md. It is carried from day one precisely because
+/// retrofitting a confidence dimension after call sites exist is the painful
+/// kind of change.
 public struct RepMetrics: Codable, Equatable, Sendable {
     public var repIndex: Int
     public var startTime: Double          // s, relative to recording
@@ -19,10 +24,18 @@ public struct RepMetrics: Codable, Equatable, Sendable {
     public var meanConcentricVelocity: Double  // m/s
     public var peakConcentricVelocity: Double  // m/s
     public var rangeOfMotion: Double           // m
+    /// How much to trust this rep, 0…1. Drives fusion weighting and the
+    /// "tap to verify" / active-learning UX.
+    public var confidence: Double
+    /// True when absolute velocity is not calibrated for this lift/source and
+    /// only relative/trend values should be trusted (e.g. cable, watch-only).
+    public var velocityIsRelativeOnly: Bool
 
     public init(
         repIndex: Int, startTime: Double, turnaroundTime: Double, endTime: Double,
-        meanConcentricVelocity: Double, peakConcentricVelocity: Double, rangeOfMotion: Double
+        meanConcentricVelocity: Double, peakConcentricVelocity: Double, rangeOfMotion: Double,
+        confidence: Double = 1.0,
+        velocityIsRelativeOnly: Bool = false
     ) {
         self.repIndex = repIndex
         self.startTime = startTime
@@ -31,28 +44,64 @@ public struct RepMetrics: Codable, Equatable, Sendable {
         self.meanConcentricVelocity = meanConcentricVelocity
         self.peakConcentricVelocity = peakConcentricVelocity
         self.rangeOfMotion = rangeOfMotion
+        self.confidence = confidence
+        self.velocityIsRelativeOnly = velocityIsRelativeOnly
     }
 }
 
-/// Summary of one set, source-agnostic.
+/// Quality summary for one source's contribution to a set — the input to
+/// confidence-weighted fusion (docs/sources-and-fusion.md).
+public struct SourceQuality: Codable, Equatable, Sendable {
+    /// Fraction of the set where the source had usable signal (1 = no dropouts).
+    public var coverage: Double
+    /// Mean per-rep confidence this source produced.
+    public var meanConfidence: Double
+    /// Optional human-readable note (e.g. "tracking lost mid-set").
+    public var note: String?
+
+    public init(coverage: Double = 1.0, meanConfidence: Double = 1.0, note: String? = nil) {
+        self.coverage = coverage
+        self.meanConfidence = meanConfidence
+        self.note = note
+    }
+}
+
+/// Summary of one set, source-agnostic. Carries which source produced it and an
+/// aggregate confidence so the fusion layer can weight and reconcile multiple
+/// summaries for the same set.
 public struct SetSummary: Codable, Equatable, Sendable {
     public var reps: [RepMetrics]
     /// Intra-set velocity loss (%) — the validated proximity-to-failure proxy.
     public var velocityLossPct: Double
+    /// Which source produced this summary (nil for a fused result).
+    public var sourceID: String?
+    /// Aggregate confidence for the set (mean of rep confidence by default).
+    public var confidence: Double
 
-    public init(reps: [RepMetrics]) {
+    public init(reps: [RepMetrics], sourceID: String? = nil, confidence: Double? = nil) {
         self.reps = reps
+        self.sourceID = sourceID
+
         let mvs = reps.map(\.meanConcentricVelocity)
         if let best = mvs.max(), best > 0, let worst = mvs.min() {
             self.velocityLossPct = (best - worst) / best * 100.0
         } else {
             self.velocityLossPct = 0
         }
+
+        if let confidence {
+            self.confidence = confidence
+        } else if reps.isEmpty {
+            self.confidence = 0
+        } else {
+            self.confidence = reps.map(\.confidence).reduce(0, +) / Double(reps.count)
+        }
     }
 }
 
 /// Any sensor/algorithm that can turn a recording into per-set rep metrics.
-/// Watch IMU is the first implementer; BLE and video conform later.
+/// Watch IMU is the first implementer; BLE, video, and AirPods IMU conform
+/// later, each reporting its own `SourceQuality` so fusion can weight them.
 public protocol VelocitySource {
     /// Stable identifier for the source kind (e.g. "watchIMU", "vitruveBLE").
     var sourceID: String { get }

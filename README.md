@@ -10,6 +10,12 @@ a *muscular* strain & recovery score they can't.
 > **Status: PoC / thin vertical slice.** Goal right now is to prove the wrist
 > signal survives off the watch and calibrate it against a Vitruve — not to ship
 > UI. See [`docs/architecture.md`](docs/architecture.md).
+>
+> The full multi-source vision — AirPods + video + BLE fusion, a learned
+> per-user rep-shape prior, any-lift support, graceful degradation to
+> watch-only, and a manual rep editor that trains the model — lives in
+> [`docs/sources-and-fusion.md`](docs/sources-and-fusion.md), with a bite-sized
+> phase plan at the end.
 
 ## What's here
 

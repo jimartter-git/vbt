@@ -62,5 +62,19 @@ final class SetSummaryTests: XCTestCase {
         }
         let summary = SetSummary(reps: reps)
         XCTAssertEqual(summary.velocityLossPct, 25.0, accuracy: 0.001) // (0.8-0.6)/0.8
+        XCTAssertEqual(summary.confidence, 1.0, accuracy: 0.001)       // default per-rep conf
+    }
+
+    func testSetConfidenceAveragesRepConfidence() {
+        let reps = [0.9, 0.5, 0.7].enumerated().map { i, c in
+            RepMetrics(
+                repIndex: i, startTime: 0, turnaroundTime: 0, endTime: 0,
+                meanConcentricVelocity: 0.5, peakConcentricVelocity: 0.7,
+                rangeOfMotion: 0.5, confidence: c
+            )
+        }
+        let summary = SetSummary(reps: reps, sourceID: "watchIMU")
+        XCTAssertEqual(summary.sourceID, "watchIMU")
+        XCTAssertEqual(summary.confidence, 0.7, accuracy: 0.001) // mean(0.9,0.5,0.7)
     }
 }
