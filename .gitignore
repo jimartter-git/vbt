@@ -27,3 +27,8 @@ venv/
 # ---- Recorded sensor data (large / binary, not for git) ----
 analysis/data/*
 !analysis/data/.gitkeep
+
+# ---- dataset/ : SQLite is a rebuilt artifact; raw time-series are local ----
+dataset/dataset.sqlite
+dataset/raw/*
+!dataset/raw/.gitkeep

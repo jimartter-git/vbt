@@ -1,0 +1,3 @@
+# Bulk raw time-series (WL per-frame txt, watch ~200Hz CSV, AirPods) land here.
+# Gitignored (can be large / local). The normalized per-rep summaries derived
+# from them live in ../rep_metrics.csv, which IS versioned.
