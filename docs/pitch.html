@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBT — one-pager</title>
+<style>
+  :root{
+    --ink:#0e1116; --body:#363b45; --muted:#7b818d; --line:#e6e8ec;
+    --accent:#4f46e5; --accent-soft:#eef0fe; --signal:#0f9d58; --warn:#b4690e;
+    --panel:#fafbfc; --page:#ffffff;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#eceef1;color:var(--body);font-family:var(--sans);
+       font-size:10.3px;line-height:1.45;letter-spacing:.005em;padding:24px}
+  .toolbar{max-width:8.5in;margin:0 auto 14px;display:flex;justify-content:flex-end;gap:8px}
+  .btn{font:600 12px var(--sans);color:#fff;background:var(--accent);border:0;border-radius:7px;
+       padding:9px 16px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+
+  .page{width:8.5in;min-height:11in;margin:0 auto;background:var(--page);
+        padding:0.5in 0.55in 0.42in;box-shadow:0 10px 40px rgba(20,25,40,.16);
+        border-radius:3px}
+
+  /* ---------- header ---------- */
+  header{display:flex;justify-content:space-between;align-items:flex-end;
+         padding-bottom:11px;border-bottom:2px solid var(--ink)}
+  .brand{display:flex;align-items:center;gap:13px}
+  .mark{font:800 33px/0.9 var(--sans);letter-spacing:-.02em;color:var(--ink)}
+  .mark b{color:var(--accent)}
+  .tag{font-size:10.3px;color:var(--muted);max-width:330px;border-left:2px solid var(--line);
+       padding-left:11px;margin-left:2px}
+  .status{font:600 9px var(--mono);letter-spacing:.06em;text-transform:uppercase;
+          color:var(--accent);background:var(--accent-soft);padding:5px 9px;border-radius:20px;white-space:nowrap}
+  svg.spark{display:block}
+
+  /* ---------- thesis ---------- */
+  .thesis{font-family:var(--serif);font-size:14.5px;line-height:1.5;color:var(--ink);
+          margin:13px 0 11px}
+  .thesis .hl{background:linear-gradient(transparent 62%, #fbe8a6 62%);padding:0 1px}
+  .thesis b{color:var(--accent);font-weight:700}
+
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{font-size:9px;border:1px solid var(--line);border-radius:20px;padding:4px 10px;color:var(--ink);background:#fff}
+  .chip b{font-family:var(--mono);color:var(--accent);font-weight:700}
+
+  /* ---------- grid ---------- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 22px}
+  section h2{display:flex;align-items:center;gap:7px;margin:0 0 6px;
+             font:700 10px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+  section h2 .dot{width:7px;height:7px;border-radius:2px;background:var(--accent)}
+  .c-build .dot{background:#0ea5a0}.c-learn .dot{background:var(--signal)}
+  .c-road .dot{background:var(--accent)}.c-risk .dot{background:var(--warn)}
+  ul{margin:0;padding:0;list-style:none}
+  li{position:relative;padding-left:13px;margin-bottom:5px}
+  li::before{content:"";position:absolute;left:0;top:6px;width:4px;height:4px;border-radius:50%;
+             background:var(--accent);opacity:.55}
+  .c-build li::before{background:#0ea5a0}.c-learn li::before{background:var(--signal)}
+  .c-risk li::before{background:var(--warn)}
+  li b{color:var(--ink);font-weight:650}
+  .m{font-family:var(--mono);color:var(--accent);font-weight:600;font-size:9.5px}
+
+  /* roadmap numbered */
+  ol{margin:0;padding:0;counter-reset:r;list-style:none}
+  ol li{padding-left:20px;margin-bottom:5px}
+  ol li::before{counter-increment:r;content:counter(r);top:0;left:0;width:14px;height:14px;
+     border-radius:50%;background:var(--accent);color:#fff;opacity:1;
+     font:700 8.5px/14px var(--mono);text-align:center}
+
+  footer{margin-top:14px;padding-top:9px;border-top:1px solid var(--line);
+          display:flex;justify-content:space-between;color:var(--muted);font-size:8.7px}
+  footer .mono{font-family:var(--mono)}
+
+  @media print{
+    @page{size:Letter;margin:0;}
+    body{background:#fff;padding:0}
+    .toolbar{display:none}
+    .page{width:auto;min-height:auto;margin:0;box-shadow:none;border-radius:0;
+          padding:0.5in 0.55in}
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="mark">V<b>B</b>T</div>
+        <!-- velocity-loss curve: the product's signature signal -->
+        <svg class="spark" width="118" height="40" viewBox="0 0 118 40" aria-hidden="true">
+          <polyline fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            points="4,17 17,11 30,12 43,15 56,18 69,21 82,25 95,30 108,34 114,36"/>
+          <g fill="#4f46e5">
+            <circle cx="17" cy="11" r="2.4"/><circle cx="43" cy="15" r="2.4"/>
+            <circle cx="69" cy="21" r="2.4"/><circle cx="95" cy="30" r="2.4"/>
+            <circle cx="114" cy="36" r="2.6" fill="#b4690e"/>
+          </g>
+        </svg>
+        <div class="tag">Velocity-based training &amp; muscular-fatigue tracking, fused from the sensors you already own.</div>
+      </div>
+      <div class="status">Working prototype · May 2026</div>
+    </header>
+
+    <p class="thesis">
+      Heart-rate wearables are <b>blind to lifting</b> — you can grind your muscles and CNS to failure with barely a flicker in HR, so they tell you that you hardly trained.
+      <span class="hl">VBT counts every rep and tracks intra-set <b>velocity loss</b></span> — a validated proximity-to-failure signal — to build the muscular strain &amp; recovery score those platforms structurally can’t.
+    </p>
+
+    <div class="chips">
+      <span class="chip"><b>4</b> commercial tools → <b>1</b> model</span>
+      <span class="chip">3-way agreement to <b>~0.02&nbsp;m/s</b> (best case)</span>
+      <span class="chip">confidence-scored, <b>per rep</b></span>
+      <span class="chip">watch-first, <b>source-agnostic</b></span>
+    </div>
+
+    <div class="grid">
+
+      <section class="c-bet">
+        <h2><span class="dot"></span>The bet</h2>
+        <ul>
+          <li>Your <b>wrist already wears precise sensors.</b> An Apple Watch IMU (plus AirPods) can recover bar velocity, range of motion, and fatigue — no device strapped to the bar.</li>
+          <li><b>Multimodal from day one:</b> phone video, BLE bar tools (Vitruve, Stance), and the watch all emit the same shape into one model. Fuse when more than one is present; degrade gracefully when not.</li>
+          <li>The wedge isn’t a sensor trick — it’s the <b>muscular strain score</b> HR platforms can’t compute.</li>
+        </ul>
+      </section>
+
+      <section class="c-phil">
+        <h2><span class="dot"></span>Operating philosophy</h2>
+        <ul>
+          <li><b>One abstraction:</b> every source → (rep boundaries · velocity · ROM) <i>+ confidence.</i></li>
+          <li><b>Confidence is per-rep and per-metric</b> — and it’s unclaimed territory. No competitor tells you how much to trust a number.</li>
+          <li>A <b>learned personal rep-shape prior</b> is an always-on “source” that compounds every set — so even messy, watch-only data stays legible.</li>
+          <li><b>Sources repair each other</b> — agreement on a turnaround sharpens everyone’s velocity. Relative trend beats a perfect absolute, so it works on any lift.</li>
+        </ul>
+      </section>
+
+      <section class="c-build">
+        <h2><span class="dot"></span>What’s built</h2>
+        <ul>
+          <li>Native <b>iOS + watchOS capture</b> — a workout session keeps high-rate motion alive and streams it to the phone.</li>
+          <li>A shared <b>Swift core</b> (the source abstraction + confidence model) and a <b>Python ZUPT pipeline</b> — rep detection, velocity, ROM — under test.</li>
+          <li>A <b>living measurement lab:</b> the same sets recorded by SmartBarbell, Stance, Metric &amp; WL Analysis, linked rep-by-rep — with ground-truth Vitruve incoming. <span class="m">5 sets</span> across squat, bench &amp; deadlift, growing each session.</li>
+        </ul>
+      </section>
+
+      <section class="c-learn">
+        <h2><span class="dot"></span>Early learnings</h2>
+        <ul>
+          <li><b>Every “ground truth” disagrees</b> — on one deadlift, pro tools differed on rep count <i>and</i> on how fast the set decayed.</li>
+          <li><b>The reps that matter most are measured worst</b> — the grindy final reps that carry the fatigue signal are where every source wobbles.</li>
+          <li>In good conditions, signals <b>converge</b> — three independent methods agreed within <span class="m">~0.02 m/s</span> on incline bench.</li>
+          <li>The error is a <b>near-constant offset</b>, not a moving target — a tractable calibration.</li>
+          <li><b>Confidence is open white space</b> — a category leader’s “100%” badge stayed 100% while it silently missed half a set.</li>
+        </ul>
+      </section>
+
+      <section class="c-road">
+        <h2><span class="dot"></span>Roadmap</h2>
+        <ol>
+          <li><b>Calibrate</b> the watch against Vitruve ground truth (deadlift first); quantify the error.</li>
+          <li>Ship <b>confidence + personal prior + velocity-loss</b> — make watch-only trustworthy.</li>
+          <li>A <b>manual rep editor</b> where every correction trains the prior — the data flywheel.</li>
+          <li><b>Fuse a second source</b> (video / AirPods) for consensus rep detection.</li>
+          <li>The product: a <b>muscular strain &amp; recovery score</b>, for any lift.</li>
+        </ol>
+      </section>
+
+      <section class="c-risk">
+        <h2><span class="dot"></span>Hurdles to clear</h2>
+        <ul>
+          <li><b>The wrist isn’t the bar</b> — accuracy is exercise-dependent and drift is the enemy (squat hardest; deadlift &amp; bench best).</li>
+          <li><b>Sustained sensing:</b> watchOS must hold <span class="m">~100–200 Hz</span> for a full session without throttling, sleep, or draining the battery — the first thing to prove.</li>
+          <li><b>Rep detection</b> on grindy and unconventional lifts; clean multi-source time-sync &amp; fusion.</li>
+          <li><b>The prior needs data</b> — cold-start, then per-user learning at scale.</li>
+          <li><b>Recording reality</b> — frame rate &amp; setup quietly degrade video; the system must know when to trust what.</li>
+        </ul>
+      </section>
+
+    </div>
+
+    <footer>
+      <span>Working prototype &amp; a growing personal multi-vendor measurement dataset.</span>
+      <span class="mono">VBT · May 2026</span>
+    </footer>
+  </div>
+</body>
+</html>
