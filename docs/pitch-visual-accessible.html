@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBT — visual brief (accessible-tool vision)</title>
+<style>
+  :root{
+    --ink:#0e1116; --body:#363b45; --muted:#7b818d; --line:#e6e8ec; --grid:#eceef1;
+    --accent:#4f46e5; --accent-soft:#eef0fe; --signal:#0f9d58; --warn:#b4690e;
+    --panel:#fafbfc;
+    --v-sb:#0ea5a0; --v-stance:#e2683c; --v-metric:#7c3aed; --v-wl:#0f9d58;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:Georgia,"Times New Roman",serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#eceef1;color:var(--body);font-family:var(--sans);font-size:10px;line-height:1.45;padding:24px}
+  .toolbar{max-width:8.5in;margin:0 auto 14px;display:flex;justify-content:flex-end}
+  .btn{font:600 12px var(--sans);color:#fff;background:var(--accent);border:0;border-radius:7px;padding:9px 16px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+
+  .page{position:relative;width:8.5in;min-height:11in;margin:0 auto 22px;background:#fff;
+        padding:0.5in 0.55in 0.4in;box-shadow:0 10px 40px rgba(20,25,40,.16);border-radius:3px}
+  .pnum{position:absolute;bottom:0.28in;right:0.55in;font:600 8px var(--mono);color:#b6bcc6}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:10px;border-bottom:2px solid var(--ink)}
+  .brand{display:flex;align-items:center;gap:13px}
+  .mark{font:800 32px/0.9 var(--sans);letter-spacing:-.02em;color:var(--ink)}
+  .mark b{color:var(--accent)}
+  .tag{font-size:10px;color:var(--muted);max-width:330px;border-left:2px solid var(--line);padding-left:11px}
+  .status{font:600 9px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:5px 9px;border-radius:20px;white-space:nowrap}
+
+  .thesis{font-family:var(--serif);font-size:13.5px;line-height:1.5;color:var(--ink);margin:12px 0 10px}
+  .thesis .hl{background:linear-gradient(transparent 62%, #fbe8a6 62%)}
+  .thesis b{color:var(--accent)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 4px}
+  .chip{font-size:9px;border:1px solid var(--line);border-radius:20px;padding:4px 10px;color:var(--ink)}
+  .chip b{font-family:var(--mono);color:var(--accent)}
+
+  h2.sec{display:flex;align-items:center;gap:8px;margin:19px 0 9px;font:700 11px var(--sans);letter-spacing:.11em;text-transform:uppercase;color:var(--ink)}
+  h2.sec::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--accent)}
+  h2.sec .n{font-family:var(--mono);color:var(--muted);font-weight:600;letter-spacing:0}
+  .lead{color:var(--muted);font-size:9.6px;margin:-4px 0 10px;max-width:6.6in}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 13px}
+  .card h3{margin:0 0 6px;font:700 10px var(--sans);color:var(--ink)}
+  figcaption{font-size:8.4px;color:var(--muted);margin-top:5px;line-height:1.4}
+
+  table{width:100%;border-collapse:collapse;font-size:9px}
+  th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font:700 8px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  td.n,th.n{text-align:center}
+  .mono{font-family:var(--mono)}
+  tbody tr:last-child td{border-bottom:0}
+
+  .matrix .cap{font-weight:600;color:var(--ink)}
+  .matrix th.us,.matrix td.us{background:var(--accent-soft)}
+  .matrix th.us{color:var(--accent)}
+  .yes{color:var(--signal);font-weight:700}.no{color:#c2c7d0;font-weight:700}.part{color:var(--warn);font-weight:700}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:8.5px;color:var(--body);margin-top:4px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
+  .fix td:first-child{font-weight:650;color:var(--ink);width:46%}
+  .road{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}
+  .step{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff;position:relative}
+  .step .ph{font:700 8px var(--mono);color:var(--accent)}
+  .step .ti{font-weight:700;color:var(--ink);font-size:9.3px;margin:3px 0}
+  .step .ds{font-size:8.3px;color:var(--muted)}
+  .step.done{background:var(--accent-soft);border-color:#cfd2f7}
+  .step.done .badge{position:absolute;top:7px;right:8px;font:700 7px var(--mono);color:#fff;background:var(--signal);padding:2px 5px;border-radius:10px}
+
+  .statrow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:4px 0 12px}
+  .stat{text-align:center;border:1px solid var(--line);border-radius:9px;padding:9px 6px;background:var(--panel)}
+  .stat .big{font:800 20px var(--sans);color:var(--accent);line-height:1}
+  .stat .lbl{font-size:8px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+
+  .sci{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px;font-size:8.6px}
+  .zonebar{display:flex;height:16px;border-radius:4px;overflow:hidden;margin:5px 0;font:700 7px var(--mono);color:#fff;line-height:16px;text-align:center}
+  footer{margin-top:16px;padding-top:9px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:8.4px}
+
+  @media print{
+    @page{size:Letter;margin:0}
+    body{background:#fff;padding:0}.toolbar{display:none}
+    .page{width:auto;min-height:auto;margin:0;box-shadow:none;border-radius:0;padding:0.5in 0.55in;page-break-after:always}
+    .page:last-child{page-break-after:auto}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar"><button class="btn" onclick="window.print()">Print / Save as PDF</button></div>
+
+<!-- ============================ PAGE 1 ============================ -->
+<div class="page">
+  <header>
+    <div class="brand">
+      <div class="mark">V<b>B</b>T</div>
+      <svg width="112" height="38" viewBox="0 0 112 38" aria-hidden="true">
+        <polyline fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          points="4,16 16,10 28,11 40,14 52,17 64,20 76,24 88,29 100,33 107,35"/>
+        <circle cx="16" cy="10" r="2.3" fill="#4f46e5"/><circle cx="52" cy="17" r="2.3" fill="#4f46e5"/>
+        <circle cx="88" cy="29" r="2.3" fill="#4f46e5"/><circle cx="107" cy="35" r="2.6" fill="#b4690e"/>
+      </svg>
+      <div class="tag">Device-grade rep velocity — and smarter load &amp; RPE calls — from the gear you already own.</div>
+    </div>
+    <div class="status">Visual brief · May 2026</div>
+  </header>
+
+  <p class="thesis">
+    Every velocity app is chasing the same useful thing: turn <b>how fast the bar moves</b> into smarter training — gauge how hard a set was and what to load next.
+    Today that means <span class="hl">buying a $300 bar device, or filming a perfectly side-on video of perfectly round plates.</span>
+    VBT does it from the <b>Apple Watch &amp; AirPods already on your body</b> — and when you <i>do</i> film, it just works: off-angle, odd plates, low frame rate.
+  </p>
+  <div class="chips">
+    <span class="chip">no <b>$300</b> bar device</span>
+    <span class="chip">video <b>optional</b></span>
+    <span class="chip">any angle · any plate · any <b>fps</b></span>
+    <span class="chip">validated <b>vs the pros</b></span>
+  </div>
+
+  <h2 class="sec"><span class="n">01</span>&nbsp;The job to be done — turn rep speed into the next call</h2>
+  <p class="lead">Bar speed on the last hard rep tells you how close to failure you were — and whether to add, hold, or drop weight. Learn each lifter’s personal curve and it becomes a real-time RPE gauge.</p>
+  <div class="two">
+    <figure class="card" style="margin:0">
+      <h3>Your RPE gauge — last-rep speed → effort <span style="font-weight:400;color:var(--muted)">(real personal data, bench)</span></h3>
+      <div id="rpeChart"></div>
+      <div class="legend"><span><i style="background:#4f46e5"></i>your curve</span><span><i style="background:#cfd6f8"></i>observed spread</span></div>
+      <figcaption>As a set nears failure, last-rep velocity falls predictably. Slower than your line ⇒ back off; faster ⇒ you’ve got more in the tank. The band is your own logged spread — i.e. honest uncertainty.</figcaption>
+    </figure>
+    <figure class="card" style="margin:0">
+      <h3>Read the last rep, get the call</h3>
+      <table style="margin-top:2px">
+        <tbody>
+          <tr><td class="cap">Gauge RPE / reps-in-reserve</td><td>without grinding to true failure</td></tr>
+          <tr><td class="cap">Pick the next set’s load</td><td>autoregulate to today’s readiness</td></tr>
+          <tr><td class="cap">Catch a bad day early</td><td>same load, slower bar = under-recovered</td></tr>
+          <tr><td class="cap">Estimate 1RM</td><td>from sub-max sets, no test day</td></tr>
+        </tbody>
+      </table>
+      <figcaption>Rule of thumb: a <span class="mono">~0.05 m/s</span> rise at a fixed load ≈ a <b>~2–3% strength gain</b>. Speed is a leading indicator the scale can’t see.</figcaption>
+    </figure>
+  </div>
+
+  <h2 class="sec"><span class="n">02</span>&nbsp;What’s missing today — access &amp; forgiveness</h2>
+  <p class="lead">The tools work — if you buy hardware, or film just so. The opening isn’t a new metric; it’s the same metric with none of the friction.</p>
+  <table class="matrix">
+    <thead><tr>
+      <th style="width:34%">&nbsp;</th>
+      <th class="n">BLE bar device<br><span style="font-weight:400">Vitruve · Stance</span></th>
+      <th class="n">Video apps<br><span style="font-weight:400">Metric · SmartBarbell · WL</span></th>
+      <th class="n us">VBT</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="cap">Rep velocity &amp; velocity loss</td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td class="cap">Turns speed into RPE / load guidance</td><td class="n"><span class="part">◐</span></td><td class="n"><span class="part">◐</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td class="cap">No device to buy — uses gear you own</td><td class="n"><span class="no">○</span></td><td class="n"><span class="part">◐</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td class="cap">Works with no video at all</td><td class="n"><span class="yes">●</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td class="cap">Forgiving when you do film<br><span style="font-weight:400;color:var(--muted)">off-angle · non-round plates · low fps</span></td><td class="n">—</td><td class="n"><span class="no">○</span></td><td class="n us"><span class="part">◐→●</span></td></tr>
+      <tr><td class="cap">Uses whatever sensor is present</td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+    </tbody>
+  </table>
+  <div class="legend"><span><span class="yes">●</span> strong&nbsp;&nbsp;<span class="part">◐</span> partial&nbsp;&nbsp;<span class="no">○</span> none</span><span style="color:var(--muted)">The watch removes the device tax; forgiving capture removes the tripod tax.</span></div>
+  <div class="pnum">VBT · 1 / 3</div>
+</div>
+
+<!-- ============================ PAGE 2 ============================ -->
+<div class="page">
+  <h2 class="sec"><span class="n">03</span>&nbsp;One velocity model, whatever sensor you have</h2>
+  <p class="lead">Watch, AirPods, phone video, or a bar device — each emits the same shape (rep boundaries · velocity · ROM · confidence) into one model. Use whatever’s present; lean on a personal prior when the signal is thin.</p>
+  <svg viewBox="0 0 700 196" width="100%" style="margin-bottom:4px">
+    <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#9aa0ab"/></marker></defs>
+    <g font-size="9" font-family="-apple-system,sans-serif" text-anchor="middle">
+      <rect x="8" y="14" width="150" height="34" rx="7" fill="#eef0fe" stroke="#cfd2f7"/><text x="83" y="29" fill="#0e1116" font-weight="700">Apple Watch IMU</text><text x="83" y="41" fill="#7b818d" font-size="8">always on · no purchase</text>
+      <rect x="8" y="54" width="150" height="30" rx="7" fill="#fff" stroke="#e6e8ec"/><text x="83" y="73" fill="#0e1116">AirPods IMU</text>
+      <rect x="8" y="90" width="150" height="30" rx="7" fill="#fff" stroke="#e6e8ec"/><text x="83" y="109" fill="#0e1116">Phone video (optional)</text>
+      <rect x="8" y="126" width="150" height="30" rx="7" fill="#fff" stroke="#e6e8ec"/><text x="83" y="145" fill="#0e1116">BLE bar device (if owned)</text>
+      <g stroke="#9aa0ab" stroke-width="1.4" marker-end="url(#ar)">
+        <line x1="160" y1="31" x2="252" y2="74"/><line x1="160" y1="69" x2="252" y2="83"/>
+        <line x1="160" y1="105" x2="252" y2="96"/><line x1="160" y1="141" x2="252" y2="105"/></g>
+      <rect x="256" y="58" width="150" height="64" rx="9" fill="#0e1116"/><text x="331" y="80" fill="#fff" font-weight="700">Fusion + confidence</text><text x="331" y="94" fill="#c7cad6" font-size="7.6">align on true rep ·</text><text x="331" y="105" fill="#c7cad6" font-size="7.6">weight by trust · re-segment</text>
+      <rect x="256" y="140" width="150" height="34" rx="8" fill="#fff" stroke="#cfd2f7" stroke-dasharray="3 2"/><text x="331" y="155" fill="#4f46e5" font-weight="700" font-size="8.4">Learned personal prior</text><text x="331" y="166" fill="#7b818d" font-size="7.4">rep-shape · tempo · your MVT</text>
+      <line x1="331" y1="140" x2="331" y2="124" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#ar)"/>
+      <line x1="406" y1="90" x2="448" y2="90" stroke="#9aa0ab" stroke-width="1.4" marker-end="url(#ar)"/>
+      <rect x="452" y="58" width="150" height="64" rx="9" fill="#eef0fe" stroke="#cfd2f7"/><text x="527" y="80" fill="#0e1116" font-weight="700">Velocity model</text><text x="527" y="94" fill="#7b818d" font-size="7.6">speed · loss ·</text><text x="527" y="105" fill="#7b818d" font-size="7.6">ROM · tempo</text>
+      <line x1="602" y1="90" x2="636" y2="90" stroke="#9aa0ab" stroke-width="1.4" marker-end="url(#ar)"/>
+      <rect x="610" y="50" width="86" height="80" rx="9" fill="#4f46e5"/><text x="653" y="84" fill="#fff" font-weight="700" font-size="9">RPE &amp;</text><text x="653" y="97" fill="#fff" font-weight="700" font-size="9">load call</text>
+    </g>
+  </svg>
+
+  <h2 class="sec"><span class="n">04</span>&nbsp;What the data shows — video <span style="text-transform:none;font-weight:800;color:var(--signal)">can</span> be device-grade, but today it’s brittle</h2>
+  <p class="lead">Real sets, recorded by several tools at once. The upside and the opening, in two charts.</p>
+  <div class="two">
+    <figure class="card" style="margin:0">
+      <h3>A phone <span style="color:var(--signal)">matched</span> the $300 bar device</h3>
+      <div id="convChart"></div>
+      <div class="legend"><span><i style="background:var(--v-sb)"></i>SmartBarbell (video)</span><span><i style="background:var(--v-stance)"></i>Stance (device)</span><span><i style="background:var(--v-wl)"></i>WL (video)</span></div>
+      <figcaption>Incline bench, well-filmed: video and the on-bar device agree within <span class="mono">~0.02 m/s</span>. The accuracy is there.</figcaption>
+    </figure>
+    <figure class="card" style="margin:0">
+      <h3>…until conditions <span style="color:var(--warn)">slip</span></h3>
+      <div id="divChart"></div>
+      <div class="legend"><span><i style="background:var(--v-metric)"></i>Metric</span><span><i style="background:var(--v-sb)"></i>SmartBarbell</span><span><i style="background:var(--v-stance)"></i>Stance</span><span><i style="background:var(--v-wl)"></i>WL</span></div>
+      <figcaption>Deadlift: ~0.15 m/s spread &amp; different decline shapes. Setup, not the metric, is the problem — so setup is what we fix.</figcaption>
+    </figure>
+  </div>
+
+  <h2 class="sec" style="margin-top:15px"><span class="n">05</span>&nbsp;The friction we remove</h2>
+  <table class="fix">
+    <thead><tr><th>Today’s failure (seen in our data)</th><th>VBT’s answer</th></tr></thead>
+    <tbody>
+      <tr><td>Off-angle / non-round plates break plate-circle detection (a video app mis-scaled to a junk weight)</td><td>markerless region &amp; joint tracking — no perfect circle required</td></tr>
+      <tr><td>Low frame rate (24 fps) makes apps mis-count grindy reps</td><td>frame-rate-robust segmentation + cross-source consensus</td></tr>
+      <tr><td>Occlusion drops the final rep — the one that defines the set</td><td>fusion fills the gap; a manual editor makes the rare fix trivial</td></tr>
+      <tr><td>You forgot the tripod / don’t want to film</td><td>the watch already caught it — no video needed</td></tr>
+      <tr><td>You don’t own a bar device</td><td>you don’t need one</td></tr>
+    </tbody>
+  </table>
+  <div class="pnum">VBT · 2 / 3</div>
+</div>
+
+<!-- ============================ PAGE 3 ============================ -->
+<div class="page">
+  <h2 class="sec"><span class="n">06</span>&nbsp;The path</h2>
+  <p class="lead">Prove the watch hits device-grade, make video forgiving, turn speed into the coach, then fuse — each step useful on its own.</p>
+  <div class="road">
+    <div class="step done"><span class="badge">DONE</span><div class="ph">PHASE 0</div><div class="ti">Capture &amp; lab</div><div class="ds">watch→phone pipeline, analysis, multi-vendor dataset</div></div>
+    <div class="step"><div class="ph">PHASE 1</div><div class="ti">Device-grade watch</div><div class="ds">calibrate vs Vitruve ground truth; quantify error</div></div>
+    <div class="step"><div class="ph">PHASE 2</div><div class="ti">Forgiving video</div><div class="ds">any angle · any plate · any frame rate</div></div>
+    <div class="step"><div class="ph">PHASE 3</div><div class="ti">The coach</div><div class="ds">last-rep speed → RPE &amp; next-set load</div></div>
+    <div class="step"><div class="ph">PHASE 4</div><div class="ti">Fuse</div><div class="ds">watch + video + AirPods; use whatever’s present</div></div>
+    <div class="step"><div class="ph">PHASE 5</div><div class="ti">Ship it</div><div class="ds">the most accessible accurate VBT app</div></div>
+  </div>
+
+  <h2 class="sec"><span class="n">07</span>&nbsp;The lab — proof we’re building on data</h2>
+  <div class="statrow">
+    <div class="stat"><div class="big">5</div><div class="lbl">real sets logged</div></div>
+    <div class="stat"><div class="big">4</div><div class="lbl">commercial tools</div></div>
+    <div class="stat"><div class="big">3</div><div class="lbl">lifts (SQ·BN·DL)</div></div>
+    <div class="stat"><div class="big">~7k</div><div class="lbl">per-frame samples</div></div>
+    <div class="stat"><div class="big">1</div><div class="lbl">ground truth incoming</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Date</th><th>Lift</th><th class="n">Load</th><th class="n">Reps</th><th>Sources</th><th>What it taught us</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">04/24</td><td>Bench (flat)</td><td class="n mono">245</td><td class="n mono">6</td><td>SmartBarbell, WL</td><td>non-round plates broke video scale — a manual circle fixed it (we’d automate that)</td></tr>
+      <tr><td class="mono">05/27</td><td>Squat</td><td class="n mono">245</td><td class="n mono">10</td><td>SmartBarbell, Metric, WL</td><td>plate left frame → a confidence flag caught the bad source</td></tr>
+      <tr><td class="mono">05/28</td><td>Incline bench</td><td class="n mono">185</td><td class="n mono">10</td><td>SmartBarbell, Stance, WL, Metric</td><td>phone video matched the bar device to ~0.02 m/s; one app mis-counted at 24 fps</td></tr>
+      <tr><td class="mono">05/29</td><td>Deadlift</td><td class="n mono">330</td><td class="n mono">8</td><td>SmartBarbell, Stance, Metric, WL</td><td>a source dropped the final rep — fusion would recover it</td></tr>
+      <tr><td class="mono">05/29</td><td>Deadlift</td><td class="n mono">285</td><td class="n mono">8</td><td>SmartBarbell, Stance, Metric, WL</td><td>4-way divergence on decline shape — a calibration target</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec"><span class="n">08</span>&nbsp;Hurdles we’ll have to clear</h2>
+  <table class="fix">
+    <thead><tr><th>Hurdle</th><th>How we clear it</th></tr></thead>
+    <tbody>
+      <tr><td>The wrist isn’t the bar — accuracy is exercise-dependent (squat hardest)</td><td>calibrate per source × lift; start best-case (DL/bench); fuse + prior</td></tr>
+      <tr><td>Forgiving video is the core promise — and the hard part</td><td>markerless region/joint tracking, pose fallback, frame-rate-robust segmentation</td></tr>
+      <tr><td>watchOS must sustain ~100–200&nbsp;Hz a full session without draining</td><td>a thin vertical slice de-risks it first; batched sensor API is built for it</td></tr>
+      <tr><td>The personal RPE curve needs your reps</td><td>population cold-start, then a flywheel from your own logged sets</td></tr>
+      <tr><td>Trust — users must know when a number is shaky</td><td>per-rep confidence surfaced; one-tap manual correction</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec"><span class="n">09</span>&nbsp;The science it stands on</h2>
+  <div class="sci">
+    <div>
+      <b>Velocity zones</b> (mean concentric, m/s)
+      <div class="zonebar">
+        <span style="flex:5;background:#4338ca">strength 0–.5</span>
+        <span style="flex:2.5;background:#6d28d9">.5–.75</span>
+        <span style="flex:2.5;background:#0ea5a0">.75–1.0</span>
+        <span style="flex:3;background:#0f9d58">speed 1.0+</span>
+      </div>
+      <span style="color:var(--muted)">personal rolling baselines beat fixed zones</span>
+    </div>
+    <div>
+      <b>Velocity-loss cut-offs</b><br>
+      <span class="mono">~10%</span> power · <span class="mono">~20%</span> strength · <span class="mono">~30%+</span> hypertrophy. Higher loss = closer to failure.
+    </div>
+    <div>
+      <b>Min. velocity threshold</b> (≈ last rep at failure)<br>
+      <span class="mono">deadlift ≈ .15–.20</span> · <span class="mono">bench ≈ .10–.17</span> · <span class="mono">squat ≈ .25–.30</span>
+    </div>
+  </div>
+
+  <footer>
+    <span>Working prototype &amp; a growing personal multi-vendor measurement dataset. Velocity figures from real recorded sets; RPE-gauge band from logged personal data.</span>
+    <span class="mono">VBT · 3 / 3</span>
+  </footer>
+</div>
+
+<script>
+function lc(id,cfg){
+  var w=cfg.w||330,h=cfg.h||150,p={t:10,r:10,b:26,l:32};
+  var iw=w-p.l-p.r,ih=h-p.t-p.b;
+  var xMin=(cfg.xMin==null?1:cfg.xMin),xMax=cfg.xMax,yMin=cfg.yMin,yMax=cfg.yMax,yt=cfg.yt||4,xStep=cfg.xStep||1;
+  var X=function(x){return p.l+(x-xMin)/(xMax-xMin)*iw;},Y=function(y){return p.t+(yMax-y)/(yMax-yMin)*ih;};
+  var s='<svg viewBox="0 0 '+w+' '+h+'" width="100%">';
+  for(var i=0;i<=yt;i++){var v=yMin+(yMax-yMin)*i/yt,yy=Y(v).toFixed(1);
+    s+='<line x1="'+p.l+'" y1="'+yy+'" x2="'+(w-p.r)+'" y2="'+yy+'" stroke="#eceef1"/>';
+    s+='<text x="'+(p.l-4)+'" y="'+(+yy+2.5)+'" font-size="6.6" fill="#9aa0ab" text-anchor="end">'+v.toFixed(2)+'</text>';}
+  for(var x=xMin;x<=xMax;x+=xStep){s+='<text x="'+X(x).toFixed(1)+'" y="'+(h-p.b+11)+'" font-size="6.6" fill="#9aa0ab" text-anchor="middle">'+x+'</text>';}
+  s+='<text x="'+(p.l+iw/2)+'" y="'+(h-1)+'" font-size="7" fill="#7b818d" text-anchor="middle">'+(cfg.xLabel||'rep number')+'</text>';
+  if(cfg.band){var lo=cfg.band.lo,hi=cfg.band.hi,fwd=[],bwd=[];
+    for(var j=0;j<lo.length;j++)fwd.push(X(xMin+j).toFixed(1)+','+Y(lo[j]).toFixed(1));
+    for(var k=hi.length-1;k>=0;k--)bwd.push(X(xMin+k).toFixed(1)+','+Y(hi[k]).toFixed(1));
+    s+='<polygon points="'+fwd.concat(bwd).join(' ')+'" fill="'+cfg.band.c+'" stroke="none"/>';}
+  cfg.series.forEach(function(se){
+    var pts=se.d.map(function(y,i){return X(xMin+i).toFixed(1)+','+Y(y).toFixed(1);}).join(' ');
+    s+='<polyline fill="none" stroke="'+se.c+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" points="'+pts+'"/>';
+    se.d.forEach(function(y,i){s+='<circle cx="'+X(xMin+i).toFixed(1)+'" cy="'+Y(y).toFixed(1)+'" r="1.7" fill="'+se.c+'"/>';});
+  });
+  s+='</svg>';document.getElementById(id).innerHTML=s;
+}
+// RPE gauge — real personal bench curve (priors/bench_rpe_velocity.csv): velocity falls as RPE rises
+lc('rpeChart',{xMin:0,xMax:10,xStep:2,xLabel:'RPE  (→ closer to failure)',yMin:0.05,yMax:0.55,yt:5,
+  band:{c:'#dfe4fb',lo:[0.36,0.36,0.33,0.28,0.31,0.25,0.23,0.23,0.17,0.13,0.10],
+                    hi:[0.51,0.48,0.46,0.38,0.39,0.39,0.35,0.27,0.23,0.19,0.12]},
+  series:[{c:'#4f46e5',d:[0.50,0.45,0.40,0.36,0.33,0.30,0.27,0.23,0.20,0.15,0.10]}]});
+// incline bench convergence
+lc('convChart',{xMax:10,yMin:0.2,yMax:0.6,yt:4,series:[
+  {c:'#0ea5a0',d:[0.54,0.50,0.49,0.44,0.45,0.38,0.38,0.39,0.33,0.29]},
+  {c:'#e2683c',d:[0.54,0.50,0.49,0.43,0.42,0.35,0.37,0.38,0.32,0.30]},
+  {c:'#0f9d58',d:[0.539,0.503,0.504,0.444,0.459,0.401,0.386,0.393,0.343,0.291]}]});
+// deadlift divergence
+lc('divChart',{xMax:8,yMin:0.2,yMax:0.6,yt:4,series:[
+  {c:'#7c3aed',d:[0.47,0.53,0.52,0.54,0.52,0.48,0.49,0.38]},
+  {c:'#0ea5a0',d:[0.37,0.40,0.34,0.46,0.35,0.37,0.31,0.29]},
+  {c:'#e2683c',d:[0.43,0.46,0.46,0.49,0.50,0.42,0.44,0.32]},
+  {c:'#0f9d58',d:[0.534,0.574,0.567,0.579,0.570,0.530,0.523,0.368]}]});
+</script>
+</body>
+</html>
