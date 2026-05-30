@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBT — visual brief</title>
+<style>
+  :root{
+    --ink:#0e1116; --body:#363b45; --muted:#7b818d; --line:#e6e8ec; --grid:#eceef1;
+    --accent:#4f46e5; --accent-soft:#eef0fe; --signal:#0f9d58; --warn:#b4690e;
+    --panel:#fafbfc;
+    --v-watch:#4f46e5; --v-sb:#0ea5a0; --v-stance:#e2683c; --v-metric:#7c3aed; --v-wl:#0f9d58;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:Georgia,"Times New Roman",serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#eceef1;color:var(--body);font-family:var(--sans);font-size:10px;line-height:1.45;padding:24px}
+  .toolbar{max-width:8.5in;margin:0 auto 14px;display:flex;justify-content:flex-end}
+  .btn{font:600 12px var(--sans);color:#fff;background:var(--accent);border:0;border-radius:7px;padding:9px 16px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+
+  .page{position:relative;width:8.5in;min-height:11in;margin:0 auto 22px;background:#fff;
+        padding:0.5in 0.55in 0.4in;box-shadow:0 10px 40px rgba(20,25,40,.16);border-radius:3px}
+  .pnum{position:absolute;bottom:0.28in;right:0.55in;font:600 8px var(--mono);color:#b6bcc6}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:10px;border-bottom:2px solid var(--ink)}
+  .brand{display:flex;align-items:center;gap:13px}
+  .mark{font:800 32px/0.9 var(--sans);letter-spacing:-.02em;color:var(--ink)}
+  .mark b{color:var(--accent)}
+  .tag{font-size:10px;color:var(--muted);max-width:320px;border-left:2px solid var(--line);padding-left:11px}
+  .status{font:600 9px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:5px 9px;border-radius:20px;white-space:nowrap}
+
+  .thesis{font-family:var(--serif);font-size:14px;line-height:1.5;color:var(--ink);margin:12px 0 10px}
+  .thesis .hl{background:linear-gradient(transparent 62%, #fbe8a6 62%)}
+  .thesis b{color:var(--accent)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 4px}
+  .chip{font-size:9px;border:1px solid var(--line);border-radius:20px;padding:4px 10px;color:var(--ink)}
+  .chip b{font-family:var(--mono);color:var(--accent)}
+
+  h2.sec{display:flex;align-items:center;gap:8px;margin:20px 0 9px;font:700 11px var(--sans);letter-spacing:.11em;text-transform:uppercase;color:var(--ink)}
+  h2.sec::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--accent)}
+  h2.sec .n{font-family:var(--mono);color:var(--muted);font-weight:600;letter-spacing:0}
+  .lead{color:var(--muted);font-size:9.6px;margin:-4px 0 10px;max-width:6.6in}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 13px}
+  .card h3{margin:0 0 6px;font:700 10px var(--sans);color:var(--ink);letter-spacing:.02em}
+  figcaption{font-size:8.4px;color:var(--muted);margin-top:5px;line-height:1.4}
+
+  table{width:100%;border-collapse:collapse;font-size:9px}
+  th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font:700 8px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  td.n,th.n{text-align:center}
+  .mono{font-family:var(--mono)}
+  tbody tr:last-child td{border-bottom:0}
+
+  .matrix td{font-size:9px}
+  .matrix .cap{font-weight:600;color:var(--ink)}
+  .matrix th.us,.matrix td.us{background:var(--accent-soft)}
+  .matrix th.us{color:var(--accent)}
+  .yes{color:var(--signal);font-weight:700}.no{color:#c2c7d0;font-weight:700}.part{color:var(--warn);font-weight:700}
+
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:8.5px;color:var(--body);margin-top:4px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
+  .heat td{text-align:center;font-size:8.3px;font-weight:600}
+  .heat td.lift{text-align:left;font-weight:600;color:var(--ink);background:#fff}
+  .h-good{background:#d8f0e2;color:#0b6b3d}.h-fair{background:#fbeccf;color:#8a5208}.h-hard{background:#f6dada;color:#9b2c2c}.h-na{background:#eef0f2;color:#9aa0ab}
+
+  /* roadmap */
+  .road{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}
+  .step{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff;position:relative}
+  .step .ph{font:700 8px var(--mono);color:var(--accent);letter-spacing:.04em}
+  .step .ti{font-weight:700;color:var(--ink);font-size:9.3px;margin:3px 0}
+  .step .ds{font-size:8.3px;color:var(--muted)}
+  .step.done{background:var(--accent-soft);border-color:#cfd2f7}
+  .step.done .badge{position:absolute;top:7px;right:8px;font:700 7px var(--mono);color:#fff;background:var(--signal);padding:2px 5px;border-radius:10px}
+
+  .statrow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:4px 0 12px}
+  .stat{text-align:center;border:1px solid var(--line);border-radius:9px;padding:9px 6px;background:var(--panel)}
+  .stat .big{font:800 20px var(--sans);color:var(--accent);line-height:1}
+  .stat .lbl{font-size:8px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+
+  .risk td:first-child{font-weight:650;color:var(--ink);width:42%}
+  .sci{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px;font-size:8.6px}
+  .zonebar{display:flex;height:16px;border-radius:4px;overflow:hidden;margin:5px 0;font:700 7px var(--mono);color:#fff;line-height:16px;text-align:center}
+  .zonebar span{display:block}
+
+  footer{margin-top:16px;padding-top:9px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:8.4px}
+
+  @media print{
+    @page{size:Letter;margin:0}
+    body{background:#fff;padding:0}
+    .toolbar{display:none}
+    .page{width:auto;min-height:auto;margin:0;box-shadow:none;border-radius:0;padding:0.5in 0.55in;page-break-after:always}
+    .page:last-child{page-break-after:auto}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar"><button class="btn" onclick="window.print()">Print / Save as PDF</button></div>
+
+<!-- ============================ PAGE 1 ============================ -->
+<div class="page">
+  <header>
+    <div class="brand">
+      <div class="mark">V<b>B</b>T</div>
+      <svg width="112" height="38" viewBox="0 0 112 38" aria-hidden="true">
+        <polyline fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          points="4,16 16,10 28,11 40,14 52,17 64,20 76,24 88,29 100,33 107,35"/>
+        <circle cx="16" cy="10" r="2.3" fill="#4f46e5"/><circle cx="52" cy="17" r="2.3" fill="#4f46e5"/>
+        <circle cx="88" cy="29" r="2.3" fill="#4f46e5"/><circle cx="107" cy="35" r="2.6" fill="#b4690e"/>
+      </svg>
+      <div class="tag">Velocity-based training &amp; muscular-fatigue tracking, fused from the sensors you already own.</div>
+    </div>
+    <div class="status">Visual brief · May 2026</div>
+  </header>
+
+  <p class="thesis">
+    Heart-rate wearables are <b>blind to lifting</b> — you can grind your muscles and CNS to failure with barely a flicker in HR, so they report you hardly trained.
+    <span class="hl">VBT counts every rep and tracks intra-set <b>velocity loss</b></span> — a validated proximity-to-failure signal — to build the <b>muscular strain &amp; recovery score</b> those platforms structurally can’t.
+  </p>
+  <div class="chips">
+    <span class="chip"><b>4</b> commercial tools → <b>1</b> model</span>
+    <span class="chip">3-way agreement to <b>~0.02&nbsp;m/s</b></span>
+    <span class="chip">confidence-scored, <b>per rep</b></span>
+    <span class="chip">watch-first, <b>no bar hardware</b></span>
+  </div>
+
+  <h2 class="sec"><span class="n">01</span>&nbsp;Why now — the blind spot</h2>
+  <p class="lead">The same hard set, seen two ways. HR barely moves; the muscular cost — captured by rep-by-rep velocity decay — is enormous. That gap is the product.</p>
+  <div class="two">
+    <figure class="card" style="margin:0">
+      <h3>One hard set: HR vs. muscular strain <span style="font-weight:400;color:var(--muted)">(illustrative)</span></h3>
+      <div id="hrChart"></div>
+      <div class="legend"><span><i style="background:#e2683c"></i>Heart rate (% max)</span><span><i style="background:#4f46e5"></i>Muscular strain (velocity-loss based)</span></div>
+      <figcaption>HR-based scores read this set as “easy.” Velocity loss reads it as near-failure — the truth your muscles know.</figcaption>
+    </figure>
+    <figure class="card" style="margin:0">
+      <h3>What only velocity sees</h3>
+      <table style="margin-top:2px">
+        <tbody>
+          <tr><td class="cap">Every rep counted</td><td>volume &amp; fatigue, not guessed</td></tr>
+          <tr><td class="cap">Intra-set velocity loss</td><td>validated proximity-to-failure</td></tr>
+          <tr><td class="cap">Per-rep / per-metric confidence</td><td>know what to trust</td></tr>
+          <tr><td class="cap">Muscular strain &amp; recovery</td><td>the score HR can’t build</td></tr>
+        </tbody>
+      </table>
+      <figcaption>Velocity loss is the rare gym metric that’s both <b>validated in the literature</b> and <b>actionable in real time</b>.</figcaption>
+    </figure>
+  </div>
+
+  <h2 class="sec"><span class="n">02</span>&nbsp;Where VBT sits</h2>
+  <p class="lead">Everyone measures <i>something</i>. No one combines muscular strain, measurement confidence, sensor fusion, any-lift coverage, and zero added hardware.</p>
+  <table class="matrix">
+    <thead><tr>
+      <th style="width:30%">Capability</th>
+      <th class="n">HR wearables<br><span style="font-weight:400">Whoop · Athlytic</span></th>
+      <th class="n">BLE bar device<br><span style="font-weight:400">Vitruve · Stance</span></th>
+      <th class="n">Video apps<br><span style="font-weight:400">Metric · SmartBarbell</span></th>
+      <th class="n us">VBT</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="cap">Counts every rep</td><td class="n"><span class="no">○</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td class="cap">Intra-set velocity loss</td><td class="n"><span class="no">○</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td class="cap">Muscular strain &amp; recovery</td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td class="cap">Per-rep measurement confidence</td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td class="cap">Multi-source fusion</td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td class="cap">Works on any lift</td><td class="n"><span class="part">◐</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="part">◐→●</span></td></tr>
+      <tr><td class="cap">No added hardware</td><td class="n"><span class="yes">●</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="part">◐</span></td><td class="n us"><span class="yes">●</span></td></tr>
+    </tbody>
+  </table>
+  <div class="legend"><span><span class="yes">●</span> strong&nbsp;&nbsp;<span class="part">◐</span> partial&nbsp;&nbsp;<span class="no">○</span> none</span><span style="color:var(--muted)">BLE = barbell-only; video needs a round plate + good framing; HR is structurally blind to resistance work.</span></div>
+  <div class="pnum">VBT · 1 / 3</div>
+</div>
+
+<!-- ============================ PAGE 2 ============================ -->
+<div class="page">
+  <h2 class="sec"><span class="n">03</span>&nbsp;How it works — one model, many sensors</h2>
+  <p class="lead">Every source emits the same shape — rep boundaries, a velocity profile, range of motion, and a <i>confidence</i> — into one fusion layer. A learned personal prior strengthens with every set, so even a lone noisy watch stays legible.</p>
+  <svg viewBox="0 0 700 196" width="100%" style="margin-bottom:4px">
+    <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#9aa0ab"/></marker></defs>
+    <!-- sources -->
+    <g font-size="9" font-family="-apple-system,sans-serif" text-anchor="middle">
+      <g>
+        <rect x="8"  y="14" width="150" height="34" rx="7" fill="#eef0fe" stroke="#cfd2f7"/><text x="83" y="29" fill="#0e1116" font-weight="700">Apple Watch IMU</text><text x="83" y="41" fill="#7b818d" font-size="8">primary · always on</text>
+        <rect x="8"  y="54" width="150" height="30" rx="7" fill="#fff" stroke="#e6e8ec"/><text x="83" y="73" fill="#0e1116">AirPods IMU + HR</text>
+        <rect x="8"  y="90" width="150" height="30" rx="7" fill="#fff" stroke="#e6e8ec"/><text x="83" y="109" fill="#0e1116">Phone video</text>
+        <rect x="8"  y="126" width="150" height="30" rx="7" fill="#fff" stroke="#e6e8ec"/><text x="83" y="145" fill="#0e1116">BLE bar device</text>
+      </g>
+      <!-- arrows to fusion -->
+      <g stroke="#9aa0ab" stroke-width="1.4" marker-end="url(#ar)">
+        <line x1="160" y1="31" x2="252" y2="74"/><line x1="160" y1="69" x2="252" y2="83"/>
+        <line x1="160" y1="105" x2="252" y2="96"/><line x1="160" y1="141" x2="252" y2="105"/>
+      </g>
+      <!-- fusion -->
+      <rect x="256" y="58" width="150" height="64" rx="9" fill="#0e1116"/><text x="331" y="80" fill="#fff" font-weight="700">Fusion + confidence</text><text x="331" y="94" fill="#c7cad6" font-size="7.6">align on true rep ·</text><text x="331" y="105" fill="#c7cad6" font-size="7.6">weight by trust · re-segment</text>
+      <!-- prior -->
+      <rect x="256" y="140" width="150" height="34" rx="8" fill="#fff" stroke="#cfd2f7" stroke-dasharray="3 2"/><text x="331" y="155" fill="#4f46e5" font-weight="700" font-size="8.4">Learned personal prior</text><text x="331" y="166" fill="#7b818d" font-size="7.4">rep-shape · tempo · MVT</text>
+      <line x1="331" y1="140" x2="331" y2="124" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#ar)"/>
+      <!-- to model -->
+      <line x1="406" y1="90" x2="448" y2="90" stroke="#9aa0ab" stroke-width="1.4" marker-end="url(#ar)"/>
+      <rect x="452" y="58" width="150" height="64" rx="9" fill="#eef0fe" stroke="#cfd2f7"/><text x="527" y="80" fill="#0e1116" font-weight="700">Rep + fatigue model</text><text x="527" y="94" fill="#7b818d" font-size="7.6">velocity loss ·</text><text x="527" y="105" fill="#7b818d" font-size="7.6">RFD · ROM · tempo</text>
+      <line x1="602" y1="90" x2="636" y2="90" stroke="#9aa0ab" stroke-width="1.4" marker-end="url(#ar)"/>
+      <rect x="612" y="50" width="84" height="80" rx="9" fill="#4f46e5"/><text x="654" y="84" fill="#fff" font-weight="700" font-size="9">Muscular</text><text x="654" y="97" fill="#fff" font-weight="700" font-size="9">strain score</text>
+    </g>
+  </svg>
+
+  <h2 class="sec"><span class="n">04</span>&nbsp;What the data already shows</h2>
+  <p class="lead">Real sets, each recorded by multiple tools at once. When conditions are good the sources nearly overlap; when they’re not, they spread — exactly why fusion + confidence matter.</p>
+  <div class="two">
+    <figure class="card" style="margin:0">
+      <h3>Sources <span style="color:var(--signal)">converge</span> — incline bench, 185 lb × 10</h3>
+      <div id="convChart"></div>
+      <div class="legend"><span><i style="background:var(--v-sb)"></i>SmartBarbell</span><span><i style="background:var(--v-stance)"></i>Stance</span><span><i style="background:var(--v-wl)"></i>WL Analysis</span></div>
+      <figcaption>Three independent methods agree within <span class="mono">~0.02 m/s</span> — a clean read of the noise floor.</figcaption>
+    </figure>
+    <figure class="card" style="margin:0">
+      <h3>Sources <span style="color:var(--warn)">diverge</span> — deadlift, 285 lb × 8</h3>
+      <div id="divChart"></div>
+      <div class="legend"><span><i style="background:var(--v-metric)"></i>Metric</span><span><i style="background:var(--v-sb)"></i>SmartBarbell</span><span><i style="background:var(--v-stance)"></i>Stance</span><span><i style="background:var(--v-wl)"></i>WL</span></div>
+      <figcaption>Same set, ~0.15 m/s spread and different decline shapes — “ground truth” is plural.</figcaption>
+    </figure>
+  </div>
+
+  <div class="two" style="margin-top:13px">
+    <div>
+      <h3 style="font:700 10px var(--sans);color:var(--ink);margin:0 0 5px">Agreement vs. on-bar reference (mean velocity)</h3>
+      <table>
+        <thead><tr><th>Set</th><th class="n">bias</th><th class="n">RMSE</th><th>read</th></tr></thead>
+        <tbody class="mono">
+          <tr><td>Incline bench</td><td class="n">±0.01</td><td class="n">.015–.024</td><td style="font-family:var(--sans)" class="yes">excellent</td></tr>
+          <tr><td>Deadlift 330</td><td class="n">−.06…+.10</td><td class="n">.08–.10</td><td style="font-family:var(--sans)" class="part">condition-dependent</td></tr>
+          <tr><td>Squat 245</td><td class="n">—</td><td class="n">—</td><td style="font-family:var(--sans)" class="part">1 source plate-occluded</td></tr>
+        </tbody>
+      </table>
+      <figcaption>Error behaves as a roughly <b>constant offset</b>, not a moving target — a tractable calibration.</figcaption>
+    </div>
+    <div>
+      <h3 style="font:700 10px var(--sans);color:var(--ink);margin:0 0 5px">Source × lift fit <span style="font-weight:400;color:var(--muted)">(early evidence + hypothesis)</span></h3>
+      <table class="heat">
+        <thead><tr><th>&nbsp;</th><th>DL</th><th>Bench</th><th>Incline</th><th>Squat</th><th>Cable/DB</th></tr></thead>
+        <tbody>
+          <tr><td class="lift">Watch IMU</td><td class="h-good">good</td><td class="h-good">good</td><td class="h-good">good</td><td class="h-hard">hard</td><td class="h-fair">fair</td></tr>
+          <tr><td class="lift">Phone video</td><td class="h-fair">fair</td><td class="h-good">good</td><td class="h-good">good</td><td class="h-fair">fair</td><td class="h-na">n/a</td></tr>
+          <tr><td class="lift">BLE device</td><td class="h-good">good</td><td class="h-good">good</td><td class="h-good">good</td><td class="h-good">good</td><td class="h-na">n/a</td></tr>
+        </tbody>
+      </table>
+      <figcaption>No single sensor wins everywhere — which is the whole argument for a source-agnostic model.</figcaption>
+    </div>
+  </div>
+
+  <h2 class="sec" style="margin-top:16px"><span class="n">05</span>&nbsp;Five truths from the first sets</h2>
+  <div class="two">
+    <ul style="margin:0;padding:0;list-style:none">
+      <li style="padding-left:13px;position:relative;margin-bottom:5px"><span style="position:absolute;left:0;top:5px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></span><b>Every “ground truth” disagrees</b> — on rep count <i>and</i> decline shape.</li>
+      <li style="padding-left:13px;position:relative;margin-bottom:5px"><span style="position:absolute;left:0;top:5px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></span><b>The reps that matter most are measured worst</b> — the grindy finish carries the fatigue signal.</li>
+      <li style="padding-left:13px;position:relative;margin-bottom:5px"><span style="position:absolute;left:0;top:5px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></span><b>Time-domain metrics stay robust</b> when velocity gets noisy on terminal reps.</li>
+    </ul>
+    <ul style="margin:0;padding:0;list-style:none">
+      <li style="padding-left:13px;position:relative;margin-bottom:5px"><span style="position:absolute;left:0;top:5px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></span><b>Confidence is open white space</b> — a leader’s “100%” badge stayed 100% while it missed half a set.</li>
+      <li style="padding-left:13px;position:relative;margin-bottom:5px"><span style="position:absolute;left:0;top:5px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></span><b>Conditions, not category, set accuracy</b> — frame rate &amp; plate shape quietly break video.</li>
+      <li style="padding-left:13px;position:relative;margin-bottom:5px"><span style="position:absolute;left:0;top:5px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></span><b>Calibration is a constant offset</b> — fixable once, per source × lift.</li>
+    </ul>
+  </div>
+  <div class="pnum">VBT · 2 / 3</div>
+</div>
+
+<!-- ============================ PAGE 3 ============================ -->
+<div class="page">
+  <h2 class="sec"><span class="n">06</span>&nbsp;The path</h2>
+  <p class="lead">De-risk the signal first, then the always-on watch experience, then the flywheel, then fusion — each step ships standalone value.</p>
+  <div class="road">
+    <div class="step done"><span class="badge">DONE</span><div class="ph">PHASE 0</div><div class="ti">Capture &amp; lab</div><div class="ds">watch→phone pipeline, ZUPT analysis, multi-vendor dataset</div></div>
+    <div class="step"><div class="ph">PHASE 1</div><div class="ti">Calibrate</div><div class="ds">watch vs Vitruve ground truth; quantify error</div></div>
+    <div class="step"><div class="ph">PHASE 2</div><div class="ti">Watch-only</div><div class="ds">confidence + personal prior + velocity-loss</div></div>
+    <div class="step"><div class="ph">PHASE 3</div><div class="ti">Flywheel</div><div class="ds">manual rep editor → every fix trains the prior</div></div>
+    <div class="step"><div class="ph">PHASE 4</div><div class="ti">Fuse</div><div class="ds">add video / AirPods → consensus rep detection</div></div>
+    <div class="step"><div class="ph">PHASE 5</div><div class="ti">The score</div><div class="ds">muscular strain &amp; recovery, any lift</div></div>
+  </div>
+
+  <h2 class="sec"><span class="n">07</span>&nbsp;The lab — proof we’re building on data</h2>
+  <div class="statrow">
+    <div class="stat"><div class="big">5</div><div class="lbl">real sets logged</div></div>
+    <div class="stat"><div class="big">4</div><div class="lbl">commercial tools</div></div>
+    <div class="stat"><div class="big">3</div><div class="lbl">lifts (SQ·BN·DL)</div></div>
+    <div class="stat"><div class="big">~7k</div><div class="lbl">per-frame samples</div></div>
+    <div class="stat"><div class="big">1</div><div class="lbl">ground truth incoming</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Date</th><th>Lift</th><th class="n">Load</th><th class="n">Reps</th><th>Sources captured</th><th>What it taught us</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">04/24</td><td>Bench (flat)</td><td class="n mono">245</td><td class="n mono">6</td><td>SmartBarbell, WL</td><td>non-round plates break video circle-detection — fixable in-app</td></tr>
+      <tr><td class="mono">05/27</td><td>Squat</td><td class="n mono">245</td><td class="n mono">10</td><td>SmartBarbell, Metric, WL</td><td>occlusion → low-confidence flag fired correctly</td></tr>
+      <tr><td class="mono">05/28</td><td>Incline bench</td><td class="n mono">185</td><td class="n mono">10</td><td>SmartBarbell, Stance, WL, Metric</td><td>3-way agreement to ~0.02 m/s; Metric mis-counted at 24fps</td></tr>
+      <tr><td class="mono">05/29</td><td>Deadlift</td><td class="n mono">330</td><td class="n mono">8</td><td>SmartBarbell, Stance, Metric, WL</td><td>a source dropped the final rep — the one that matters</td></tr>
+      <tr><td class="mono">05/29</td><td>Deadlift</td><td class="n mono">285</td><td class="n mono">8</td><td>SmartBarbell, Stance, Metric, WL</td><td>full 4-way divergence on decline shape</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec"><span class="n">08</span>&nbsp;Hurdles we’ll have to clear</h2>
+  <table class="risk">
+    <thead><tr><th>Hurdle</th><th>How we clear it</th></tr></thead>
+    <tbody>
+      <tr><td>The wrist isn’t the bar — accuracy is exercise-dependent; drift is the enemy</td><td>start on best-case lifts (DL/bench), ZUPT, fuse + prior, lean on relative trend</td></tr>
+      <tr><td>watchOS must sustain ~100–200&nbsp;Hz a full session without throttling or draining</td><td>thin vertical slice de-risks it first; batched sensor API built for this</td></tr>
+      <tr><td>Rep detection on grindy &amp; unconventional lifts</td><td>periodicity fallback + cross-source consensus + a manual editor</td></tr>
+      <tr><td>The prior needs data; cold-start &amp; per-user learning at scale</td><td>population prior to start, personal flywheel from corrections</td></tr>
+      <tr><td>Video fragility — frame rate, plate shape, framing</td><td>per-condition confidence; region-tracking; in-app guidance</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec"><span class="n">09</span>&nbsp;The science it stands on</h2>
+  <div class="sci">
+    <div>
+      <b>Velocity zones</b> (mean concentric, m/s)
+      <div class="zonebar">
+        <span style="flex:5;background:#4338ca">strength 0–.5</span>
+        <span style="flex:2.5;background:#6d28d9">.5–.75</span>
+        <span style="flex:2.5;background:#0ea5a0">.75–1.0</span>
+        <span style="flex:3;background:#0f9d58">speed 1.0+</span>
+      </div>
+      <span style="color:var(--muted)">we prefer personal rolling baselines over fixed zones</span>
+    </div>
+    <div>
+      <b>Velocity-loss cut-offs</b><br>
+      <span class="mono">~10%</span> power · <span class="mono">~20%</span> strength · <span class="mono">~30%+</span> hypertrophy.
+      Higher loss = closer to failure.
+    </div>
+    <div>
+      <b>Min. velocity threshold</b> (≈ velocity at 1RM)<br>
+      <span class="mono">deadlift ≈ .15–.20</span> · <span class="mono">bench ≈ .10–.17</span> · <span class="mono">squat ≈ .25–.30</span>
+    </div>
+  </div>
+
+  <footer>
+    <span>Working prototype &amp; a growing personal multi-vendor measurement dataset. Figures from real recorded sets; HR/strain panel illustrative.</span>
+    <span class="mono">VBT · 3 / 3</span>
+  </footer>
+</div>
+
+<script>
+function lc(id,cfg){
+  var w=cfg.w||330,h=cfg.h||150,p={t:10,r:10,b:24,l:30};
+  var iw=w-p.l-p.r,ih=h-p.t-p.b,xMin=1,xMax=cfg.xMax,yMin=cfg.yMin,yMax=cfg.yMax,yt=cfg.yt||4;
+  var X=function(x){return p.l+(x-xMin)/(xMax-xMin)*iw;}, Y=function(y){return p.t+(yMax-y)/(yMax-yMin)*ih;};
+  var s='<svg viewBox="0 0 '+w+' '+h+'" width="100%">';
+  for(var i=0;i<=yt;i++){var v=yMin+(yMax-yMin)*i/yt,yy=Y(v).toFixed(1);
+    s+='<line x1="'+p.l+'" y1="'+yy+'" x2="'+(w-p.r)+'" y2="'+yy+'" stroke="#eceef1"/>';
+    s+='<text x="'+(p.l-4)+'" y="'+(+yy+2.5)+'" font-size="6.6" fill="#9aa0ab" text-anchor="end">'+v.toFixed(2)+'</text>';}
+  for(var x=xMin;x<=xMax;x++){s+='<text x="'+X(x).toFixed(1)+'" y="'+(h-p.b+11)+'" font-size="6.6" fill="#9aa0ab" text-anchor="middle">'+x+'</text>';}
+  s+='<text x="'+(p.l+iw/2)+'" y="'+(h-1)+'" font-size="7" fill="#7b818d" text-anchor="middle">rep number</text>';
+  cfg.series.forEach(function(se){
+    var pts=se.d.map(function(y,i){return X(i+1).toFixed(1)+','+Y(y).toFixed(1);}).join(' ');
+    s+='<polyline fill="none" stroke="'+se.c+'" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" points="'+pts+'"/>';
+    se.d.forEach(function(y,i){s+='<circle cx="'+X(i+1).toFixed(1)+'" cy="'+Y(y).toFixed(1)+'" r="1.7" fill="'+se.c+'"/>';});
+  });
+  s+='</svg>';
+  document.getElementById(id).innerHTML=s;
+}
+// illustrative HR vs strain across a set
+lc('hrChart',{xMax:5,yMin:0,yMax:100,yt:4,series:[
+  {c:'#e2683c',d:[55,58,57,59,56]},
+  {c:'#4f46e5',d:[18,40,58,76,90]}
+]});
+// incline bench — convergence
+lc('convChart',{xMax:10,yMin:0.2,yMax:0.6,yt:4,series:[
+  {c:'#0ea5a0',d:[0.54,0.50,0.49,0.44,0.45,0.38,0.38,0.39,0.33,0.29]},
+  {c:'#e2683c',d:[0.54,0.50,0.49,0.43,0.42,0.35,0.37,0.38,0.32,0.30]},
+  {c:'#0f9d58',d:[0.539,0.503,0.504,0.444,0.459,0.401,0.386,0.393,0.343,0.291]}
+]});
+// deadlift — divergence
+lc('divChart',{xMax:8,yMin:0.2,yMax:0.6,yt:4,series:[
+  {c:'#7c3aed',d:[0.47,0.53,0.52,0.54,0.52,0.48,0.49,0.38]},
+  {c:'#0ea5a0',d:[0.37,0.40,0.34,0.46,0.35,0.37,0.31,0.29]},
+  {c:'#e2683c',d:[0.43,0.46,0.46,0.49,0.50,0.42,0.44,0.32]},
+  {c:'#0f9d58',d:[0.534,0.574,0.567,0.579,0.570,0.530,0.523,0.368]}
+]});
+</script>
+</body>
+</html>
