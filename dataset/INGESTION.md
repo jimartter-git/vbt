@@ -63,8 +63,14 @@ as confidence.
 **WL Analysis** — don't hand-type the per-frame table. Save the `.txt` into
 `dataset/raw/`, add a `raw_files.csv` pointer, then:
 `python tools/wl_import.py raw/<file>.txt <set_id> --append`
-(it segments the frame velocity into per-rep means). **"Weight (lbs)" in the file
-is actually kg — ignore it; use the user's stated load.** Verify the parser's rep
+The importer selects columns **by name** (`velocity (vertical, m/s)`), so both the
+slim 3-column and the rich ~16-column exports (velocity/accel/displacement/power/
+force × axes) work in any order. It uses the **vertical velocity** channel for
+segmentation, the **vertical displacement** channel for a direct drift-free ROM
+(falls back to integrated velocity, flagged `rom_integrated`), and **vertical
+acceleration** for per-rep `peak_accel`. Export at least vertical velocity; adding
+displacement + acceleration is strictly better. **"Weight (lbs)" in the file is
+actually kg — ignore it; use the user's stated load.** Verify the parser's rep
 count against the user's true count the first time.
 
 **Vitruve** — once it arrives, prefer its CSV export; it becomes the reference
