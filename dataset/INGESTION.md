@@ -72,6 +72,12 @@ acceleration** for per-rep `peak_accel`. Export at least vertical velocity; addi
 displacement + acceleration is strictly better. **"Weight (lbs)" in the file is
 actually kg — ignore it; use the user's stated load.** Verify the parser's rep
 count against the user's true count the first time.
+- **Non-round / 12-sided plates:** WL's automatic circle-detection fails (wrong
+  scale → garbage weight cal, spurious velocity spikes, undercount). Fix in the WL
+  app: **manually drag the circle inside the plate's straight edges AND toggle OFF
+  "standard plate diameter."** That restored correct scale + velocities (verified
+  on 20260424-BN-1). SmartBarbell's region-tracking handles non-round plates with
+  no such step.
 
 **Vitruve** — once it arrives, prefer its CSV export; it becomes the reference
 vendor for calibration (`compare.py` auto-prefers it).
