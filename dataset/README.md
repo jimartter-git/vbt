@@ -57,6 +57,9 @@ Rules for any calculated measure (enforced in `compare.py`):
 
 ## Entry workflow (multimodal in, normalized out)
 
+> **Adding a record from a screenshot/export?** Follow `INGESTION.md` — it has the
+> per-vendor recognition + column→metric recipes and the metadata to collect.
+
 You supply linking metadata per set; inputs arrive however each tool allows:
 
 1. **Metadata** — for each set, confirm: `set_id | lift | load | RPE | which vendors`.
