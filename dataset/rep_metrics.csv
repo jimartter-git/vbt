@@ -447,3 +447,17 @@ set_id,vendor,rep_index,true_rep,metric,value,unit,flag,confidence
 20260528-IB-1,wl_analysis,10,10,peak_velocity,0.42,m/s,,
 20260528-IB-1,wl_analysis,10,10,rom,43.0,cm,,
 20260528-IB-1,wl_analysis,10,10,peak_accel,4.88,m/s^2,,
+20260528-IB-1,metric,1,,mean_velocity,0.38,m/s,undercount,0.3
+20260528-IB-1,metric,2,,mean_velocity,0.4,m/s,undercount,0.3
+20260528-IB-1,metric,3,,mean_velocity,0.41,m/s,undercount,0.3
+20260528-IB-1,metric,4,,mean_velocity,0.4,m/s,undercount,0.3
+20260528-IB-1,metric,5,,mean_velocity,0.36,m/s,undercount,0.3
+20260528-IB-1,metric,1,,rom,39,cm,undercount,0.3
+20260528-IB-1,metric,2,,rom,45,cm,undercount,0.3
+20260528-IB-1,metric,3,,rom,45,cm,undercount,0.3
+20260528-IB-1,metric,4,,rom,43,cm,undercount,0.3
+20260528-IB-1,metric,5,,rom,44,cm,undercount,0.3
+20260528-IB-1,metric,1,,eccentric_time,0.7,s,undercount,0.3
+20260528-IB-1,metric,2,,eccentric_time,0.9,s,undercount,0.3
+20260528-IB-1,metric,3,,eccentric_time,1.5,s,undercount,0.3
+20260528-IB-1,metric,4,,eccentric_time,0.9,s,undercount,0.3

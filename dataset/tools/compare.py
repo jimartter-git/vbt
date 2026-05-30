@@ -56,17 +56,17 @@ def main() -> int:
         return 1
 
     per_rep = d.copy()
-    # Align on the PHYSICAL rep (true_rep); fall back to the vendor's own
-    # rep_index only when true_rep wasn't resolved. Never compare on rep_index
-    # across vendors — a dropped rep renumbers it.
-    per_rep["rep"] = per_rep["true_rep"].where(per_rep["true_rep"].notna(), per_rep["rep_index"])
-    per_rep = per_rep[per_rep["rep"].notna()].copy()
-    per_rep["rep"] = per_rep["rep"].astype(int)
+    # Aligned rows REQUIRE a physical rep number (true_rep). Per-rep rows that
+    # lack it (e.g. a vendor that mis-counted reps) can't be aligned across
+    # vendors -> reported separately, never positionally forced onto rep_index.
+    unaligned = per_rep[per_rep["true_rep"].isna() & per_rep["rep_index"].notna()]
+    aligned = per_rep[per_rep["true_rep"].notna()].copy()
+    aligned["rep"] = aligned["true_rep"].astype(int)
 
     # Flags that mean "not a real measurement" — keep them out of the numbers.
     INVALID = {"phantom", "missed"}
-    flagged = per_rep[per_rep.flag.notna() & (per_rep.flag != "")]
-    valid = per_rep[~per_rep.flag.isin(INVALID)]
+    flagged = aligned[aligned.flag.notna() & (aligned.flag != "")]
+    valid = aligned[~aligned.flag.isin(INVALID)]
     table = valid.pivot_table(index="rep", columns="vendor",
                               values="value", aggfunc="first").sort_index()
 
@@ -78,6 +78,12 @@ def main() -> int:
             f"({'excluded' if r.flag in INVALID else 'kept, annotated'})"
             for _, r in flagged.iterrows())
         print(f"  flagged: {notes}")
+    if not unaligned.empty:
+        for v, g in unaligned.groupby("vendor"):
+            fl = [x for x in g.flag.dropna().unique() if x]
+            tag = f" [{fl[0]}]" if fl else ""
+            print(f"  unaligned: {v} reported {len(g)} reps{tag}, true_rep unresolved "
+                  f"(mean {g.value.mean():.3f}) — excluded from alignment")
 
     # Per-vendor summary. VL is best-referenced and labels WHICH rep it runs to,
     # so a 7-rep vendor's loss is never silently equated with an 8-rep vendor's.
