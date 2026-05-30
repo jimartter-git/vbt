@@ -172,3 +172,27 @@ Rep + fatigue model (velocity loss → muscular strain & recovery)
 - **Phase 5.** Full multi-source fusion; confidence-triggered active-learning
   prompts; HR as context into the strain model.
 ```
+
+## Optional future hardware — the gym "sensor-cam" (parked idea, not committed)
+
+A small, strongly-magnetized wide-angle camera that sticks to a rack/upright and
+watches the lift. Whoop-in-spirit: **no screen, no playback, no saved footage** —
+frames are consumed on-device by computer vision (velocity, ROM, strain) and
+discarded. *It's a sensor, not a camera.*
+
+Why it's compelling:
+- **Kills video friction** — ambient capture, no tripod/aiming; installed once per
+  station → fixed, known geometry → stable, easy calibration. The "forgiving
+  video" problem largely dissolves when the camera lives on the rack.
+- **Privacy-by-design is the wedge** — bystanders and gym owners accept a
+  no-recording sensor far more than a phone pointed at the room; "it never stores
+  video" is a real differentiator and a clean **B2B gym-install** opener.
+- **Pairs with the watch (fusion)** — camera = drift-free bar velocity; watch =
+  identity + IMU + always-on. The watch handshake also solves *which lifter is
+  this?* attribution.
+
+Parked considerations (deliberately not now): edge compute/battery (motion-wake
+duty cycle), gym permissioning / theft / multi-user concurrency, a privacy
+attestation (tally light / on-device-only proof), and it's **capital-intensive** —
+so strictly *later*. The watch + software path de-risks everything first; this is
+an option the data + CV stack unlocks, never a dependency.
