@@ -39,10 +39,15 @@ REPS_CSV = os.path.join(DATASET, "rep_metrics.csv")
 def parse_wl_txt(path: str) -> pd.DataFrame:
     """Extract the (time_s, velocity) frame table from a WL export.
 
-    Two real-export quirks we defend against (seen in the first committed file):
-    - A summary block ("video,average,min,...") sits above the frame table and its
-      data row (e.g. "1,0.45,-1.28,25650,...") starts with a digit, so it would be
-      mistaken for a frame. We only start reading after the "Frame number" header.
+    Three real-export quirks we defend against (seen in the committed files):
+    - One or MORE summary blocks ("velocity (vertical, m/s)" -> "video,average,..."
+      -> "1,0.41,-2.51,...") sit above the frame table, and each summary data row
+      starts with a digit, so it would be mistaken for a frame. The richest exports
+      stack ~16 of these (velocity/accel/displacement/power/force x axes). We only
+      parse rows BENEATH the "Frame number" header and ignore everything above it.
+    - The frame table may carry many extra columns (vertical/horizontal/total
+      velocity, accel, displacement, power, force). Column 2 (0-based) is always
+      vertical velocity in both the slim and rich exports, so we read just that.
     - The "Time (s)" column loses its decimals past ~10s (every frame reads as a
       bare integer second), so deduping/segmenting on it would collapse most of the
       set. We therefore IGNORE the time column for spacing and rebuild a uniform
@@ -50,17 +55,15 @@ def parse_wl_txt(path: str) -> pd.DataFrame:
     """
     frames, t_raw, vs = [], [], []
     in_table = False
-    saw_header = False
     with open(path, errors="ignore") as f:
         for line in f:
             parts = [p.strip().strip('"') for p in re.split(r"[,\t]", line)]
             if parts and parts[0].lower().startswith("frame number"):
-                in_table = saw_header = True
+                in_table = True  # the per-frame table begins after this header
                 continue
-            # If the file has the documented header, only trust rows beneath it.
-            if saw_header and not in_table:
-                continue
-            # A frame row is: <int frame>, <float time>, <float velocity>
+            if not in_table:
+                continue  # skip the Weight line + every summary block above the table
+            # A frame row is: <int frame>, <float time>, <float vertical velocity>, ...
             if len(parts) >= 3 and parts[0].isdigit():
                 try:
                     fr = int(parts[0]); t = float(parts[1]); v = float(parts[2])
@@ -80,15 +83,20 @@ def parse_wl_txt(path: str) -> pd.DataFrame:
     return df[["t", "v"]]
 
 
-def segment_reps(t: np.ndarray, v: np.ndarray, peak_min: float = 0.3):
+def segment_reps(t: np.ndarray, v: np.ndarray, peak_min: float = 0.3,
+                 rom_min: float = 0.25):
     """Return per-rep concentric (positive-velocity) segments as (start,end) idx.
 
     WL gives velocity directly (drift-free), so we high-pass to remove any slow
     baseline and split on zero-crossings, taking positive runs as concentrics.
-    A real concentric peaks near the bar's max speed (~1 m/s here); the small
-    ±0.1 m/s bounces that ride on the turnarounds between reps also read positive
-    but never get fast, so we require the segment's PEAK to clear `peak_min` to
-    keep those micro-bounces from inflating the rep count.
+    Two kinds of non-rep positive blips have to be rejected:
+    - the small ±0.1 m/s wobbles on the turnarounds between reps -> filtered by
+      requiring the segment PEAK to clear `peak_min`;
+    - on lifts where the bar is DROPPED from lockout (deadlift), it rebounds off
+      the floor in a short, fast positive spike (seen up to ~1.3 m/s) that a peak
+      threshold can't distinguish from a pull -> filtered by requiring the segment
+      to travel a real ROM (`rom_min`): a true concentric covers ~0.5-0.7 m, a
+      floor bounce only ~0.1 m.
     """
     fs = 1.0 / np.median(np.diff(t))
     b, a = butter(2, min(0.99, 0.1 / (fs / 2)), btype="high")
@@ -101,9 +109,13 @@ def segment_reps(t: np.ndarray, v: np.ndarray, peak_min: float = 0.3):
     for s, e in zip(bounds[:-1], bounds[1:]):
         if e - s < max(2, int(0.15 * fs)):
             continue
-        seg = v[s:e + 1]
-        if seg.mean() > 0 and seg.max() >= peak_min:   # a real concentric
-            segs.append((s, e))
+        seg_v, seg_t = v[s:e + 1], t[s:e + 1]
+        if seg_v.mean() <= 0 or seg_v.max() < peak_min:
+            continue
+        # displacement over the run; rejects floor bounces that never travel far
+        if cumulative_trapezoid(seg_v, seg_t, initial=0.0)[-1] < rom_min:
+            continue
+        segs.append((s, e))
     return segs
 
 
@@ -114,10 +126,20 @@ def derive_rep_metrics(df: pd.DataFrame):
     for i, (s, e) in enumerate(segs, start=1):
         seg_v, seg_t = v[s:e + 1], t[s:e + 1]
         rom_m = float(cumulative_trapezoid(seg_v, seg_t, initial=0.0)[-1])
+        # Mean over the ACTIVE pull only. The zero-crossing boundaries can sweep in
+        # the near-zero floor rest before a heavy rep (esp. the grindy terminal one),
+        # which would deflate the mean even though peak/ROM are right; trim the
+        # leading/trailing frames below 10% of peak so the mean matches what the
+        # commercial apps report (lockout-to-lockout concentric). ROM stays the
+        # full integral (the trimmed frames carry ~no displacement anyway).
+        peak = float(seg_v.max())
+        active = np.where(seg_v >= max(0.05, 0.1 * peak))[0]
+        a0, a1 = int(active[0]), int(active[-1])
+        mean_v = float(seg_v[a0:a1 + 1].mean())
         out.append({
             "rep_index": i,
-            "mean_velocity": round(float(seg_v.mean()), 3),
-            "peak_velocity": round(float(seg_v.max()), 3),
+            "mean_velocity": round(mean_v, 3),
+            "peak_velocity": round(peak, 3),
             "rom": round(rom_m * 100, 1),  # m -> cm
         })
     return out
