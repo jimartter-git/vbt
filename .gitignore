@@ -28,7 +28,10 @@ venv/
 analysis/data/*
 !analysis/data/.gitkeep
 
-# ---- dataset/ : SQLite is a rebuilt artifact; raw time-series are local ----
-dataset/dataset.sqlite
+# ---- dataset/ ----
+dataset/dataset.sqlite                 # rebuilt artifact
+# Raw data: COMMIT small text exports (WL .txt) so derived rows stay reproducible;
+# keep large binary/IMU streams (watch/AirPods .csv, video) OUT of git.
 dataset/raw/*
 !dataset/raw/.gitkeep
+!dataset/raw/*.txt
