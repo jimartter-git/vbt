@@ -29,7 +29,8 @@ analysis/data/*
 !analysis/data/.gitkeep
 
 # ---- dataset/ ----
-dataset/dataset.sqlite                 # rebuilt artifact
+# SQLite is a rebuilt artifact (comments must be on their own line in .gitignore).
+dataset/dataset.sqlite
 # Raw data: COMMIT small text exports (WL .txt) so derived rows stay reproducible;
 # keep large binary/IMU streams (watch/AirPods .csv, video) OUT of git.
 dataset/raw/*
