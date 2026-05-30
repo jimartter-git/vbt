@@ -37,29 +37,58 @@ REPS_CSV = os.path.join(DATASET, "rep_metrics.csv")
 
 
 def parse_wl_txt(path: str) -> pd.DataFrame:
-    """Extract the (time_s, velocity) frame table from a WL export."""
-    rows = []
+    """Extract the (time_s, velocity) frame table from a WL export.
+
+    Two real-export quirks we defend against (seen in the first committed file):
+    - A summary block ("video,average,min,...") sits above the frame table and its
+      data row (e.g. "1,0.45,-1.28,25650,...") starts with a digit, so it would be
+      mistaken for a frame. We only start reading after the "Frame number" header.
+    - The "Time (s)" column loses its decimals past ~10s (every frame reads as a
+      bare integer second), so deduping/segmenting on it would collapse most of the
+      set. We therefore IGNORE the time column for spacing and rebuild a uniform
+      time base from the frame numbers at the camera's frame rate.
+    """
+    frames, t_raw, vs = [], [], []
+    in_table = False
+    saw_header = False
     with open(path, errors="ignore") as f:
         for line in f:
-            parts = [p.strip() for p in re.split(r"[,\t]", line)]
+            parts = [p.strip().strip('"') for p in re.split(r"[,\t]", line)]
+            if parts and parts[0].lower().startswith("frame number"):
+                in_table = saw_header = True
+                continue
+            # If the file has the documented header, only trust rows beneath it.
+            if saw_header and not in_table:
+                continue
             # A frame row is: <int frame>, <float time>, <float velocity>
             if len(parts) >= 3 and parts[0].isdigit():
                 try:
-                    t = float(parts[1]); v = float(parts[2])
+                    fr = int(parts[0]); t = float(parts[1]); v = float(parts[2])
                 except ValueError:
                     continue
-                rows.append((t, v))
-    if not rows:
+                frames.append(fr); t_raw.append(t); vs.append(v)
+    if not frames:
         raise ValueError(f"no frame rows parsed from {path}")
-    df = pd.DataFrame(rows, columns=["t", "v"]).drop_duplicates("t").reset_index(drop=True)
-    return df
+    df = pd.DataFrame({"frame": frames, "t_raw": t_raw, "v": vs})
+    df = df.drop_duplicates("frame").sort_values("frame").reset_index(drop=True)
+    # Robust dt from the part of the time column that still has sub-second
+    # precision (ignore zero diffs from the integer-truncated tail and any jumps).
+    dt_raw = np.diff(df["t_raw"].to_numpy())
+    good = dt_raw[(dt_raw > 1e-4) & (dt_raw < 0.5)]
+    dt = float(np.median(good)) if good.size else 0.04
+    df["t"] = (df["frame"] - df["frame"].iloc[0]) * dt
+    return df[["t", "v"]]
 
 
-def segment_reps(t: np.ndarray, v: np.ndarray):
+def segment_reps(t: np.ndarray, v: np.ndarray, peak_min: float = 0.3):
     """Return per-rep concentric (positive-velocity) segments as (start,end) idx.
 
     WL gives velocity directly (drift-free), so we high-pass to remove any slow
     baseline and split on zero-crossings, taking positive runs as concentrics.
+    A real concentric peaks near the bar's max speed (~1 m/s here); the small
+    ±0.1 m/s bounces that ride on the turnarounds between reps also read positive
+    but never get fast, so we require the segment's PEAK to clear `peak_min` to
+    keep those micro-bounces from inflating the rep count.
     """
     fs = 1.0 / np.median(np.diff(t))
     b, a = butter(2, min(0.99, 0.1 / (fs / 2)), btype="high")
@@ -72,7 +101,8 @@ def segment_reps(t: np.ndarray, v: np.ndarray):
     for s, e in zip(bounds[:-1], bounds[1:]):
         if e - s < max(2, int(0.15 * fs)):
             continue
-        if np.mean(v[s:e + 1]) > 0:   # concentric
+        seg = v[s:e + 1]
+        if seg.mean() > 0 and seg.max() >= peak_min:   # a real concentric
             segs.append((s, e))
     return segs
 
