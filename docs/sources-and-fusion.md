@@ -191,6 +191,17 @@ Why it's compelling:
   identity + IMU + always-on. The watch handshake also solves *which lifter is
   this?* attribution.
 
+**Placement decides which sensor leads** (one device, flexible form):
+- *On a rack / floor / box, angled at you* (the primary idea): the **camera leads**
+  — ambient, privacy-first, attach nothing, multi-station.
+- *On the bar / plate* (optional "power mode"): an **IMU leads** (Stance-style
+  direct kinematics), and the outward camera can add **visual odometry**
+  (background optical flow = drift-free displacement) — so the puck **self-fuses
+  IMU + vision on-device** to beat integration drift with no external reference.
+- Trade-off: bar-mounted is more accurate and trivially attributes to *you*, but
+  loses the ambient/attach-nothing/privacy appeal — so lead with the observer,
+  offer on-bar as a mode. Either way it's just another `VelocitySource`.
+
 Parked considerations (deliberately not now): edge compute/battery (motion-wake
 duty cycle), gym permissioning / theft / multi-user concurrency, a privacy
 attestation (tally light / on-device-only proof), and it's **capital-intensive** —
