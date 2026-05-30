@@ -17,8 +17,6 @@
   *{box-sizing:border-box}
   html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{background:#eceef1;color:var(--body);font-family:var(--sans);font-size:10px;line-height:1.45;padding:24px}
-  .toolbar{max-width:8.5in;margin:0 auto 14px;display:flex;justify-content:flex-end}
-  .btn{font:600 12px var(--sans);color:#fff;background:var(--accent);border:0;border-radius:7px;padding:9px 16px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.15)}
 
   .page{position:relative;width:8.5in;min-height:11in;margin:0 auto 22px;background:#fff;
         padding:0.5in 0.55in 0.4in;box-shadow:0 10px 40px rgba(20,25,40,.16);border-radius:3px}
@@ -41,7 +39,7 @@
   h2.sec{display:flex;align-items:center;gap:8px;margin:19px 0 9px;font:700 11px var(--sans);letter-spacing:.11em;text-transform:uppercase;color:var(--ink)}
   h2.sec::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--accent)}
   h2.sec .n{font-family:var(--mono);color:var(--muted);font-weight:600;letter-spacing:0}
-  .lead{color:var(--muted);font-size:9.6px;margin:-4px 0 10px;max-width:6.6in}
+  .lead{color:var(--muted);font-size:9.6px;margin:-4px 0 10px;max-width:6.7in}
 
   .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 13px}
@@ -63,6 +61,18 @@
   .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 
   .fix td:first-child{font-weight:650;color:var(--ink);width:46%}
+
+  /* feature matrix */
+  .feat{font-size:8.2px}
+  .feat th,.feat td{padding:4px 6px}
+  .feat td:first-child{width:25%;font-weight:600;color:var(--ink)}
+  .feat th.us,.feat td.us{background:var(--accent-soft)}
+  .feat th.us{color:var(--accent)}
+  .feat tr.grp td{background:#f1f2f6;color:var(--muted);font:700 7px var(--mono);letter-spacing:.09em;text-transform:uppercase;padding:3px 6px}
+  .feat td.n{text-align:center;font-size:9px}
+  .feat .sub{font-weight:400;color:var(--muted);font-size:7px;display:block}
+  sup.g{color:var(--accent);font-weight:700;font-size:7px}
+
   .road{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}
   .step{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff;position:relative}
   .step .ph{font:700 8px var(--mono);color:var(--accent)}
@@ -70,6 +80,7 @@
   .step .ds{font-size:8.3px;color:var(--muted)}
   .step.done{background:var(--accent-soft);border-color:#cfd2f7}
   .step.done .badge{position:absolute;top:7px;right:8px;font:700 7px var(--mono);color:#fff;background:var(--signal);padding:2px 5px;border-radius:10px}
+  .teaser{margin-top:9px;font-size:9.4px;color:var(--ink);background:var(--accent-soft);border-left:3px solid var(--accent);padding:7px 11px;border-radius:0 7px 7px 0}
 
   .statrow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:4px 0 12px}
   .stat{text-align:center;border:1px solid var(--line);border-radius:9px;padding:9px 6px;background:var(--panel)}
@@ -78,18 +89,29 @@
 
   .sci{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px;font-size:8.6px}
   .zonebar{display:flex;height:16px;border-radius:4px;overflow:hidden;margin:5px 0;font:700 7px var(--mono);color:#fff;line-height:16px;text-align:center}
+
+  /* escalator */
+  .escal{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end;margin-top:8px}
+  .lvl{border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:var(--panel)}
+  .lvl .k{font:700 7.5px var(--mono);letter-spacing:.08em;color:var(--accent)}
+  .lvl .t{font-weight:700;color:var(--ink);font-size:10px;margin:3px 0}
+  .lvl .d{font-size:8.3px;color:var(--muted)}
+  .lvl:nth-child(1){min-height:80px}.lvl:nth-child(2){min-height:96px}
+  .lvl:nth-child(3){min-height:118px}.lvl:nth-child(4){min-height:134px}
+  .lvl.prize{background:#0e1116;border-color:#0e1116}
+  .lvl.prize .k{color:#a5b4fc}.lvl.prize .t{color:#fff}.lvl.prize .d{color:#c7cad6}
+
   footer{margin-top:16px;padding-top:9px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:8.4px}
 
   @media print{
     @page{size:Letter;margin:0}
-    body{background:#fff;padding:0}.toolbar{display:none}
+    body{background:#fff;padding:0}
     .page{width:auto;min-height:auto;margin:0;box-shadow:none;border-radius:0;padding:0.5in 0.55in;page-break-after:always}
     .page:last-child{page-break-after:auto}
   }
 </style>
 </head>
 <body>
-<div class="toolbar"><button class="btn" onclick="window.print()">Print / Save as PDF</button></div>
 
 <!-- ============================ PAGE 1 ============================ -->
 <div class="page">
@@ -126,7 +148,7 @@
       <h3>Your RPE gauge — last-rep speed → effort <span style="font-weight:400;color:var(--muted)">(real personal data, bench)</span></h3>
       <div id="rpeChart"></div>
       <div class="legend"><span><i style="background:#4f46e5"></i>your curve</span><span><i style="background:#cfd6f8"></i>observed spread</span></div>
-      <figcaption>As a set nears failure, last-rep velocity falls predictably. Slower than your line ⇒ back off; faster ⇒ you’ve got more in the tank. The band is your own logged spread — i.e. honest uncertainty.</figcaption>
+      <figcaption>As a set nears failure, last-rep velocity falls predictably. Slower than your line ⇒ back off; faster ⇒ more in the tank. The band is your own logged spread — honest uncertainty.</figcaption>
     </figure>
     <figure class="card" style="margin:0">
       <h3>Read the last rep, get the call</h3>
@@ -161,7 +183,7 @@
     </tbody>
   </table>
   <div class="legend"><span><span class="yes">●</span> strong&nbsp;&nbsp;<span class="part">◐</span> partial&nbsp;&nbsp;<span class="no">○</span> none</span><span style="color:var(--muted)">The watch removes the device tax; forgiving capture removes the tripod tax.</span></div>
-  <div class="pnum">VBT · 1 / 3</div>
+  <div class="pnum">VBT · 1 / 4</div>
 </div>
 
 <!-- ============================ PAGE 2 ============================ -->
@@ -216,23 +238,63 @@
       <tr><td>You don’t own a bar device</td><td>you don’t need one</td></tr>
     </tbody>
   </table>
-  <div class="pnum">VBT · 2 / 3</div>
+  <div class="pnum">VBT · 2 / 4</div>
 </div>
 
 <!-- ============================ PAGE 3 ============================ -->
 <div class="page">
-  <h2 class="sec"><span class="n">06</span>&nbsp;The path</h2>
+  <h2 class="sec"><span class="n">06</span>&nbsp;Feature-by-feature — the tools I actually use</h2>
+  <p class="lead">A working-prototype assessment across the apps in our test bench. The pattern: each rival is strong in a slice; none is accessible <i>and</i> forgiving <i>and</i> intelligent at once.</p>
+  <table class="feat">
+    <thead><tr>
+      <th>Capability</th>
+      <th class="n">Stance</th><th class="n">Vitruve</th><th class="n">Smart&shy;Barbell</th><th class="n">Metric</th><th class="n">WL&nbsp;Analysis</th><th class="n us">VBT</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>Primary sensor</td><td class="n">bar device</td><td class="n">bar device</td><td class="n">phone cam</td><td class="n">phone cam</td><td class="n">phone cam</td><td class="n us">Apple&nbsp;Watch</td></tr>
+
+      <tr class="grp"><td colspan="7">Access</td></tr>
+      <tr><td>Works with no camera</td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td>No hardware to buy</td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n us"><span class="yes">●</span></td></tr>
+
+      <tr class="grp"><td colspan="7">Capture robustness (video)</td></tr>
+      <tr><td>Handles non-round plates</td><td class="n">—</td><td class="n">—</td><td class="n"><span class="yes">●</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="part">◐</span></td><td class="n us"><span class="yes">●</span><sup class="g">*</sup></td></tr>
+      <tr><td>Off-angle / multiple angles</td><td class="n">—</td><td class="n">—</td><td class="n"><span class="part">◐</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="part">◐</span></td><td class="n us"><span class="yes">●</span><sup class="g">*</sup></td></tr>
+      <tr><td>Adjustable focus for weight detection</td><td class="n">—</td><td class="n">—</td><td class="n"><span class="yes">●</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="yes">●</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td>Handles ~all movements <span class="sub">cable / DB / odd lifts</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="part">◐</span></td><td class="n us"><span class="yes">●</span><sup class="g">*</sup></td></tr>
+
+      <tr class="grp"><td colspan="7">Metrics</td></tr>
+      <tr><td>Mean &amp; peak velocity</td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td>Range of motion</td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td>Other metrics <span class="sub">power · tempo · RFD · TUT</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="yes">●</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td>Per-rep measurement confidence</td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+
+      <tr class="grp"><td colspan="7">Intelligence &amp; coaching</td></tr>
+      <tr><td>Editable rep start/stop</td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span><sup class="g">*</sup></td></tr>
+      <tr><td>Builds RPE curve &amp; estimates RPE</td><td class="n"><span class="part">◐</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td>Compare across lifts <span class="sub">unified history</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="part">◐</span></td><td class="n"><span class="yes">●</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+      <tr><td>Multi-source fusion</td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n"><span class="no">○</span></td><td class="n us"><span class="yes">●</span></td></tr>
+    </tbody>
+  </table>
+  <div class="legend"><span><span class="yes">●</span> strong&nbsp;&nbsp;<span class="part">◐</span> partial / conditional&nbsp;&nbsp;<span class="no">○</span> none&nbsp;&nbsp;— n/a</span><span style="color:var(--muted)"><sup class="g">*</sup> VBT design target; other VBT marks reflect the working prototype + dataset. Vitruve from published specs.</span></div>
+
+  <h2 class="sec"><span class="n">07</span>&nbsp;The path</h2>
   <p class="lead">Prove the watch hits device-grade, make video forgiving, turn speed into the coach, then fuse — each step useful on its own.</p>
   <div class="road">
     <div class="step done"><span class="badge">DONE</span><div class="ph">PHASE 0</div><div class="ti">Capture &amp; lab</div><div class="ds">watch→phone pipeline, analysis, multi-vendor dataset</div></div>
-    <div class="step"><div class="ph">PHASE 1</div><div class="ti">Device-grade watch</div><div class="ds">calibrate vs Vitruve ground truth; quantify error</div></div>
-    <div class="step"><div class="ph">PHASE 2</div><div class="ti">Forgiving video</div><div class="ds">any angle · any plate · any frame rate</div></div>
-    <div class="step"><div class="ph">PHASE 3</div><div class="ti">The coach</div><div class="ds">last-rep speed → RPE &amp; next-set load</div></div>
-    <div class="step"><div class="ph">PHASE 4</div><div class="ti">Fuse</div><div class="ds">watch + video + AirPods; use whatever’s present</div></div>
+    <div class="step"><div class="ph">PHASE 1</div><div class="ti">Device-grade watch</div><div class="ds">calibrate vs Vitruve ground truth</div></div>
+    <div class="step"><div class="ph">PHASE 2</div><div class="ti">Forgiving video</div><div class="ds">any angle · plate · frame rate</div></div>
+    <div class="step"><div class="ph">PHASE 3</div><div class="ti">The coach</div><div class="ds">last-rep speed → RPE &amp; load</div></div>
+    <div class="step"><div class="ph">PHASE 4</div><div class="ti">Fuse</div><div class="ds">use whatever sensor’s present</div></div>
     <div class="step"><div class="ph">PHASE 5</div><div class="ti">Ship it</div><div class="ds">the most accessible accurate VBT app</div></div>
   </div>
+  <div class="teaser">Phase 5 isn’t the ceiling — a great velocity tool quietly captures something no one else has: <b>every rep, passively, from a device you already wear.</b> That’s the on-ramp. <b>See what it unlocks →</b></div>
+  <div class="pnum">VBT · 3 / 4</div>
+</div>
 
-  <h2 class="sec"><span class="n">07</span>&nbsp;The lab — proof we’re building on data</h2>
+<!-- ============================ PAGE 4 ============================ -->
+<div class="page">
+  <h2 class="sec"><span class="n">08</span>&nbsp;The lab — proof we’re building on data</h2>
   <div class="statrow">
     <div class="stat"><div class="big">5</div><div class="lbl">real sets logged</div></div>
     <div class="stat"><div class="big">4</div><div class="lbl">commercial tools</div></div>
@@ -251,7 +313,7 @@
     </tbody>
   </table>
 
-  <h2 class="sec"><span class="n">08</span>&nbsp;Hurdles we’ll have to clear</h2>
+  <h2 class="sec"><span class="n">09</span>&nbsp;Hurdles we’ll have to clear</h2>
   <table class="fix">
     <thead><tr><th>Hurdle</th><th>How we clear it</th></tr></thead>
     <tbody>
@@ -259,35 +321,28 @@
       <tr><td>Forgiving video is the core promise — and the hard part</td><td>markerless region/joint tracking, pose fallback, frame-rate-robust segmentation</td></tr>
       <tr><td>watchOS must sustain ~100–200&nbsp;Hz a full session without draining</td><td>a thin vertical slice de-risks it first; batched sensor API is built for it</td></tr>
       <tr><td>The personal RPE curve needs your reps</td><td>population cold-start, then a flywheel from your own logged sets</td></tr>
-      <tr><td>Trust — users must know when a number is shaky</td><td>per-rep confidence surfaced; one-tap manual correction</td></tr>
     </tbody>
   </table>
 
-  <h2 class="sec"><span class="n">09</span>&nbsp;The science it stands on</h2>
-  <div class="sci">
-    <div>
-      <b>Velocity zones</b> (mean concentric, m/s)
-      <div class="zonebar">
-        <span style="flex:5;background:#4338ca">strength 0–.5</span>
-        <span style="flex:2.5;background:#6d28d9">.5–.75</span>
-        <span style="flex:2.5;background:#0ea5a0">.75–1.0</span>
-        <span style="flex:3;background:#0f9d58">speed 1.0+</span>
-      </div>
-      <span style="color:var(--muted)">personal rolling baselines beat fixed zones</span>
-    </div>
-    <div>
-      <b>Velocity-loss cut-offs</b><br>
-      <span class="mono">~10%</span> power · <span class="mono">~20%</span> strength · <span class="mono">~30%+</span> hypertrophy. Higher loss = closer to failure.
-    </div>
-    <div>
-      <b>Min. velocity threshold</b> (≈ last rep at failure)<br>
-      <span class="mono">deadlift ≈ .15–.20</span> · <span class="mono">bench ≈ .10–.17</span> · <span class="mono">squat ≈ .25–.30</span>
-    </div>
+  <h2 class="sec"><span class="n">10</span>&nbsp;What this unlocks</h2>
+  <p class="lead">The accessible tool is the wedge. The data it captures — every rep, passively, from a device you already wear all day — is the on-ramp to the far larger <b>muscular-strain wearable</b> opportunity that heart-rate platforms structurally can’t reach.</p>
+  <div class="escal">
+    <div class="lvl"><div class="k">NOW</div><div class="t">Accessible velocity tool</div><div class="d">device-grade rep speed + RPE/load from the gear you own</div></div>
+    <div class="lvl"><div class="k">NEXT</div><div class="t">Passive auto-logging</div><div class="d">every set captured hands-free from the wrist — the log writes itself</div></div>
+    <div class="lvl prize"><div class="k">THEN — THE PRIZE</div><div class="t">Muscular strain &amp; recovery</div><div class="d">the lifting dimension HR wearables are blind to, built on the per-rep work we already measure</div></div>
+    <div class="lvl"><div class="k">HORIZON</div><div class="t">The training co-pilot</div><div class="d">readiness, fatigue &amp; injury flags, programming that adapts to your bar speed</div></div>
+  </div>
+  <div class="sci" style="margin-top:14px">
+    <div><b>Velocity zones</b> (mean concentric, m/s)
+      <div class="zonebar"><span style="flex:5;background:#4338ca">strength 0–.5</span><span style="flex:2.5;background:#6d28d9">.5–.75</span><span style="flex:2.5;background:#0ea5a0">.75–1.0</span><span style="flex:3;background:#0f9d58">speed 1.0+</span></div>
+      <span style="color:var(--muted)">we prefer personal rolling baselines</span></div>
+    <div><b>Velocity-loss cut-offs</b><br><span class="mono">~10%</span> power · <span class="mono">~20%</span> strength · <span class="mono">~30%+</span> hypertrophy</div>
+    <div><b>Velocity at failure</b> (MVT)<br><span class="mono">DL ≈ .15–.20</span> · <span class="mono">bench ≈ .10–.17</span> · <span class="mono">squat ≈ .25–.30</span></div>
   </div>
 
   <footer>
-    <span>Working prototype &amp; a growing personal multi-vendor measurement dataset. Velocity figures from real recorded sets; RPE-gauge band from logged personal data.</span>
-    <span class="mono">VBT · 3 / 3</span>
+    <span>Working prototype &amp; a growing personal multi-vendor measurement dataset. Velocity figures from real recorded sets; feature grid is a best-effort assessment.</span>
+    <span class="mono">VBT · 4 / 4</span>
   </footer>
 </div>
 
@@ -314,17 +369,14 @@ function lc(id,cfg){
   });
   s+='</svg>';document.getElementById(id).innerHTML=s;
 }
-// RPE gauge — real personal bench curve (priors/bench_rpe_velocity.csv): velocity falls as RPE rises
 lc('rpeChart',{xMin:0,xMax:10,xStep:2,xLabel:'RPE  (→ closer to failure)',yMin:0.05,yMax:0.55,yt:5,
   band:{c:'#dfe4fb',lo:[0.36,0.36,0.33,0.28,0.31,0.25,0.23,0.23,0.17,0.13,0.10],
                     hi:[0.51,0.48,0.46,0.38,0.39,0.39,0.35,0.27,0.23,0.19,0.12]},
   series:[{c:'#4f46e5',d:[0.50,0.45,0.40,0.36,0.33,0.30,0.27,0.23,0.20,0.15,0.10]}]});
-// incline bench convergence
 lc('convChart',{xMax:10,yMin:0.2,yMax:0.6,yt:4,series:[
   {c:'#0ea5a0',d:[0.54,0.50,0.49,0.44,0.45,0.38,0.38,0.39,0.33,0.29]},
   {c:'#e2683c',d:[0.54,0.50,0.49,0.43,0.42,0.35,0.37,0.38,0.32,0.30]},
   {c:'#0f9d58',d:[0.539,0.503,0.504,0.444,0.459,0.401,0.386,0.393,0.343,0.291]}]});
-// deadlift divergence
 lc('divChart',{xMax:8,yMin:0.2,yMax:0.6,yt:4,series:[
   {c:'#7c3aed',d:[0.47,0.53,0.52,0.54,0.52,0.48,0.49,0.38]},
   {c:'#0ea5a0',d:[0.37,0.40,0.34,0.46,0.35,0.37,0.31,0.29]},
