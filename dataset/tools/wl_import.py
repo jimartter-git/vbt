@@ -147,17 +147,23 @@ def parse_wl_txt(path: str):
     return df[keep].copy(), channels
 
 
-def segment_reps(t: np.ndarray, v: np.ndarray, peak_min: float = 0.3,
+def segment_reps(t: np.ndarray, v: np.ndarray, peak_min: float = 0.12,
                  rom_min: float = 0.25):
     """Return per-rep concentric (positive-velocity) segments as (start,end) idx.
 
     WL gives velocity directly (drift-free), so we high-pass to remove any slow
     baseline and split on zero-crossings, taking positive runs as concentrics.
-    Two non-rep positive blips are rejected:
-    - small ±0.1 m/s wobbles on the turnarounds -> require segment PEAK >= peak_min;
-    - on dropped-from-lockout lifts (deadlift) the bar rebounds off the floor in a
-      short fast spike -> require real travel (`rom_min`); a true pull covers
-      ~0.5-0.7 m, a floor bounce only ~0.1 m.
+    `rom_min` (real travel) is the PRIMARY discriminator — a true rep covers most
+    of the lift's ROM (~0.3 m bench .. ~0.7 m deadlift) while wobbles and the
+    deadlift floor-bounce travel only ~0.1 m. `peak_min` is just a low noise gate:
+    it must stay BELOW grind-rep speed (a near-failure rep peaks ~0.15-0.25 m/s),
+    or we'd silently drop the terminal reps — the most fatigue-important ones.
+    Hence 0.12, not 0.3.
+
+    TODO: thresholds should be RELATIVE (fraction of the set's median rep ROM /
+    peak), not fixed — bench's ~0.3 m ROM leaves little margin over rom_min=0.25,
+    so a near-failure bench rep with shortened ROM could still be dropped. Revisit
+    with more cross-lift data.
     """
     fs = 1.0 / np.median(np.diff(t))
     b, a = butter(2, min(0.99, 0.1 / (fs / 2)), btype="high")
