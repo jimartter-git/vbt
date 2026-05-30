@@ -53,6 +53,24 @@ and `docs/sources-and-fusion.md`.
   (metric.coach, PMC); `WebSearch` usually works.
 - **Don't open PRs** unless asked. **Don't** put the model identifier in commits.
 
+## ⚑ Branch & sync protocol — prevents lost/forked work
+
+The dataset and tools are edited across many sessions; the platform may drop a
+fresh session on its own `claude/new-session-*` branch. To never lose or fork work:
+
+1. **One canonical branch:** `claude/vbt-watchos-architecture-wu6y8`. Everything
+   funnels here.
+2. **On START, sync first.** `git fetch origin --prune`, then fast-forward to
+   `origin/claude/vbt-watchos-architecture-wu6y8` before doing anything — build on
+   the latest, never a stale base.
+3. **On FINISH (and every good stopping point), push to canonical.** If you're on
+   an auto-created `claude/new-session-*` branch, **merge/fast-forward it back into
+   the canonical branch before you stop** — don't strand work on a side branch.
+4. **One session edits `dataset/` at a time.** `sets.csv`/`rep_metrics.csv` are
+   append-heavy; concurrent appends from two branches collide. Finish + push before
+   opening another session that touches the DB. (To truly parallelize, split by
+   concern — e.g. one session only `dataset/`, another only `Watch/` Swift.)
+
 ## Key decisions & learnings (don't re-litigate — extend)
 
 1. **One `VelocitySource` abstraction** (in `VBTCore`): every source emits
