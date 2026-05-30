@@ -1,4 +1,4 @@
 set_id,vendor,path,kind,notes
-20260527-SQ-1,wl_analysis,raw/20260527-SQ-1_wl_analysis.txt,velocity_timeseries,"WL per-frame vertical velocity; 'Weight(lbs)' is really kg; Time(s) loses decimals >10s so importer rebuilds time base from frame#; segmented to 10 concentrics"
-20260529-DL-1,wl_analysis,raw/20260529-DL-1_wl_analysis.txt,velocity_timeseries,"WL per-frame vertical-velocity channel (sliced from the 16-col rich export); bar dropped each rep -> floor-bounce spikes rejected by ROM filter; segmented to 8 concentrics"
-20260529-DL-3,wl_analysis,raw/20260529-DL-3_wl_analysis.txt,velocity_timeseries,"WL vertical-velocity channel (sliced from 16-col export); 285lb 2nd back-off, dead-stop w/ long pauses; segmented to 8 concentrics"
+20260527-SQ-1,wl_analysis,raw/20260527-SQ-1_wl_analysis.txt,wl_perframe_16col,"full 16-col rich export (~25fps); name-based cols velocity/displacement/acceleration (vertical); ROM from displacement; peak_accel added; 'Weight(lbs)' is really kg; Time(s) truncates >10s so time rebuilt from frame#; 10 concentrics"
+20260529-DL-1,wl_analysis,raw/20260529-DL-1_wl_analysis.txt,wl_perframe_16col,"full 16-col rich export; deadlift dropped each rep so floor-bounce spikes rejected by ROM filter; ROM from displacement; peak_accel added; 8 concentrics"
+20260529-DL-3,wl_analysis,raw/20260529-DL-3_wl_analysis.txt,wl_perframe_16col,"full 16-col rich export; 285lb 2nd back-off, dead-stop w/ long pauses; ROM from displacement; peak_accel added; 8 concentrics"
