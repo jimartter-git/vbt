@@ -73,8 +73,10 @@ def main() -> int:
     print(f"\nPer-rep {args.metric} (rows = physical rep / true_rep):")
     print(table.to_string(na_rep="  -"))
     if not flagged.empty:
-        notes = ", ".join(f"{r.vendor} rep{int(r.rep)}={r.flag} (excluded)"
-                          for _, r in flagged.iterrows())
+        notes = ", ".join(
+            f"{r.vendor} rep{int(r.rep)}={r.flag} "
+            f"({'excluded' if r.flag in INVALID else 'kept, annotated'})"
+            for _, r in flagged.iterrows())
         print(f"  flagged: {notes}")
 
     # Per-vendor summary. VL is best-referenced and labels WHICH rep it runs to,

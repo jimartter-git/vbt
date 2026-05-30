@@ -1,3 +1,3 @@
 set_id,date,lift,load_kg,load_entered,load_unit,set_index,target_reps,actual_reps,rpe_actual,notes
 20260529-DL-1,2026-05-29,deadlift,149.7,330,lb,1,,8,,multi-app comparison; SmartBarbell missed/zeroed rep 8
-20260527-SQ-1,2026-05-27,squat,111.1,245,lb,1,10,10,,"top set; hypertrophy block wk4/4, directive=10RM (RPE not self-rated); SmartBarbell only, video to be fed to other video apps"
+20260527-SQ-1,2026-05-27,squat,111.1,245,lb,1,10,10,,"top set; hypertrophy block wk4/4, directive=10RM (RPE not self-rated); SmartBarbell + Metric (same video). Metric: plate partially left frame -> ROM unreliable (all low_confidence), reps 2/3/4/7 partial tracking (no peak/ecc)"
