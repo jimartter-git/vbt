@@ -2,4 +2,4 @@ set_id,date,lift,load_kg,load_entered,load_unit,set_index,target_reps,actual_rep
 20260529-DL-1,2026-05-29,deadlift,149.7,330,lb,1,,8,,"multi-app comparison; SmartBarbell missed/zeroed rep 8; WL upgraded from set-avg to per-rep (8 concentrics, bar dropped each rep)"
 20260529-DL-3,2026-05-29,deadlift,129.3,285,lb,3,,8,,"2nd back-off after the top set; dead-stop reps w/ long inter-rep pauses; 1st back-off (set 2) skipped - SmartBarbell only caught 5 reps; Stance recorded, Metric+WL to follow"
 20260527-SQ-1,2026-05-27,squat,111.1,245,lb,1,10,10,,"top set; hypertrophy block wk4/4, directive=10RM (RPE not self-rated); SmartBarbell + Metric (same video). Metric: plate partially left frame -> ROM unreliable (all low_confidence), reps 2/3/4/7 partial tracking (no peak/ecc)"
-20260528-IB-1,2026-05-28,incline_bench,83.9,185,lb,1,10,10,,4x10 straight sets (set 1); SmartBarbell + Stance (Metric/WL TBD)
+20260528-IB-1,2026-05-28,incline_bench,83.9,185,lb,1,10,10,,4x10 straight sets (set 1); incline bench logged in Stance as 'touch and go bench' (no incline option); Stance Peak col duplicated Mean -> peak not recorded; SmartBarbell + Stance (Metric/WL TBD)
