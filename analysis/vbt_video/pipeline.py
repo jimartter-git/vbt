@@ -8,24 +8,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .frames import FrameSource, PyAVDecoder
-from .track import CSRTTracker, PlateTracker, Tracker, auto_seed_bbox
+from .track import CSRTTracker, PlateTracker, FlowTracker, Tracker, auto_seed_bbox
 from .kinematics import PlateDiameterScaler, trajectory_to_reps
 
 
 @dataclass
 class VideoConfig:
     plate_m: float = 0.45        # known plate diameter (standard bumper)
-    tracker: str = "plate"       # front-end selector (extend as trackers are added)
+    tracker: str = "flow"        # front-end selector (extend as trackers are added)
     peak_min: float = 0.12       # m/s noise gate (below grind speed — keep terminal reps)
     rom_min: float = 0.25        # m minimum real travel for a rep
-    band: tuple | None = None    # (x0,x1) px lane for PlateTracker; None → seed-derived
+    band: tuple | None = None    # (x0,x1) px lane for the plate detector; None → seed-derived
 
 
 # Tracker factories receive the VideoConfig so a tracker can read its own knobs
-# (e.g. PlateTracker's x-band) while the default (csrt) ignores it.
+# (e.g. the x-band) while a tracker that doesn't need them (csrt) just ignores it.
 _TRACKERS = {
     "csrt": lambda cfg: CSRTTracker(),
     "plate": lambda cfg: PlateTracker(band=cfg.band),
+    "flow": lambda cfg: FlowTracker(band=cfg.band),
 }
 
 

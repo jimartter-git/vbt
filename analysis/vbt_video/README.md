@@ -16,37 +16,51 @@ Each arrow is a **swappable seam**:
 | Stage | Interface | v1 (now) | drop-in later — no downstream change |
 |---|---|---|---|
 | Decode | `FrameSource` | `PyAVDecoder` (real timestamps, VFR-safe) | any decoder / live camera |
-| Track | `Tracker` | **`PlateTracker`** (default) · `CSRTTracker` (region, seeded) | **pose/joint** (equipment-free) · learned **point tracking** (CoTracker) · **segmentation** (SAM) |
+| Track | `Tracker` | **`FlowTracker`** (default) · `PlateTracker` (detector+DP) · `CSRTTracker` | **pose/joint** (equipment-free) · learned **point tracking** (CoTracker) · **segmentation** (SAM) |
 | Scale | `Scaler` | `PlateDiameterScaler` (0.45 m) | bar length · reference object · auto-cal |
 | Kinematics + segmentation | shared | `trajectory_to_reps` | same logic family as the watch/WL paths |
 
-### `PlateTracker` — the blur-robust default
+### `FlowTracker` — the default (temporal optical flow; never drops a rep)
 
-A plate clip from a phone at the foot of the bench is *hard*: heavy motion blur on
-the fast reps, the plate clipping the frame at lockout, and a gym background full of
-**other same-size, same-gray circles**. A frame-by-frame circle detector (Metric/WL)
-and a region tracker (CSRT) both fail here — CSRT drifts off the blurred plate (0 reps);
-naive nearest-circle locks onto a background plate-stack for dozens of frames.
+A plate clip from a phone at the foot of the bench is *hard*: heavy motion blur on the
+fast reps, the plate clipping the frame at lockout, a slow occluded grind on the
+terminal rep, and a gym background full of **other same-size, same-gray circles**.
 
-`PlateTracker` is two passes:
-1. **Detect** — Hough circles per frame, restricted to the plate's vertical *lane*
-   (an x-band seeded from the bbox) and to a consistent radius. Often returns the plate
-   *and* distractors. (Hough's vote threshold scales with radius, so it generalises
-   across plate sizes.)
-2. **Choose a path** — a global **min-acceleration dynamic program** picks one candidate
-   per frame (skipping blurred frames by interpolation). The bar moves smoothly; hopping
-   onto a background circle and back costs a big acceleration spike, so the DP won't —
-   *even though a stationary distractor looks "smooth" to a nearest-neighbour tracker.*
-   **Motion-coherence is the discriminator appearance can't give us** — plate and rack
-   circles measure the same gray (verified on our clip: plate 93–105, distractors 80–110).
+The key lesson: a per-frame **detector has no memory**, so a blurred frame (no edge) or
+an occluded grind rep means nothing to detect — you drop reps. A commercial tool like
+SmartBarbell doesn't, because it tracks *temporally* — it follows the same patch of
+**texture** frame-to-frame and coasts through blur, and it doesn't care *what* the
+texture is (plate face, logo, collar, knurling), so it works filmed from in front of or
+behind the bar. `FlowTracker` does the same:
 
-On the incline-bench set `20260528-IB-1` (front camera, 30 fps, motion-blurred), this
-recovers the per-rep **velocity-loss curve in the right shape and ballpark** beside the
-four commercial tools — reading low by a roughly **constant ~0.06 m/s offset** (the
-*calibratable* signature, not a slope error). On that same clip Metric undercounted to
-5 reps and WL needed manual circle placement. The honest gaps (early-rep magnitude lost
-to blur; the terminal rep) are flagged by a low `track_confidence` and are exactly what
-fusion with the watch IMU is there to cover.
+- **Flow owns position** — pyramidal Lucas-Kanade on a cloud of feature points,
+  integrating the *median per-point displacement* each frame (robust to losing any
+  subset). **Forward-backward error culling** (the MedianFlow trick) keeps only points
+  that track cleanly round-trip — that's what kills drift, so the cloud holds an entire
+  set without re-seeding.
+- **The detector owns scale only** — it samples the plate diameter for a robust median
+  px→m but **never moves the position** (an unreliable detection that yanks the position
+  re-introduces exactly the distractor jumps flow avoids).
+
+On the incline-bench set `20260528-IB-1` (front camera, 30 fps, motion-blurred) this
+holds lock for the whole set (**`track_confidence` 1.0**) and recovers **all 10 reps**,
+landing on the commercial composite: vs Stance, **rmse 0.033 m/s** (cf. WL 0.024, SB
+0.015) with a small ~**+0.027 m/s** constant offset (clean calibration, not a slope
+error); velocity-loss 47.1% vs SB 46.3 / Stance 44.4 / WL 46.0. On that same clip Metric
+undercounted to 5 reps and WL needed manual circle placement.
+
+### `PlateTracker` — detector + min-acceleration path (the fallback)
+
+When a clip has *no trackable texture* (a plain matte plate, very low light), flow has
+no features to follow; `PlateTracker` instead **detects** the plate each frame (Hough in
+the seed-derived x-lane, consistent radius) and stitches the detections into a bar path
+with a global **min-acceleration dynamic program**: the bar moves smoothly, so hopping
+onto a background circle and back costs an acceleration spike the DP won't pay — *even
+though a stationary distractor looks "smooth" to a nearest-neighbour tracker*.
+**Motion-coherence is the discriminator appearance can't give us** — plate and rack
+circles measure the same gray (verified on our clip: plate 93–105, distractors 80–110).
+On `20260528-IB-1` it gets 9/10 reps but reads ~0.06 m/s low through the blur (rmse
+0.074) — which is why flow is the default and this is the fallback.
 
 **Why these specific packages (the "no big redesign" call):**
 - **PyAV** for decode, not `cv2.VideoCapture` — it gives true per-frame
@@ -67,14 +81,15 @@ to the commercial tools and into the fusion layer with zero glue.
 
 ```bash
 pip install -r analysis/requirements.txt -r analysis/requirements-video.txt
-python -m pytest analysis/tests/test_video_pipeline.py -q   # synthetic disc, in-memory + mp4 round-trip
+python -m pytest analysis/tests/test_video_pipeline.py -q   # synthetic disc/texture, in-memory + mp4
 ```
 
 ## Score a real clip against the other tools
 
 ```bash
-# seed the plate from frame 0 (X,Y,W,H); --band X0,X1 fixes the vertical lane
-# (keeps the DP off far-background circles). --auto-seed works on clean clips.
+# seed the plate from frame 0 (X,Y,W,H). --band X0,X1 bounds the scale detector's lane
+# (keeps it off far-background circles); --tracker defaults to flow. --auto-seed works
+# on clean clips. Swap --tracker plate for a textureless plate, --tracker csrt for region.
 python analysis/scripts/analyze_video.py dataset/raw/vcompress_1.mp4 \
     --set-id 20260528-IB-1 --seed 323,163,316,316 --band 295,720 --append
 python dataset/tools/compare.py 20260528-IB-1      # mevbt_cv now sits beside SmartBarbell/Stance/Metric/WL

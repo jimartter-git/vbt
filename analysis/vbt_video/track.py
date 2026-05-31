@@ -197,6 +197,123 @@ class PlateTracker(Tracker):
         return Track(traj=traj, target_px=2.0 * rmed, confidence=round(real / n, 3))
 
 
+def _detect_plate(img, x0b, x1b, r0, near=None):
+    """One Hough plate detection in the x-band, nearest to `near` (or band centre).
+    Returns (cx, cy, r) or None. Vote threshold scales with radius (small plate → fewer
+    votes), so it generalises across plate sizes. Used by FlowTracker for *scale only*."""
+    x1b = min(int(x1b), img.shape[1])
+    roi = img[:, int(x0b):x1b]
+    g = cv2.medianBlur(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), 5)
+    p2 = int(np.clip(0.25 * r0, 18, 42))
+    circ = cv2.HoughCircles(g, cv2.HOUGH_GRADIENT, dp=1.2, minDist=80, param1=120,
+                            param2=p2, minRadius=int(0.80 * r0), maxRadius=int(1.20 * r0))
+    if circ is None:
+        return None
+    cand = [(x0b + float(q[0]), float(q[1]), float(q[2])) for q in circ[0]]
+    nx, ny = near if near is not None else ((x0b + x1b) / 2.0, img.shape[0] / 2.0)
+    return min(cand, key=lambda q: (q[0] - nx) ** 2 + (q[1] - ny) ** 2)
+
+
+class FlowTracker(Tracker):
+    """Temporal optical-flow tracker — the blur-proof, never-drops-a-rep default.
+
+    The lesson from PlateTracker: a per-frame *detector* has no memory, so motion blur
+    (no edge) or a low/occluded grind rep means nothing to detect — we drop reps. A
+    commercial tool like SmartBarbell doesn't, because it tracks *temporally*: it follows
+    the same patch of **texture** frame-to-frame and coasts through a blurred frame
+    because the patch is still locally matchable even when the global shape is gone. It
+    also doesn't care *what* the texture is — plate face, logo, collar, bar knurling — so
+    it works filmed from in front of or behind the bar, from either side.
+
+    Division of labour (the design that matched the commercial composite on our clip):
+      - **Flow owns position.** Pyramidal Lucas-Kanade on a cloud of feature points,
+        integrating the *median per-point displacement* each frame (robust to losing
+        any subset of points). **Forward-backward error culling** (the MedianFlow trick)
+        keeps only points that track cleanly round-trip — this is what kills drift, so
+        the cloud holds an entire set without re-seeding.
+      - **The detector owns scale only.** It periodically samples the plate diameter
+        (`_detect_plate`) for a robust median px→m — but **never** moves the position
+        (letting an unreliable detection yank the position re-introduces exactly the
+        distractor jumps flow avoids).
+
+    Seed `bbox` localises the plate to seed the point cloud and the scale lane; `band`
+    (else seed-derived) bounds the scale detector. Output is the usual `(t, cx, cy)`
+    trajectory — scaling/kinematics/segmentation downstream are untouched.
+    """
+    def __init__(self, band=None, band_lr=(1.18, 1.51), win=41, levels=4,
+                 fb_thresh=1.0, min_pts=25, seed_pts=140, scale_every=10,
+                 lat_cull=1.4):
+        self.band = band
+        self.band_lr = band_lr
+        self.lk = dict(winSize=(win, win), maxLevel=levels,
+                       criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01))
+        self.fb_thresh = fb_thresh      # max forward-backward round-trip error (px)
+        self.min_pts = min_pts          # re-seed the cloud below this many clean points
+        self.seed_pts = seed_pts        # target cloud size
+        self.scale_every = scale_every  # detector cadence for scale samples (frames)
+        self.lat_cull = lat_cull        # cull points > lat_cull*r from the cloud's x-median
+
+    def _seed(self, g, cx, cy, rad):
+        mask = np.zeros_like(g)
+        cv2.circle(mask, (int(cx), int(cy)), int(1.05 * rad), 255, -1)
+        return cv2.goodFeaturesToTrack(g, maxCorners=self.seed_pts, qualityLevel=0.01,
+                                       minDistance=8, mask=mask)
+
+    def track(self, source: FrameSource, seed_bbox) -> Track:
+        x, y, w, h = [float(v) for v in seed_bbox]
+        cx, cy = x + w / 2.0, y + h / 2.0
+        r0 = (w + h) / 4.0
+        rmed = r0
+        if self.band is not None:
+            x0b, x1b = int(self.band[0]), int(self.band[1])
+        else:
+            x0b = int(max(0, cx - self.band_lr[0] * r0))
+            x1b = int(cx + self.band_lr[1] * r0)
+
+        prev = None
+        pts = None
+        ts, xs, ys, radii = [], [], [], []
+        healthy = 0
+        n = 0
+        for f in source:
+            g = cv2.cvtColor(f.img, cv2.COLOR_BGR2GRAY)
+            if prev is None:
+                d = _detect_plate(f.img, x0b, x1b, rmed, near=(cx, cy))
+                if d is not None and (d[0] - cx) ** 2 + (d[1] - cy) ** 2 < (1.2 * rmed) ** 2:
+                    cx, cy, rmed = d[0], d[1], d[2]
+                    radii.append(d[2])
+                pts = self._seed(g, cx, cy, rmed)
+            else:
+                npts, st1, _ = cv2.calcOpticalFlowPyrLK(prev, g, pts, None, **self.lk)
+                bpts, st2, _ = cv2.calcOpticalFlowPyrLK(g, prev, npts, None, **self.lk)
+                fb = np.abs(bpts - pts).reshape(-1, 2).max(axis=1)
+                good = (st1[:, 0] == 1) & (st2[:, 0] == 1) & (fb < self.fb_thresh)
+                if good.sum() >= 8:
+                    dxy = np.median((npts[good] - pts[good]).reshape(-1, 2), axis=0)
+                    cx += float(dxy[0]); cy += float(dxy[1])
+                    pts = npts[good].reshape(-1, 1, 2)
+                    mx = np.median(pts[:, 0, 0])
+                    keep = np.abs(pts[:, 0, 0] - mx) < self.lat_cull * rmed
+                    if keep.sum() >= 8:
+                        pts = pts[keep].reshape(-1, 1, 2)
+                    healthy += 1
+                if (n % self.scale_every) == 0:                  # SCALE sample (not position)
+                    d = _detect_plate(f.img, x0b, x1b, rmed, near=(cx, cy))
+                    if d is not None and (d[0] - cx) ** 2 + (d[1] - cy) ** 2 < (1.2 * rmed) ** 2:
+                        radii.append(d[2])
+                if pts is None or pts.shape[0] < self.min_pts:   # re-seed only on depletion
+                    pts = self._seed(g, cx, cy, 0.85 * rmed)
+            ts.append(f.t); xs.append(cx); ys.append(cy)
+            prev = g
+            n += 1
+        if n == 0:
+            raise ValueError("no frames decoded")
+        rmed = float(np.median(radii)) if radii else r0
+        traj = np.column_stack([np.asarray(ts, float), np.asarray(xs), np.asarray(ys)])
+        return Track(traj=traj, target_px=2.0 * rmed,
+                     confidence=round(healthy / max(1, n - 1), 3))
+
+
 def auto_seed_bbox(img, min_area_frac: float = 0.004) -> tuple:
     """Best-effort seed: the largest solid blob in the frame (the plate end).
 

@@ -31,8 +31,9 @@ def main() -> int:
     p.add_argument("--seed", help="X,Y,W,H bbox around the plate in frame 0")
     p.add_argument("--auto-seed", action="store_true", help="detect the plate automatically")
     p.add_argument("--plate-cm", type=float, default=45.0)
-    p.add_argument("--tracker", default="plate", help="plate (default, blur-robust DP) or csrt")
-    p.add_argument("--band", help="X0,X1 px vertical lane for the plate tracker (else seed-derived)")
+    p.add_argument("--tracker", default="flow",
+                   help="flow (default, optical-flow, blur-proof) · plate (detector+DP) · csrt")
+    p.add_argument("--band", help="X0,X1 px vertical lane for the plate detector (else seed-derived)")
     p.add_argument("--append", action="store_true", help="write rows to dataset/rep_metrics.csv")
     args = p.parse_args()
 

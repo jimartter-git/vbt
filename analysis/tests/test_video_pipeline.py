@@ -14,7 +14,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from vbt_video import (ArrayFrameSource, PyAVDecoder, VideoVelocitySource,
-                       VideoConfig, PlateTracker, auto_seed_bbox)  # noqa: E402
+                       VideoConfig, PlateTracker, FlowTracker, auto_seed_bbox)  # noqa: E402
 
 W, H, FPS, R = 240, 320, 60.0, 40           # frame + disc radius (px)
 T, N_REPS, A = 2.0, 3, 0.25                  # rep period (s), reps, amplitude (m)
@@ -130,3 +130,33 @@ def test_plate_tracker_rejects_stationary_distractor():
     for r in reps:
         assert abs(r["mean_velocity"] - EXP_MEAN) < 0.12, r    # looser: Hough centre jitter
         assert abs(r["rom"] - EXP_ROM_CM) < 12, r
+
+
+def _textured_frames():
+    """A moving disc with fixed interior **texture** — optical flow needs feature points
+    to track (a flat disc has none). The texture rides with the disc, so flow follows it."""
+    rng = np.random.default_rng(0)
+    texture = rng.integers(0, 255, (2 * R, 2 * R, 3), dtype=np.uint8)
+    circ_mask = np.zeros((2 * R, 2 * R), np.uint8)
+    cv2.circle(circ_mask, (R, R), R, 255, -1)
+    cy0 = H / 2.0
+    imgs = []
+    for i in range(int(N_REPS * T * FPS)):
+        t = i / FPS
+        pos = -A * np.cos(2 * np.pi * t / T)
+        cy = int(round(cy0 - pos / MPP))
+        im = np.full((H, W, 3), 230, np.uint8)
+        sub = im[cy - R:cy + R, W // 2 - R:W // 2 + R]
+        sub[circ_mask > 0] = texture[circ_mask > 0]
+        imgs.append(im)
+    return imgs
+
+
+def test_flow_tracker_holds_lock_through_the_set():
+    # The optical-flow default: track texture frame-to-frame, hold lock the whole set
+    # (high confidence), and recover the reps — the never-drops-a-rep behaviour.
+    track = FlowTracker().track(ArrayFrameSource(_textured_frames(), FPS), _seed())
+    assert track.confidence > 0.9                       # flow held lock across the set
+    reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow")).estimate(
+        ArrayFrameSource(_textured_frames(), FPS), seed_bbox=_seed())
+    _assert_reps(reps)
