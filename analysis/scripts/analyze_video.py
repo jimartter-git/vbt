@@ -31,6 +31,8 @@ def main() -> int:
     p.add_argument("--seed", help="X,Y,W,H bbox around the plate in frame 0")
     p.add_argument("--auto-seed", action="store_true", help="detect the plate automatically")
     p.add_argument("--plate-cm", type=float, default=45.0)
+    p.add_argument("--tracker", default="plate", help="plate (default, blur-robust DP) or csrt")
+    p.add_argument("--band", help="X0,X1 px vertical lane for the plate tracker (else seed-derived)")
     p.add_argument("--append", action="store_true", help="write rows to dataset/rep_metrics.csv")
     args = p.parse_args()
 
@@ -39,8 +41,14 @@ def main() -> int:
         seed = tuple(float(v) for v in args.seed.split(","))
         if len(seed) != 4:
             p.error("--seed must be X,Y,W,H")
+    band = None
+    if args.band:
+        band = tuple(int(v) for v in args.band.split(","))
+        if len(band) != 2:
+            p.error("--band must be X0,X1")
 
-    src = VideoVelocitySource(VideoConfig(plate_m=args.plate_cm / 100.0))
+    src = VideoVelocitySource(VideoConfig(plate_m=args.plate_cm / 100.0,
+                                          tracker=args.tracker, band=band))
     reps, meta = src.estimate(args.clip, seed_bbox=seed)
 
     print(f"\n{args.set_id}  via mevbt_cv ({args.clip})")

@@ -14,7 +14,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from vbt_video import (ArrayFrameSource, PyAVDecoder, VideoVelocitySource,
-                       VideoConfig, auto_seed_bbox)  # noqa: E402
+                       VideoConfig, PlateTracker, auto_seed_bbox)  # noqa: E402
 
 W, H, FPS, R = 240, 320, 60.0, 40           # frame + disc radius (px)
 T, N_REPS, A = 2.0, 3, 0.25                  # rep period (s), reps, amplitude (m)
@@ -53,7 +53,8 @@ def _assert_reps(reps):
 
 
 def test_core_inmemory():
-    reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M)).estimate(
+    # CSRT region tracker on a clean disc — validates the decode→scale→kinematics seams.
+    reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="csrt")).estimate(
         ArrayFrameSource(_frames(), FPS), seed_bbox=_seed())
     assert meta["track_confidence"] > 0.9
     assert abs(meta["m_per_px"] - MPP) / MPP < 0.1   # scaler within 10%
@@ -90,5 +91,42 @@ def test_full_mp4_roundtrip():
         ts = [f.t for f in dec]
         assert len(ts) >= len(imgs) - 2                 # decoder returns the frames
         assert all(b > a for a, b in zip(ts, ts[1:]))   # timestamps increase
-        reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M)).estimate(p, seed_bbox=_seed())
+        reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="csrt")).estimate(
+            p, seed_bbox=_seed())
         _assert_reps(reps)
+
+
+def _frames_with_distractor():
+    """The moving plate PLUS a *stationary* same-size disc inside the search band — a
+    background 'circle' a naive nearest-neighbour tracker would happily lock onto."""
+    cy0 = H / 2.0
+    dist_c = (160, 70)                                   # stationary distractor (in-band, out of the plate's path)
+    imgs = []
+    for i in range(int(N_REPS * T * FPS)):
+        t = i / FPS
+        pos = -A * np.cos(2 * np.pi * t / T)
+        cy = int(round(cy0 - pos / MPP))
+        im = np.full((H, W, 3), 230, np.uint8)
+        cv2.circle(im, dist_c, R, (30, 30, 30), -1)     # distractor first (may be overdrawn)
+        cv2.circle(im, (W // 2, cy), R, (25, 25, 25), -1)
+        imgs.append(im)
+    return imgs
+
+
+def test_plate_tracker_rejects_stationary_distractor():
+    # The min-acceleration DP must follow the *moving* plate, not the stationary disc —
+    # motion-coherence is what appearance/intensity can't give us (both discs are gray).
+    src = ArrayFrameSource(_frames_with_distractor(), FPS)
+
+    # 1) the recovered trajectory stays on the plate's lane (x≈120), never the distractor (x=160)
+    track = PlateTracker().track(src, _seed())
+    assert abs(np.median(track.traj[:, 1]) - W // 2) < 20      # cx near the moving plate
+    assert track.traj[:, 1].max() < 150                        # never jumps to the distractor lane
+
+    # 2) and the per-rep velocity/ROM still come out right
+    reps, _ = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="plate")).estimate(
+        src, seed_bbox=_seed())
+    assert abs(len(reps) - N_REPS) <= 1, f"expected ~{N_REPS} reps, got {len(reps)}"
+    for r in reps:
+        assert abs(r["mean_velocity"] - EXP_MEAN) < 0.12, r    # looser: Hough centre jitter
+        assert abs(r["rom"] - EXP_ROM_CM) < 12, r
