@@ -36,3 +36,5 @@ dataset/dataset.sqlite
 dataset/raw/*
 !dataset/raw/.gitkeep
 !dataset/raw/*.txt
+!dataset/raw/*.mp4
+!dataset/raw/*.mov

@@ -36,7 +36,7 @@ and `docs/sources-and-fusion.md`.
 | `docs/calibration-protocol.md` | watch-vs-Vitruve capture protocol |
 | `docs/vbt-reference.md` | VBT science + competitor accuracy/metrics (verified vs PDFs) |
 | `dataset/` | the living multi-vendor measurement DB (+ `dataset/README.md`, `dataset/INGESTION.md`) |
-| `analysis/` | Python ZUPT pipeline (rep detect, velocity, Vitruve compare) |
+| `analysis/` | Python pipelines: `vbt_analysis/` (IMU ZUPT) + `vbt_video/` (our own CV velocity — PyAV+OpenCV, pluggable trackers, outputs vendor `mevbt_cv`) |
 | `Watch/` `iOS/` `Packages/VBTCore/` | the Swift app + shared package |
 
 ## How to work here (conventions)
