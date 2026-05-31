@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meVBT — Porter's Five Forces</title>
+<style>
+  :root{
+    --ink:#0e1116;--body:#363b45;--muted:#7b818d;--line:#e6e8ec;--panel:#fafbfc;
+    --accent:#4f46e5;--accent-soft:#eef0fe;
+    --high:#d33f3f;--modhi:#e07b39;--mod:#c98a1a;--low:#15a34a;--arrow:#cdd2da;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:Georgia,"Times New Roman",serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#eceef1;color:var(--body);font-family:var(--sans);font-size:10px;line-height:1.45;padding:24px}
+  .page{position:relative;width:8.5in;min-height:11in;margin:0 auto 22px;background:#fff;
+        padding:0.5in 0.55in 0.45in;box-shadow:0 10px 40px rgba(20,25,40,.16);border-radius:3px}
+  .pnum{position:absolute;bottom:0.28in;right:0.55in;font:600 8px var(--mono);color:#b6bcc6}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:9px;border-bottom:2px solid var(--ink)}
+  .brand{display:flex;align-items:center;gap:12px}
+  .mark{font:800 30px/0.9 var(--sans);letter-spacing:-.02em;color:var(--ink)}
+  .mark b{color:var(--accent)}
+  .htxt h1{margin:0;font:700 12px var(--sans);letter-spacing:.04em;color:var(--ink)}
+  .htxt .sub{font-size:9.5px;color:var(--muted)}
+  .status{font:600 9px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:5px 9px;border-radius:20px;white-space:nowrap}
+
+  .legend{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin:11px 0 2px;font-size:8.4px;color:var(--body)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+
+  .forces{position:relative;display:grid;grid-template-columns:1fr 1.12fr 1fr;grid-template-rows:auto auto auto;gap:30px 26px;margin:10px 0 4px}
+  .fcard{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  .e{grid-column:2;grid-row:1}.s{grid-column:1;grid-row:2}.c{grid-column:2;grid-row:2}.b{grid-column:3;grid-row:2}.u{grid-column:2;grid-row:3}
+  .fh{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:5px}
+  .fh h3{margin:0;font:700 9.5px var(--sans);color:var(--ink)}
+  .fh .pos{font:600 7px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .lv{font:700 6.8px var(--mono);letter-spacing:.03em;text-transform:uppercase;padding:2px 6px;border-radius:10px;color:#fff;white-space:nowrap}
+  .lv.high{background:var(--high)}.lv.modhi{background:var(--modhi)}.lv.mod{background:var(--mod)}.lv.low{background:var(--low)}
+  .fcard ul{margin:0;padding:0;list-style:none}
+  .fcard li{position:relative;padding-left:10px;margin-bottom:3px;font-size:8.4px;color:var(--body)}
+  .fcard li::before{content:"";position:absolute;left:0;top:5px;width:3px;height:3px;border-radius:50%;background:#b6bcc6}
+  .edge{margin-top:5px;font-size:8.3px;color:var(--accent);font-weight:600}
+
+  .c{background:var(--accent-soft);border:1.5px solid #cfd2f7}
+  .c .fh h3{font-size:11px}
+
+  /* inward arrows sit in the grid gaps */
+  .e::after{content:"";position:absolute;left:50%;bottom:-21px;transform:translateX(-50%);border:8px solid transparent;border-top-color:var(--arrow)}
+  .u::after{content:"";position:absolute;left:50%;top:-21px;transform:translateX(-50%);border:8px solid transparent;border-bottom-color:var(--arrow)}
+  .s::after{content:"";position:absolute;top:50%;right:-19px;transform:translateY(-50%);border:8px solid transparent;border-left-color:var(--arrow)}
+  .b::after{content:"";position:absolute;top:50%;left:-19px;transform:translateY(-50%);border:8px solid transparent;border-right-color:var(--arrow)}
+
+  .net{margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--panel)}
+  .net h3{margin:0 0 6px;font:700 9px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .net h3::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--accent)}
+  .net .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;font-size:9px}
+  .net b{color:var(--ink)}
+  .net .read{margin-top:8px;font-size:9.2px;color:var(--ink);border-left:3px solid var(--accent);padding-left:10px}
+  .tag-pill{display:inline-block;font:700 7px var(--mono);padding:2px 6px;border-radius:10px;margin-right:4px}
+  .moat{background:#dceee3;color:#0b6b3d}.risk{background:#f7ddd9;color:#9b2c2c}
+
+  @media print{
+    @page{size:Letter;margin:0}
+    body{background:#fff;padding:0}
+    .page{width:auto;min-height:auto;margin:0;box-shadow:none;border-radius:0;padding:0.5in 0.55in;page-break-after:always}
+    .page:last-child{page-break-after:auto}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== PAGE 1 — DREAM ===================== -->
+<div class="page">
+  <header>
+    <div class="brand">
+      <div class="mark">me<b>V</b>BT</div>
+      <div class="htxt">
+        <h1>Porter's Five Forces</h1>
+        <div class="sub">Dream vision — the muscular strain &amp; recovery platform ("Whoop for the weight room")</div>
+      </div>
+    </div>
+    <div class="status">Strategy · May 2026</div>
+  </header>
+
+  <div class="legend">
+    <span>Force intensity:</span>
+    <span><i style="background:var(--high)"></i>High</span>
+    <span><i style="background:var(--modhi)"></i>Mod–High</span>
+    <span><i style="background:var(--mod)"></i>Moderate</span>
+    <span><i style="background:var(--low)"></i>Low</span>
+    <span style="color:var(--muted)">arrows = pressure on the industry</span>
+  </div>
+
+  <div class="forces">
+    <!-- top: new entrants -->
+    <div class="fcard e">
+      <div class="fh"><h3>Threat of New Entrants</h3><span class="lv high">High · #1 risk</span></div>
+      <ul>
+        <li>An incumbent bolts "lifting" onto its wearable — esp. <b>Apple, watch-native</b></li>
+        <li>They own the sensors, distribution, brand &amp; capital</li>
+        <li>A bare app is easy; accuracy + data moat are not</li>
+      </ul>
+      <div class="edge">▸ build the moat so <b>buying us beats building</b></div>
+    </div>
+
+    <!-- left: suppliers -->
+    <div class="fcard s">
+      <div class="fh"><h3>Supplier Power</h3><span class="lv modhi">Mod–High</span></div>
+      <ul>
+        <li><b>Apple is the supplier</b>: sensor APIs, 15–30% take, can change terms</li>
+        <li>…and a potential <b>competitor</b> at the same time</li>
+        <li>Components commoditized; data is self-generated</li>
+      </ul>
+      <div class="edge">▸ stay cross-platform; own the data; keep a hardware option</div>
+    </div>
+
+    <!-- center: rivalry -->
+    <div class="fcard c">
+      <div class="fh"><h3>Competitive Rivalry</h3><span class="lv high">High</span></div>
+      <ul>
+        <li>Whoop ($10B), Oura ($11B), Apple, Garmin, Fitbit all chase recovery/readiness</li>
+        <li>Adjacent strength tools (Vitruve, GymAware, Perch, Metric)</li>
+        <li>Fierce in "recovery score" — <b>thin in <i>lifting</i> strain</b></li>
+      </ul>
+      <div class="edge">▸ own the one signal the whole category is blind to</div>
+    </div>
+
+    <!-- right: buyers -->
+    <div class="fcard b">
+      <div class="fh"><h3>Buyer Power</h3><span class="lv mod">Moderate</span></div>
+      <ul>
+        <li>Consumers: price-sensitive, sub-fatigued, <b>churn-prone</b></li>
+        <li>Teams: higher power per deal, but stickier &amp; higher-ACV</li>
+        <li>Low switching cost — early</li>
+      </ul>
+      <div class="edge">▸ personal history + prior = <b>rising switching cost</b></div>
+    </div>
+
+    <!-- bottom: substitutes -->
+    <div class="fcard u">
+      <div class="fh"><h3>Threat of Substitutes</h3><span class="lv mod">Moderate</span></div>
+      <ul>
+        <li>Train by feel / RPE, a coach, a notebook</li>
+        <li>HR/HRV recovery proxies, sleep scores, BLE VBT</li>
+        <li><b>Inertia ("good enough")</b> is the real rival</li>
+      </ul>
+      <div class="edge">▸ measure muscular strain the proxies only <i>guess</i> at</div>
+    </div>
+  </div>
+
+  <div class="net">
+    <h3>Net read</h3>
+    <div class="cols">
+      <div><b>Three moats to build</b><br>
+        <span class="tag-pill moat">SIGNAL</span> the lifting-strain metric no one else computes<br>
+        <span class="tag-pill moat">DATA</span> a compounding per-user prior<br>
+        <span class="tag-pill moat">IP</span> multi-source fusion + the calibration dataset
+      </div>
+      <div><b>Two existential risks</b><br>
+        <span class="tag-pill risk">ENTRY</span> an incumbent adds lifting (Apple/Whoop/Oura)<br>
+        <span class="tag-pill risk">PLATFORM</span> Apple dependency (supplier &amp; rival)
+      </div>
+    </div>
+    <div class="read">A hot, fast-growing category with a genuinely <b>unserved niche</b> — but ringed by giants and tethered to Apple. Win the strength niche fast, turn data into a moat, and become the obvious <b>acquisition</b> for whoever realizes their recovery platform can't see the weight room.</div>
+  </div>
+  <div class="pnum">meVBT · 1 / 2</div>
+</div>
+
+<!-- ===================== PAGE 2 — ACCESSIBLE ===================== -->
+<div class="page">
+  <header>
+    <div class="brand">
+      <div class="mark">me<b>V</b>BT</div>
+      <div class="htxt">
+        <h1>Porter's Five Forces</h1>
+        <div class="sub">Accessible vision — the VBT / RPE coaching tool (rep speed → load &amp; effort, no hardware)</div>
+      </div>
+    </div>
+    <div class="status">Strategy · May 2026</div>
+  </header>
+
+  <div class="legend">
+    <span>Force intensity:</span>
+    <span><i style="background:var(--high)"></i>High</span>
+    <span><i style="background:var(--modhi)"></i>Mod–High</span>
+    <span><i style="background:var(--mod)"></i>Moderate</span>
+    <span><i style="background:var(--low)"></i>Low</span>
+    <span style="color:var(--muted)">different fight: smaller giant-threat, stronger "free by feel"</span>
+  </div>
+
+  <div class="forces">
+    <!-- top: new entrants -->
+    <div class="fcard e">
+      <div class="fh"><h3>Threat of New Entrants</h3><span class="lv mod">Moderate</span></div>
+      <ul>
+        <li>Another VBT app is easy to start…</li>
+        <li>…but accuracy/calibration, <b>forgiving capture</b>, and a personal RPE curve are not</li>
+        <li>Giants chase the bigger recovery prize, not this niche</li>
+      </ul>
+      <div class="edge">▸ robustness IP + per-user data as the barrier</div>
+    </div>
+
+    <!-- left: suppliers -->
+    <div class="fcard s">
+      <div class="fh"><h3>Supplier Power</h3><span class="lv mod">Moderate</span></div>
+      <ul>
+        <li>Apple App-Store cut + sensor APIs (less existential here)</li>
+        <li>Commodity components; no hardware to source</li>
+        <li>Data self-generated</li>
+      </ul>
+      <div class="edge">▸ watch-agnostic &amp; cross-platform via one source model</div>
+    </div>
+
+    <!-- center: rivalry -->
+    <div class="fcard c">
+      <div class="fh"><h3>Competitive Rivalry</h3><span class="lv modhi">Mod–High</span></div>
+      <ul>
+        <li>Crowded: Vitruve, GymAware, Perch, Output, Metric, SmartBarbell, WL + strength apps</li>
+        <li>But <b>fragmented</b> — none is accessible <i>and</i> forgiving <i>and</i> a coach</li>
+        <li>Device makers won't cannibalize their hardware</li>
+      </ul>
+      <div class="edge">▸ watch + forgiving video undercut the $300 device</div>
+    </div>
+
+    <!-- right: buyers -->
+    <div class="fcard b">
+      <div class="fh"><h3>Buyer Power</h3><span class="lv modhi">Mod–High</span></div>
+      <ul>
+        <li>Price-sensitive; many free training apps; low early switching</li>
+        <li>Teams concentrate demand (one sale → a whole roster)</li>
+      </ul>
+      <div class="edge">▸ your velocity→RPE curve compounds; teams add stickiness</div>
+    </div>
+
+    <!-- bottom: substitutes -->
+    <div class="fcard u">
+      <div class="fh"><h3>Threat of Substitutes</h3><span class="lv modhi">Mod–High · the real fight</span></div>
+      <ul>
+        <li><b>Lifting by feel / RPE is free and entrenched</b></li>
+        <li>A one-time $300 device; a paper log; a spreadsheet</li>
+      </ul>
+      <div class="edge">▸ cheaper &amp; frictionless than a device, smarter than feel</div>
+    </div>
+  </div>
+
+  <div class="net">
+    <h3>Net read</h3>
+    <div class="cols">
+      <div><b>Why it's winnable</b><br>
+        <span class="tag-pill moat">NICHE</span> giants largely ignore it<br>
+        <span class="tag-pill moat">GAP</span> rivals are fragmented &amp; friction-heavy<br>
+        <span class="tag-pill moat">EDGE</span> accessibility + an RPE coach no one ships
+      </div>
+      <div><b>Where the pressure is</b><br>
+        <span class="tag-pill risk">FEEL</span> "free by feel" is the entrenched default<br>
+        <span class="tag-pill risk">PRICE</span> consumers are subscription-sensitive
+      </div>
+    </div>
+    <div class="read">A <b>winnable wedge</b>: the giants aren't here and the incumbents are fragmented hardware/finicky-video plays. The real battle is vs <b>"do nothing / lift by feel"</b> and price sensitivity — beaten by being free-of-hardware, forgiving, and genuinely useful (the RPE/load call). Teams fund the early days; the data it captures <b>feeds the dream platform →</b></div>
+  </div>
+  <div class="pnum">meVBT · 2 / 2</div>
+</div>
+
+</body>
+</html>
