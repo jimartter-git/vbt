@@ -56,3 +56,27 @@ A is the **wedge and the data engine**: every rep captured passively from a devi
 - Bottoms-up SAM by geography/platform (iOS share, EN markets).
 
 _Sources: see chat for links (marketsandmarkets, gminsights, precedenceresearch, Sacra/Yahoo on Whoop, CNBC/Fortune on Oura, businessofapps on Strava, marketintelo on VBT, grandviewresearch/imarc on sports nutrition)._
+
+
+## B2B lane — pro / college / HS teams (a higher-ACV beachhead)
+
+Strength & conditioning departments already pay real money for velocity tech:
+**Perch** (rack-mounted depth camera) ~**$2k/unit**; GymAware, Vitruve, Output and
+Metric all sell coach/team tiers. This channel is stickier and higher-ACV than
+consumer, and a natural early-revenue beachhead.
+
+- **Buyers:** ~1,100 NCAA programs + thousands of other colleges; ~20k+ US high
+  schools with athletics; hundreds of pro/national teams; private S&C facilities
+  and barbell gyms — and global multiples of all of it.
+- **WTP is proven:** one Perch unit ≈ a year of *many* consumer subs. Weight rooms
+  buy per-rack hardware + per-seat software and renew.
+- **meVBT's edge is the same accessibility:** a 100-athlete weight room can't kit
+  100 racks with $2k devices, but *can* run an app on athletes' watches/phones +
+  a few rack-cams — per-athlete cost collapses, the coach still gets a dashboard.
+- **Rough institutional TAM (US S&C tech): ~$0.1–0.5B**, global multiples. Lower
+  volume, higher ACV ($2k–30k/program), lower CAC per user (one sale → a whole
+  roster), and it **seeds the consumer funnel** (athletes keep using it after they
+  graduate).
+- **Caveat:** incumbents (GymAware/Perch/Vitruve) are entrenched here and sales
+  cycles are slow (budgets, ADs, RFPs). Best as a credibility + cashflow beachhead
+  alongside the consumer push, not the sole motion.

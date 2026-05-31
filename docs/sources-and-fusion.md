@@ -207,3 +207,24 @@ duty cycle), gym permissioning / theft / multi-user concurrency, a privacy
 attestation (tally light / on-device-only proof), and it's **capital-intensive** —
 so strictly *later*. The watch + software path de-risks everything first; this is
 an option the data + CV stack unlocks, never a dependency.
+
+
+## Readiness signals — beyond the bar (parked idea)
+
+The strain side needs a recovery/readiness counterpart. Two cheap, on-thesis signals:
+
+- **Velocity-as-readiness (validated):** a standardized warm-up — e.g. a fixed
+  load done with max intent, or the first few work reps — read against your
+  personal **load-velocity baseline** tells you what % you're operating at today.
+  Same load slower than usual ⇒ under-recovered ⇒ auto-trim the day's loads.
+  (Metric's "trends" already hints at this: first-3-reps vs a 6-week average.)
+- **CNS / neuromuscular micro-tests:** the **countermovement jump (CMJ)** is the
+  field-standard neuromuscular-readiness test; simpler equipment-free proxies are
+  the **finger-tapping test** (tapping frequency falls with CNS fatigue) and
+  reaction time. A 10-second in-app morning finger-tap, trended against personal
+  baseline, is a plausible lightweight daily readiness check.
+
+Both feed the same autoregulation output (today's recommended loads / RPE target)
+and tighten the strain↔recovery loop. Cross-validate any tap-test delta against
+the bar-velocity readiness signal before trusting it. Parked; not a near-term
+dependency.
