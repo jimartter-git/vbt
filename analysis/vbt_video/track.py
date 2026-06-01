@@ -240,17 +240,21 @@ class FlowTracker(Tracker):
     (else seed-derived) bounds the scale detector. Output is the usual `(t, cx, cy)`
     trajectory — scaling/kinematics/segmentation downstream are untouched.
 
-    OPEN ISSUE (2026-06-01, rows): on a barbell-ROW arc this over-reads *vertical* travel
-    by ~1.45× — measured directly, its plate-y pixel excursion was 1.46–1.55× the wrist-y
-    excursion on the same frames (rigidly-linked points), scale-independent and *symmetric*
-    at both ends (so not drift). Leading hypothesis: pyramidal-LK displacement overshoot on
-    the fast/motion-blurred phases. Validated on a square-on bench press (rmse 0.033) but
-    NOT on row-type arcs — fix + revalidate before trusting flow magnitudes on rows. See
-    docs/generalization.md "Field finding (2026-06-01)".
+    ROW-ARC OVER-READ (2026-06-01, diagnosed): on a barbell-ROW arc this over-reads
+    *vertical* travel ~1.4× (side view 1.17 vs apps 0.63–0.78). NAILED via an on-frame
+    overlay + trajectory instrumentation: it is NOT discrete jumps (jerk-limiting removes
+    only ~2%; a motion/Kalman prior conserves net displacement and can't fix an amplitude
+    bias) and NOT 2D-correctable (RANSAC affine was a no-op). It's a *smooth* migration of
+    the face-texture centroid off the plate hub as the plate tilts/occludes against the
+    torso at the top of the pull — an out-of-plane effect a flat point cloud can't see, but
+    the circular RIM can. MITIGATION: `anchor_alpha` slowly pulls position to the detected
+    rim centre (side 1.17→0.86; a no-op on square-on bench, rmse 0.033 preserved). Not yet a
+    full closure — residual gap is plate-detector-quality-limited (robust rim fit = next
+    step). See docs/generalization.md "Field finding (2026-06-01)".
     """
     def __init__(self, band=None, band_lr=(1.18, 1.51), win=41, levels=4,
                  fb_thresh=1.0, min_pts=25, seed_pts=140, scale_every=10,
-                 lat_cull=1.4):
+                 lat_cull=1.4, anchor_alpha=0.0, anchor_every=3):
         self.band = band
         self.band_lr = band_lr
         self.lk = dict(winSize=(win, win), maxLevel=levels,
@@ -260,6 +264,13 @@ class FlowTracker(Tracker):
         self.seed_pts = seed_pts        # target cloud size
         self.scale_every = scale_every  # detector cadence for scale samples (frames)
         self.lat_cull = lat_cull        # cull points > lat_cull*r from the cloud's x-median
+        # Optional position anchor: slowly pull the integrated position toward the plate's
+        # RIM-circle centre (the detector), correcting the smooth centroid migration the
+        # face-texture cloud accrues as the plate tilts/occludes on a row (diagnosed on the
+        # side view). 0 → off (default; flow owns position unchanged). >0 → complementary
+        # gain per gated detection; gated near the current estimate so a distractor can't yank.
+        self.anchor_alpha = anchor_alpha
+        self.anchor_every = anchor_every
 
     def _seed(self, g, cx, cy, rad):
         mask = np.zeros_like(g)
@@ -305,10 +316,15 @@ class FlowTracker(Tracker):
                     if keep.sum() >= 8:
                         pts = pts[keep].reshape(-1, 1, 2)
                     healthy += 1
-                if (n % self.scale_every) == 0:                  # SCALE sample (not position)
+                cadence = self.anchor_every if self.anchor_alpha > 0.0 else self.scale_every
+                if (n % cadence) == 0:                           # SCALE sample (+ optional anchor)
                     d = _detect_plate(f.img, x0b, x1b, rmed, near=(cx, cy))
                     if d is not None and (d[0] - cx) ** 2 + (d[1] - cy) ** 2 < (1.2 * rmed) ** 2:
                         radii.append(d[2])
+                        # slow position correction toward the rim centre (see __init__).
+                        if self.anchor_alpha > 0.0 and abs(d[2] - rmed) / max(rmed, 1.0) < 0.20:
+                            cx += self.anchor_alpha * (d[0] - cx)
+                            cy += self.anchor_alpha * (d[1] - cy)
                 if pts is None or pts.shape[0] < self.min_pts:   # re-seed only on depletion
                     pts = self._seed(g, cx, cy, 0.85 * rmed)
             ts.append(f.t); xs.append(cx); ys.append(cy)

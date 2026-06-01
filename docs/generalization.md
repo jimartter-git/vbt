@@ -127,11 +127,18 @@ ranking as settled):
    `scale="anthro"`) reproduced that on the front view. It inherits pose's *visibility*
    limit: great front/quarter-on, **degrades on a pure side view** (arm occluded) — so the
    plate ruler and the body ruler are themselves **complementary; pick by what's visible.**
-3. **`FlowTracker` over-reads vertical travel on the row arc (~1.45×), independent of
-   scale** — measured directly: its plate-y pixel excursion was 1.46–1.55× the wrist-y
-   excursion on the same frames (rigidly-linked points), over-extending *symmetrically* at
-   both ends (suggests Lucas-Kanade overshoot on the fast/blurred phases, not drift).
-   Validated on bench (square-on press) but **not yet on row-type arcs — OPEN item.**
+3. **`FlowTracker` over-reads vertical travel on the row arc (~1.4×) — diagnosed & partly
+   fixed.** An on-frame overlay + trajectory instrumentation nailed the cause: *not* discrete
+   jumps (jerk-limiting removes ~2% — and a motion/Kalman prior conserves net displacement,
+   so it can't fix an amplitude bias) and *not* 2D-correctable (RANSAC affine was a no-op).
+   It's a **smooth migration of the face-texture centroid off the plate hub** as the plate
+   tilts/occludes against the torso at the top of the pull — an out-of-plane effect a flat
+   cloud can't see but the circular **rim** can. **Fix:** a slow position anchor to the
+   detected rim centre (`VideoConfig(flow_anchor_alpha>0)`) pulls the side view **1.17 → 0.86**
+   (into app range) and is a **no-op on square-on bench** (0.44, rmse 0.033 preserved — so
+   not overfitting). Residual gap is **plate-detector-quality-limited** (a robust rim fit is
+   the next step), and the lesson stands: an amplitude over-read is fixed by anchoring
+   *position to geometry*, never by constraining the *dynamics*.
 
 The complementarity is the fusion thesis in one set: the **plate** track holds where the
 wrist is occluded (side), the **wrist** holds where the plate goes edge-on (front).

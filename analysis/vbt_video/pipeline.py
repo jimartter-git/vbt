@@ -31,6 +31,10 @@ class VideoConfig:
     side: str = "auto"           # "left" / "right" / "auto" (most-visible)
     height_m: float = 1.75       # user height → anthropometric px→m scale
     segment: str = "forearm"     # body segment used as the metric ruler
+    # FlowTracker position anchor: 0 = off (flow owns position, the validated default);
+    # >0 slowly pulls position to the plate's rim centre, correcting the smooth centroid
+    # migration on row arcs (side 1.17→0.86 at 0.3; a no-op on square-on bench). Opt-in.
+    flow_anchor_alpha: float = 0.0
 
 
 # Which two landmarks bound each scale segment (their pixel distance = the metric ruler).
@@ -41,7 +45,7 @@ _SEGMENT_LANDMARKS = {"forearm": ("wrist", "elbow"), "upper_arm": ("elbow", "sho
 _TRACKERS = {
     "csrt": lambda cfg: CSRTTracker(),
     "plate": lambda cfg: PlateTracker(band=cfg.band),
-    "flow": lambda cfg: FlowTracker(band=cfg.band),
+    "flow": lambda cfg: FlowTracker(band=cfg.band, anchor_alpha=cfg.flow_anchor_alpha),
     "pose": lambda cfg: PoseTracker(landmark=cfg.landmark, side=cfg.side,
                                     scale_segment=_SEGMENT_LANDMARKS.get(cfg.segment,
                                                                          ("wrist", "elbow"))),
