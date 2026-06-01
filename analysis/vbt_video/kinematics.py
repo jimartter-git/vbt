@@ -25,6 +25,32 @@ class PlateDiameterScaler:
         return self.plate_m / target_px
 
 
+# Body-segment lengths as a fraction of standing height (Drillis & Contini anthropometry).
+# Used for the equipment-free pose path: the skeleton *is* the ruler once height is known.
+_SEGMENT_HEIGHT_FRAC = {"forearm": 0.146, "upper_arm": 0.186, "hand": 0.108}
+
+
+@dataclass
+class AnthropometricScaler:
+    """Scale from a body segment whose real length is known from the user's height —
+    the pose path's px→m (no implement in frame). `target_px` is that segment's median
+    pixel length (PoseTracker reports the wrist↔elbow forearm by default).
+
+    Absolute scale is only as good as the height prior, BUT velocity *loss* (our headline
+    signal) is relative and survives a scale error as long as it's consistent rep-to-rep.
+    """
+    height_m: float = 1.75
+    segment: str = "forearm"
+
+    def m_per_px(self, target_px: float) -> float:
+        if target_px <= 0:
+            raise ValueError("target_px must be > 0 (pose found no scale segment)")
+        frac = _SEGMENT_HEIGHT_FRAC.get(self.segment)
+        if frac is None:
+            raise ValueError(f"unknown segment '{self.segment}'; have {list(_SEGMENT_HEIGHT_FRAC)}")
+        return (self.height_m * frac) / target_px
+
+
 def _segment_concentric(t, v, pos, peak_min, rom_min, fs):
     """Positive-velocity runs that clear a peak and a real ROM. `rom_min` (real
     travel) is the primary gate; `peak_min` is a low noise gate kept BELOW grind-

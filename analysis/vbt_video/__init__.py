@@ -20,13 +20,14 @@ Why these seams matter (the anti-redesign guarantee):
   watch/BLE sources → flows straight into fusion and the dataset (vendor=mevbt_cv).
 """
 from .frames import Frame, FrameSource, ArrayFrameSource, PyAVDecoder
-from .track import Tracker, CSRTTracker, PlateTracker, FlowTracker, auto_seed_bbox
-from .kinematics import PlateDiameterScaler, trajectory_to_reps
+from .track import (Tracker, CSRTTracker, PlateTracker, FlowTracker, PoseTracker,
+                    auto_seed_bbox)
+from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
 from .pipeline import VideoConfig, VideoVelocitySource
 
 __all__ = [
     "Frame", "FrameSource", "ArrayFrameSource", "PyAVDecoder",
-    "Tracker", "CSRTTracker", "PlateTracker", "FlowTracker", "auto_seed_bbox",
-    "PlateDiameterScaler", "trajectory_to_reps",
+    "Tracker", "CSRTTracker", "PlateTracker", "FlowTracker", "PoseTracker", "auto_seed_bbox",
+    "PlateDiameterScaler", "AnthropometricScaler", "trajectory_to_reps",
     "VideoConfig", "VideoVelocitySource",
 ]

@@ -314,6 +314,127 @@ class FlowTracker(Tracker):
                      confidence=round(healthy / max(1, n - 1), 3))
 
 
+# ---- Pose front-end: the equipment-free, universal tracker ----
+#
+# Same `Tracker` contract as the implement trackers — it emits `(t, cx, cy)` for a chosen
+# body landmark (wrist for cable/isolation work; hip/shoulder for bodyweight). Downstream
+# (scaling, kinematics, segmentation, fusion) cannot tell it apart from FlowTracker. See
+# docs/generalization.md for where this fits (one spine, swappable front-ends).
+#
+# A pose landmark is a 2-for-1: it's both the thing we *track* and a metric *ruler* (the
+# skeleton's segment lengths calibrate px→m from the user's height) — so PoseTracker also
+# reports a body-segment length in `target_px`, which AnthropometricScaler turns into m/px.
+
+# MediaPipe Pose landmark indices (the subset we use).
+_POSE_IDX = {
+    "left_wrist": 15, "right_wrist": 16, "left_elbow": 13, "right_elbow": 14,
+    "left_shoulder": 11, "right_shoulder": 12, "left_hip": 23, "right_hip": 24,
+}
+
+
+class _MediaPipePoseProvider:
+    """Lazy MediaPipe-backed landmark provider. Heavy + may need a first-run
+    `pip install mediapipe` (and downloads a model on first call) — so it's imported
+    lazily and injected, never imported at module load. Returns, per frame, a dict
+    {landmark_name: (x_px, y_px, visibility)}; missing/low-confidence landmarks are absent.
+    """
+    def __init__(self, min_visibility: float = 0.5):
+        self.min_visibility = min_visibility
+        self._pose = None
+
+    def _ensure(self):
+        if self._pose is None:
+            import mediapipe as mp  # lazy: not a hard dep of the package
+            self._pose = mp.solutions.pose.Pose(static_image_mode=False,
+                                                model_complexity=1,
+                                                enable_segmentation=False,
+                                                min_detection_confidence=0.5,
+                                                min_tracking_confidence=0.5)
+
+    def __call__(self, img) -> dict:
+        self._ensure()
+        h, w = img.shape[:2]
+        res = self._pose.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        if not res.pose_landmarks:
+            return {}
+        lm = res.pose_landmarks.landmark
+        out = {}
+        for name, idx in _POSE_IDX.items():
+            p = lm[idx]
+            if p.visibility >= self.min_visibility:
+                out[name] = (p.x * w, p.y * h, float(p.visibility))
+        return out
+
+
+class PoseTracker(Tracker):
+    """Follow a named body landmark — the universal, equipment-free, seed-free tracker.
+
+    `landmark`: which point to report as the trajectory (e.g. "wrist" → load proxy on a
+    cable pushdown; "hip" → bodyweight squat/pull-up). `side` picks left/right (or "auto":
+    whichever is more consistently visible). `scale_segment`: the two landmarks whose
+    pixel distance is the metric ruler (default wrist↔elbow = forearm); its median length
+    is returned in `target_px` for AnthropometricScaler.
+
+    `seed_bbox` is accepted for interface symmetry but **ignored** — pose needs no seed
+    (that's the onboarding win). `provider` is injectable so the seam is testable without
+    the MediaPipe model; defaults to `_MediaPipePoseProvider`.
+    """
+    def __init__(self, landmark="wrist", side="auto", scale_segment=("wrist", "elbow"),
+                 provider=None):
+        self.landmark = landmark
+        self.side = side
+        self.scale_segment = scale_segment
+        self.provider = provider or _MediaPipePoseProvider()
+
+    @staticmethod
+    def _pick_side(frames_lms, base, side):
+        """Choose left/right for a landmark base name by visibility count (or honour side)."""
+        if side in ("left", "right"):
+            return f"{side}_{base}"
+        lcount = sum(1 for d in frames_lms if f"left_{base}" in d)
+        rcount = sum(1 for d in frames_lms if f"right_{base}" in d)
+        return f"{'right' if rcount >= lcount else 'left'}_{base}"
+
+    def track(self, source: FrameSource, seed_bbox=None) -> Track:
+        ts, lms = [], []
+        for f in source:
+            ts.append(f.t)
+            lms.append(self.provider(f.img))
+        n = len(ts)
+        if n == 0:
+            raise ValueError("no frames decoded")
+
+        side = self.side
+        track_name = self._pick_side(lms, self.landmark, side)
+        seg_a = self._pick_side(lms, self.scale_segment[0], side)
+        seg_b = self._pick_side(lms, self.scale_segment[1], side)
+
+        traj, seg_px, seen = [], [], 0
+        last = None
+        for t, d in zip(ts, lms):
+            if track_name in d:
+                x, y, _ = d[track_name]
+                last = (x, y)
+                seen += 1
+            elif last is not None:
+                x, y = last                    # hold last known (gap); flagged via confidence
+            else:
+                x, y = np.nan, np.nan
+            traj.append((t, x, y))
+            if seg_a in d and seg_b in d:
+                ax, ay, _ = d[seg_a]; bx, by, _ = d[seg_b]
+                seg_px.append(float(np.hypot(ax - bx, ay - by)))
+        traj = np.asarray(traj, dtype=float)
+        # fill any leading NaNs (before first detection) so kinematics gets a clean series
+        good = ~np.isnan(traj[:, 1])
+        if good.any():
+            idx = np.arange(n)
+            traj[:, 1] = np.interp(idx, idx[good], traj[good, 1])
+            traj[:, 2] = np.interp(idx, idx[good], traj[good, 2])
+        target_px = float(np.median(seg_px)) if seg_px else 0.0
+        return Track(traj=traj, target_px=target_px, confidence=round(seen / n, 3))
+
+
 def auto_seed_bbox(img, min_area_frac: float = 0.004) -> tuple:
     """Best-effort seed: the largest solid blob in the frame (the plate end).
 

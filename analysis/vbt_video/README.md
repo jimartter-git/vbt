@@ -16,9 +16,13 @@ Each arrow is a **swappable seam**:
 | Stage | Interface | v1 (now) | drop-in later — no downstream change |
 |---|---|---|---|
 | Decode | `FrameSource` | `PyAVDecoder` (real timestamps, VFR-safe) | any decoder / live camera |
-| Track | `Tracker` | **`FlowTracker`** (default) · `PlateTracker` (detector+DP) · `CSRTTracker` | **pose/joint** (equipment-free) · learned **point tracking** (CoTracker) · **segmentation** (SAM) |
-| Scale | `Scaler` | `PlateDiameterScaler` (0.45 m) | bar length · reference object · auto-cal |
+| Track | `Tracker` | **`FlowTracker`** (default) · `PlateTracker` (detector+DP) · `CSRTTracker` · **`PoseTracker`** (equipment-free, prototype) | learned **point tracking** (CoTracker) · **segmentation** (SAM) |
+| Scale | `Scaler` | `PlateDiameterScaler` (0.45 m) · `AnthropometricScaler` (pose, height-based) | bar length · reference object · auto-cal |
 | Kinematics + segmentation | shared | `trajectory_to_reps` | same logic family as the watch/WL paths |
+
+**Generalizing to any lift** (one spine, swappable front-ends — not an algorithm per
+exercise): see [`docs/generalization.md`](../../docs/generalization.md) for the tracker
+families × scale-strategy taxonomy and the per-lift decision matrix.
 
 ### `FlowTracker` — the default (temporal optical flow; never drops a rep)
 
@@ -61,6 +65,32 @@ though a stationary distractor looks "smooth" to a nearest-neighbour tracker*.
 circles measure the same gray (verified on our clip: plate 93–105, distractors 80–110).
 On `20260528-IB-1` it gets 9/10 reps but reads ~0.06 m/s low through the blur (rmse
 0.074) — which is why flow is the default and this is the fallback.
+
+### `PoseTracker` — the equipment-free, universal front-end (prototype)
+
+For lifts with **no trackable implement** (cable pushdown, pull-up, machines), follow a
+**body landmark** instead of the bar. `PoseTracker` reports a chosen joint's `(t, cx, cy)`
+— same `Tracker` contract, so scaling/kinematics/segmentation downstream are untouched —
+and needs **no seed box** (landmarks are automatic; better onboarding than the bar path).
+
+It's a **2-for-1**: the same skeleton is both the tracker *and* the metric ruler —
+`target_px` is a body segment's pixel length (wrist↔elbow forearm by default), and
+`AnthropometricScaler` turns it into m/px from the user's height (forearm ≈ 0.146·H).
+
+```python
+cfg = VideoConfig(tracker="pose", landmark="wrist", height_m=1.80)  # no seed needed
+reps, meta = VideoVelocitySource(cfg).estimate("pushdown.mp4")
+```
+
+MediaPipe is imported **lazily** (heavy; may need a first-run `pip install mediapipe`,
+see `requirements-video.txt`) and the landmark provider is **injectable**, so the seam is
+tested with a synthetic provider — no model needed in CI. Two caveats it's built around
+(full rationale in `docs/generalization.md`): (1) on **arcing** moves (cable curl) hand
+speed ≠ load speed — prefer tracking the **weight stack**, or lean on the watch; (2)
+absolute scale is only as good as the height prior — but **velocity *loss* is relative**
+and survives a scale error if it's consistent rep-to-rep, which is the signal we sell.
+On isolation work the roles flip: the **Apple Watch on the wrist becomes the primary**
+source and pose-video the validator — they fuse because they measure nearly the same point.
 
 **Why these specific packages (the "no big redesign" call):**
 - **PyAV** for decode, not `cv2.VideoCapture` — it gives true per-frame

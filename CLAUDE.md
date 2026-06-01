@@ -35,6 +35,7 @@ and `docs/sources-and-fusion.md`.
 | `docs/data-schema.md` | the raw IMU + derived-metric contract |
 | `docs/calibration-protocol.md` | watch-vs-Vitruve capture protocol |
 | `docs/vbt-reference.md` | VBT science + competitor accuracy/metrics (verified vs PDFs) |
+| `docs/generalization.md` | generalizing CV to any lift: tracker families × scale strategies (one spine, swappable front-ends; pose/equipment-free path) |
 | `dataset/` | the living multi-vendor measurement DB (+ `dataset/README.md`, `dataset/INGESTION.md`) |
 | `analysis/` | Python pipelines: `vbt_analysis/` (IMU ZUPT) + `vbt_video/` (our own CV velocity — PyAV+OpenCV, pluggable trackers, outputs vendor `mevbt_cv`) |
 | `Watch/` `iOS/` `Packages/VBTCore/` | the Swift app + shared package |

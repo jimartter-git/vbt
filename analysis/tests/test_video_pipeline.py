@@ -14,7 +14,8 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from vbt_video import (ArrayFrameSource, PyAVDecoder, VideoVelocitySource,
-                       VideoConfig, PlateTracker, FlowTracker, auto_seed_bbox)  # noqa: E402
+                       VideoConfig, PlateTracker, FlowTracker, PoseTracker,
+                       auto_seed_bbox)  # noqa: E402
 
 W, H, FPS, R = 240, 320, 60.0, 40           # frame + disc radius (px)
 T, N_REPS, A = 2.0, 3, 0.25                  # rep period (s), reps, amplitude (m)
@@ -160,3 +161,75 @@ def test_flow_tracker_holds_lock_through_the_set():
     reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow")).estimate(
         ArrayFrameSource(_textured_frames(), FPS), seed_bbox=_seed())
     _assert_reps(reps)
+
+
+# ---- Pose front-end (equipment-free path) ----
+# We validate the pose seam WITHOUT the heavy MediaPipe model by injecting a synthetic
+# landmark provider: a wrist doing 3 known "pushdown" reps, with a fixed forearm length.
+# This exercises PoseTracker → AnthropometricScaler → kinematics exactly as a real clip would.
+
+HEIGHT_M = 1.80
+FOREARM_FRAC = 0.146
+FOREARM_PX = 120.0                                   # forearm pixel length we emit
+POSE_MPP = (HEIGHT_M * FOREARM_FRAC) / FOREARM_PX    # m per px the scaler should recover
+P_EXP_MEAN = 4 * A / T                               # same 0.5 m/s motion as the disc fixtures
+P_EXP_ROM_CM = 2 * A * 100                            # 50 cm
+
+
+class _SyntheticPoseProvider:
+    """A wrist landmark (right side) tracing the cos() rep motion, plus an elbow held a
+    fixed forearm-length below it so the anthropometric scale is exact and known.
+    `drop` frames return {} (no detection) to exercise the gap-fill + confidence path."""
+    def __init__(self, drop=frozenset()):
+        self.i = -1
+        self.drop = drop
+
+    def __call__(self, img):
+        self.i += 1
+        if self.i in self.drop:
+            return {}
+        t = self.i / FPS
+        pos = -A * np.cos(2 * np.pi * t / T)         # up-positive metres
+        wy = H / 2.0 - pos / POSE_MPP                 # image y grows down
+        wx = W / 2.0
+        return {
+            "right_wrist": (wx, wy, 0.95),
+            "right_elbow": (wx, wy + FOREARM_PX, 0.95),   # forearm = fixed px ruler
+        }
+
+
+def _pose_frames(n):
+    # PoseTracker only times frames + calls the provider on each img; content is irrelevant.
+    return ArrayFrameSource([np.zeros((H, W, 3), np.uint8) for _ in range(n)], FPS)
+
+
+def test_pose_tracker_recovers_reps_via_anthropometric_scale():
+    n = int(N_REPS * T * FPS)
+    tracker = PoseTracker(landmark="wrist", side="auto",
+                          provider=_SyntheticPoseProvider())
+    track = tracker.track(_pose_frames(n), seed_bbox=None)   # pose needs no seed
+    assert track.confidence > 0.95
+    assert abs(track.target_px - FOREARM_PX) < 1.0           # forearm ruler recovered
+
+    cfg = VideoConfig(tracker="pose", height_m=HEIGHT_M, segment="forearm")
+    src = VideoVelocitySource(cfg)
+    # inject the synthetic provider into the configured PoseTracker
+    src._tracker = lambda: PoseTracker(landmark="wrist", side="auto",
+                                       provider=_SyntheticPoseProvider())
+    reps, meta = src.estimate(_pose_frames(n), seed_bbox=None)
+    assert meta["seed_bbox"] is None                         # confirms the seed-free path
+    assert abs(meta["m_per_px"] - POSE_MPP) / POSE_MPP < 0.02
+    assert abs(len(reps) - N_REPS) <= 1, f"expected ~{N_REPS} reps, got {len(reps)}"
+    for r in reps:
+        assert abs(r["mean_velocity"] - P_EXP_MEAN) < 0.08, r
+        assert abs(r["rom"] - P_EXP_ROM_CM) < 8, r
+
+
+def test_pose_tracker_gap_fill_and_confidence():
+    # Dropped detections are gap-filled (held last) and reflected in a lower confidence.
+    n = int(N_REPS * T * FPS)
+    drop = frozenset(range(40, 50))
+    track = PoseTracker(provider=_SyntheticPoseProvider(drop=drop)).track(
+        _pose_frames(n), seed_bbox=None)
+    assert track.confidence < 1.0                            # the drop is reflected
+    assert not np.isnan(track.traj[:, 2]).any()              # but the series is still clean
