@@ -43,15 +43,20 @@ The hard part of generalizing isn't tracking, it's **scale**. The menu:
 
 | Scale source | Reference length | Works when |
 |---|---|---|
-| `PlateDiameterScaler` (now) | bumper plate Ø (0.45 m) | a plate faces camera |
+| `PlateDiameterScaler` (now) | bumper plate Ø (0.45 m) | a plate faces camera, **square-on** (fragile on thick rubber & off-angle — see field finding) |
 | `EllipseScaler` (planned, see off-angle finding) | plate *outer* ellipse major axis | any plate, **any angle** (foreshortening-invariant) |
 | **plate height / bar length / dumbbell length** | known implement dimension | that implement is in frame |
 | **weight-stack plate height** | stack plate pitch | cable / selectorized machines |
-| **pose anthropometrics** | a body segment (forearm ≈ 0.146·H, upper-arm ≈ 0.186·H) from user **height** | pose is tracked — the skeleton *is* a ruler |
+| **pose anthropometrics** (`scale="anthro"`) | a body segment (forearm ≈ 0.146·H, upper-arm ≈ 0.186·H) from user **height** | the lifter's scale segment is visible — **works with ANY position tracker**, not just pose |
 
 **Pose is a two-for-one:** the same landmarks give us the tracker *and* a metric scale
 (if we know the user's height). That's why the equipment-free path is more self-
 contained than it first looks.
+
+**The Scaler is chosen independently of the Tracker** (`VideoConfig(tracker=..., scale=...)`).
+`scale="anthro"` runs a *separate pose pass* purely for the body-segment ruler, so you can
+track the plate for robust **position** yet take **px→m off the lifter** — never trusting a
+plate diameter. It degrades gracefully to the plate ruler if the lifter isn't in frame.
 
 ## The one real subtlety: hand velocity ≠ load velocity on arcs
 
@@ -93,6 +98,45 @@ point. Our confidence-weighted fusion was built for exactly this source-reweight
 | **Cable pushdown / row** | `PoseTracker` (wrist) **or** stack tracker | stack-plate pitch / anthropometric | wrist-y ≈ stack-y if cable vertical; watch = primary |
 | Cable curl / lateral raise | `PoseTracker` (wrist) + caution | anthropometric | arc → hand≠load; rely on watch + relative VL |
 | Pull-up / dip / bodyweight | `PoseTracker` (hip/shoulder) | anthropometric | no implement at all |
+
+## Field finding (2026-06-01) — plate-scale fragility & the anthro cross-check on rows
+
+One session: **Pendlay rows, 135 lb (submaximal), 10 reps, filmed three ways** (side /
+oblique / front), each measured by Stance + SmartBarbell, then by our CV two ways
+(`FlowTracker`+plate scale, and pose/wrist). Mean concentric velocity (m/s):
+
+| View | Stance | SmartBarbell | Plate-CV (flow+plate scale) | Pose-CV (wrist, anthro) |
+|---|---|---|---|---|
+| side | 0.78 | 0.63 | **1.17** (plate ok; flow over-reads) | unreliable (arm occluded) |
+| oblique | 0.75 | 0.70 | **1.08** | **0.74** |
+| front | 0.74 | 0.65 | **0.99** | **0.72** |
+
+Three takeaways (one set, one lifter — **signal, not proof**; don't read the per-angle
+ranking as settled):
+
+1. **Plate-circle scale is fragile by plate *type*, not just angle.** These were thick
+   **rubber bumpers**: off-axis the near face, far face, and cylindrical rim read as
+   multiple offset circles ("two plates from the wrong angle"); **edge-on** a bumper is a
+   fat cylinder, not a line, so the diameter detector grabbed a wrong (small) value — the
+   **front scale was ~1.4× off**, and that error alone explained the front over-read
+   (re-scaling with the correct px→m collapsed ROM 75→54 cm, onto SmartBarbell's 60).
+   We must be robust to rubber / iron / hex; **don't scale off the plate.**
+2. **The anthropometric ruler is the plate-independent cross-check** — and it works.
+   Pose/wrist with only the lifter's height landed **within ~0.02–0.05 m/s of two
+   commercial bar devices** (front & oblique), and the hybrid (`flow` position +
+   `scale="anthro"`) reproduced that on the front view. It inherits pose's *visibility*
+   limit: great front/quarter-on, **degrades on a pure side view** (arm occluded) — so the
+   plate ruler and the body ruler are themselves **complementary; pick by what's visible.**
+3. **`FlowTracker` over-reads vertical travel on the row arc (~1.45×), independent of
+   scale** — measured directly: its plate-y pixel excursion was 1.46–1.55× the wrist-y
+   excursion on the same frames (rigidly-linked points), over-extending *symmetrically* at
+   both ends (suggests Lucas-Kanade overshoot on the fast/blurred phases, not drift).
+   Validated on bench (square-on press) but **not yet on row-type arcs — OPEN item.**
+
+The complementarity is the fusion thesis in one set: the **plate** track holds where the
+wrist is occluded (side), the **wrist** holds where the plate goes edge-on (front).
+Neither front-end alone is enough; together they cover each other — exactly the
+source-reweighting our confidence-weighted fusion was built for.
 
 ## Bottom line
 

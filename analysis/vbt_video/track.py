@@ -239,6 +239,14 @@ class FlowTracker(Tracker):
     Seed `bbox` localises the plate to seed the point cloud and the scale lane; `band`
     (else seed-derived) bounds the scale detector. Output is the usual `(t, cx, cy)`
     trajectory — scaling/kinematics/segmentation downstream are untouched.
+
+    OPEN ISSUE (2026-06-01, rows): on a barbell-ROW arc this over-reads *vertical* travel
+    by ~1.45× — measured directly, its plate-y pixel excursion was 1.46–1.55× the wrist-y
+    excursion on the same frames (rigidly-linked points), scale-independent and *symmetric*
+    at both ends (so not drift). Leading hypothesis: pyramidal-LK displacement overshoot on
+    the fast/motion-blurred phases. Validated on a square-on bench press (rmse 0.033) but
+    NOT on row-type arcs — fix + revalidate before trusting flow magnitudes on rows. See
+    docs/generalization.md "Field finding (2026-06-01)".
     """
     def __init__(self, band=None, band_lr=(1.18, 1.51), win=41, levels=4,
                  fb_thresh=1.0, min_pts=25, seed_pts=140, scale_every=10,
@@ -332,29 +340,90 @@ _POSE_IDX = {
 }
 
 
+# Modern MediaPipe (>=~0.10.18) removed the legacy `mp.solutions.pose` API in favour of
+# the Tasks API (`mp.tasks.vision.PoseLandmarker` + a downloadable `.task` model). We support
+# BOTH: prefer Tasks (works on current releases), fall back to solutions (older installs),
+# so the package isn't pinned to an old MediaPipe. The model is fetched + cached on first use.
+_POSE_MODEL_URL = ("https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
+                   "pose_landmarker_lite/float16/latest/pose_landmarker_lite.task")
+
+
+def _pose_model_path() -> str:
+    """Cached path to the Tasks pose model; download on first use (needs network once)."""
+    import os
+    import urllib.request
+    cache = os.path.join(os.path.expanduser("~"), ".cache", "vbt")
+    os.makedirs(cache, exist_ok=True)
+    path = os.path.join(cache, "pose_landmarker_lite.task")
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        urllib.request.urlretrieve(_POSE_MODEL_URL, path)
+    return path
+
+
 class _MediaPipePoseProvider:
-    """Lazy MediaPipe-backed landmark provider. Heavy + may need a first-run
-    `pip install mediapipe` (and downloads a model on first call) — so it's imported
-    lazily and injected, never imported at module load. Returns, per frame, a dict
+    """Lazy MediaPipe-backed landmark provider. Heavy + needs a first-run `pip install
+    mediapipe` (and a one-time model download for the Tasks API) — so it's imported lazily
+    and injected, never imported at module load. Returns, per frame, a dict
     {landmark_name: (x_px, y_px, visibility)}; missing/low-confidence landmarks are absent.
+
+    Auto-selects the MediaPipe API: the modern **Tasks** `PoseLandmarker` if available,
+    else the legacy **solutions.pose** — so it runs across MediaPipe versions unchanged.
     """
-    def __init__(self, min_visibility: float = 0.5):
+    def __init__(self, min_visibility: float = 0.5, model_path: str | None = None):
         self.min_visibility = min_visibility
-        self._pose = None
+        self.model_path = model_path
+        self._impl = None        # "tasks" | "solutions"
+        self._tasks = None       # PoseLandmarker (tasks)
+        self._pose = None        # Pose (solutions)
 
     def _ensure(self):
-        if self._pose is None:
-            import mediapipe as mp  # lazy: not a hard dep of the package
-            self._pose = mp.solutions.pose.Pose(static_image_mode=False,
-                                                model_complexity=1,
+        if self._impl is not None:
+            return
+        import mediapipe as mp  # lazy: not a hard dep of the package
+        # Prefer the Tasks API (the only one on current MediaPipe); fall back to legacy.
+        if hasattr(mp, "tasks") and hasattr(mp.tasks, "vision"):
+            try:
+                from mediapipe.tasks.python.core.base_options import BaseOptions
+                from mediapipe.tasks.python.vision import (PoseLandmarker,
+                                                           PoseLandmarkerOptions, RunningMode)
+                model = self.model_path or _pose_model_path()
+                self._tasks = PoseLandmarker.create_from_options(PoseLandmarkerOptions(
+                    base_options=BaseOptions(model_asset_path=model),
+                    running_mode=RunningMode.VIDEO,
+                    min_pose_detection_confidence=0.5, min_tracking_confidence=0.5))
+                self._impl = "tasks"
+                self._ts_ms = 0
+                return
+            except Exception:
+                self._tasks = None   # fall through to legacy if Tasks setup/download failed
+        if hasattr(mp, "solutions") and hasattr(mp.solutions, "pose"):
+            self._pose = mp.solutions.pose.Pose(static_image_mode=False, model_complexity=1,
                                                 enable_segmentation=False,
                                                 min_detection_confidence=0.5,
                                                 min_tracking_confidence=0.5)
+            self._impl = "solutions"
+            return
+        raise RuntimeError("MediaPipe has neither tasks.vision.PoseLandmarker nor "
+                           "solutions.pose — install mediapipe (and allow the one-time "
+                           "model download), or inject a custom landmark provider.")
 
     def __call__(self, img) -> dict:
         self._ensure()
         h, w = img.shape[:2]
-        res = self._pose.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        if self._impl == "tasks":
+            import mediapipe as mp
+            self._ts_ms += 33    # monotonic timestamps for VIDEO mode (cadence-agnostic)
+            res = self._tasks.detect_for_video(
+                mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb), self._ts_ms)
+            if not res.pose_landmarks:
+                return {}
+            lm = res.pose_landmarks[0]
+            return {name: (lm[idx].x * w, lm[idx].y * h, float(lm[idx].visibility))
+                    for name, idx in _POSE_IDX.items()
+                    if lm[idx].visibility >= self.min_visibility}
+        # legacy solutions.pose
+        res = self._pose.process(rgb)
         if not res.pose_landmarks:
             return {}
         lm = res.pose_landmarks.landmark

@@ -233,3 +233,42 @@ def test_pose_tracker_gap_fill_and_confidence():
         _pose_frames(n), seed_bbox=None)
     assert track.confidence < 1.0                            # the drop is reflected
     assert not np.isnan(track.traj[:, 2]).any()              # but the series is still clean
+
+
+class _FixedForearmProvider:
+    """Emits a wrist+elbow a FIXED pixel distance apart (the metric ruler) — content of
+    the frame is irrelevant. Used to drive the *anthro scale* seam independently of the
+    position tracker. Wrist position is static (only the segment LENGTH feeds the scaler)."""
+    def __init__(self, forearm_px):
+        self.forearm_px = forearm_px
+
+    def __call__(self, img):
+        return {"right_wrist": (W / 2.0, H / 2.0, 0.95),
+                "right_elbow": (W / 2.0, H / 2.0 + self.forearm_px, 0.95)}
+
+
+def test_hybrid_anthro_scale_with_implement_position_tracker():
+    # The Scaler seam is independent of the Tracker: track the disc for POSITION (CSRT),
+    # but take px→m from a body segment (a separate pose pass) — the plate-type/angle-robust
+    # path. Size the synthetic forearm so the anthro scale equals the disc's implied MPP,
+    # then the hybrid must recover the same reps as the implement-scaled pipeline.
+    forearm_px = (1.80 * FOREARM_FRAC) / MPP          # → AnthropometricScaler gives MPP
+    cfg = VideoConfig(plate_m=PLATE_M, tracker="csrt", scale="anthro",
+                      height_m=1.80, segment="forearm")
+    src = VideoVelocitySource(cfg)
+    src._scale_pose_provider = _FixedForearmProvider(forearm_px)   # inject the ruler
+    reps, meta = src.estimate(ArrayFrameSource(_frames(), FPS), seed_bbox=_seed())
+    assert meta["scale_source"] == "anthro"
+    assert abs(meta["m_per_px"] - MPP) / MPP < 0.02                # scale came off the segment
+    _assert_reps(reps)                                             # same reps as implement scale
+
+
+def test_hybrid_falls_back_to_implement_when_pose_finds_no_segment():
+    # If the lifter (scale segment) isn't visible, anthro scale degrades gracefully to the
+    # plate-diameter ruler rather than producing garbage.
+    cfg = VideoConfig(plate_m=PLATE_M, tracker="csrt", scale="anthro")
+    src = VideoVelocitySource(cfg)
+    src._scale_pose_provider = lambda img: {}                      # never finds a segment
+    reps, meta = src.estimate(ArrayFrameSource(_frames(), FPS), seed_bbox=_seed())
+    assert meta["scale_source"] == "implement"                     # fell back to the plate
+    _assert_reps(reps)

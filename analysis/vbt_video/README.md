@@ -84,7 +84,21 @@ reps, meta = VideoVelocitySource(cfg).estimate("pushdown.mp4")
 
 MediaPipe is imported **lazily** (heavy; may need a first-run `pip install mediapipe`,
 see `requirements-video.txt`) and the landmark provider is **injectable**, so the seam is
-tested with a synthetic provider — no model needed in CI. Two caveats it's built around
+tested with a synthetic provider — no model needed in CI. The provider **auto-selects**
+MediaPipe's API (modern **Tasks** `PoseLandmarker`, or legacy `solutions.pose`), so it
+isn't pinned to an old release.
+
+**Scale is a seam too — independent of the tracker.** `VideoConfig(scale="anthro")` takes
+px→m from a body segment (a separate pose pass) while *any* position tracker runs — so you
+can keep `FlowTracker` on the plate for robust position yet **never trust a plate diameter
+for scale** (rubber/iron/hex/edge-on all break plate-circle scaling; see
+`docs/generalization.md` "Field finding (2026-06-01)"):
+
+```bash
+python analysis/scripts/analyze_video.py clip.mp4 --set-id S --seed X,Y,W,H \
+    --scale anthro --height-m 1.89    # flow position + anthropometric (plate-independent) scale
+```
+ Two caveats it's built around
 (full rationale in `docs/generalization.md`): (1) on **arcing** moves (cable curl) hand
 speed ≠ load speed — prefer tracking the **weight stack**, or lean on the watch; (2)
 absolute scale is only as good as the height prior — but **velocity *loss* is relative**

@@ -1,0 +1,6 @@
+attribute,value,unit,source,date,notes
+height,1.892,m,self-reported,2026-06-01,"6'2.5\"; used by AnthropometricScaler (forearm=0.146*H, upper_arm=0.186*H) for pose/anthro px->m scale"
+body_mass,99.8,kg,self-reported,2026-06-01,220 lb
+forearm_length,,m,TODO-measure,,"MEASURE wrist crease -> elbow. Population 0.146*H=0.276 m UNDER-estimates: long arms (XXL glove). A measured value replaces the population fraction and removes the residual per-user scale error."
+wrist_circumference,0.190,m,self-reported,2026-06-01,"7.5\"; NOT used for length scaling (ruler is forearm LENGTH) - kept as an ID/frame-size detail"
+glove_size,XXL,,self-reported,2026-06-01,proportionately long arms + large hands

@@ -32,8 +32,12 @@ def main() -> int:
     p.add_argument("--auto-seed", action="store_true", help="detect the plate automatically")
     p.add_argument("--plate-cm", type=float, default=45.0)
     p.add_argument("--tracker", default="flow",
-                   help="flow (default, optical-flow, blur-proof) · plate (detector+DP) · csrt")
+                   help="flow (default, optical-flow, blur-proof) · plate (detector+DP) · csrt · pose")
     p.add_argument("--band", help="X0,X1 px vertical lane for the plate detector (else seed-derived)")
+    p.add_argument("--scale", default="implement", choices=["implement", "anthro"],
+                   help="px→m source: implement=plate diameter · anthro=body segment (plate-type/angle robust)")
+    p.add_argument("--height-m", type=float, default=1.75,
+                   help="lifter height (m) for anthro/pose scale; default 1.75")
     p.add_argument("--append", action="store_true", help="write rows to dataset/rep_metrics.csv")
     args = p.parse_args()
 
@@ -49,12 +53,13 @@ def main() -> int:
             p.error("--band must be X0,X1")
 
     src = VideoVelocitySource(VideoConfig(plate_m=args.plate_cm / 100.0,
-                                          tracker=args.tracker, band=band))
+                                          tracker=args.tracker, band=band,
+                                          scale=args.scale, height_m=args.height_m))
     reps, meta = src.estimate(args.clip, seed_bbox=seed)
 
     print(f"\n{args.set_id}  via mevbt_cv ({args.clip})")
     print(f"  {meta['n_frames']} frames @ {meta['fps']} fps · scale {meta['m_per_px']*100:.3f} cm/px "
-          f"· track-confidence {meta['track_confidence']} · seed {meta['seed_bbox']}")
+          f"({meta.get('scale_source','implement')}) · track-confidence {meta['track_confidence']} · seed {meta['seed_bbox']}")
     print(f"  {'rep':>3}  {'mean':>6}  {'peak':>6}  {'rom(cm)':>7}")
     for r in reps:
         print(f"  {r['rep_index']:>3}  {r['mean_velocity']:>6.3f}  {r['peak_velocity']:>6.3f}  {r['rom']:>7.1f}")

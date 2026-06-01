@@ -2,7 +2,13 @@
 opencv-contrib-python-headless>=4.10   # vision ops + CSRT/KCF trackers; headless = no GUI/CI-friendly
 av>=12                                 # PyAV: frame-accurate, VFR-safe decode (bundled ffmpeg)
 # numpy / scipy come from requirements.txt
-# Optional — only for the equipment-free PoseTracker (tracker="pose"). Imported lazily,
-# so the rest of the pipeline (and CI) runs without it. Install when working on pose:
-#   pip install mediapipe
+# Optional — only for the equipment-free PoseTracker (tracker="pose") and the anthro
+# scale source (scale="anthro"). Imported lazily, so the rest of the pipeline (and CI)
+# runs without it. The provider auto-selects MediaPipe's API: modern **Tasks**
+# (PoseLandmarker, downloads a ~6 MB .task model once to ~/.cache/vbt) or legacy
+# **solutions.pose** — so any of these work:
+#   pip install mediapipe            # current (>=0.10.18 = Tasks API)
+#   pip install "mediapipe==0.10.14" # older (still has solutions.pose)
+# On headless Linux the Tasks API needs the GL runtime present (the wheel dlopens it):
+#   apt-get install -y libgles2 libegl1   # provides libGLESv2.so.2 / libEGL.so.1
 # mediapipe>=0.10
