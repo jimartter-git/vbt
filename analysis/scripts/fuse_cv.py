@@ -35,6 +35,7 @@ REPS_CSV = os.path.join(REPO, "dataset", "rep_metrics.csv")
 POSE_VIS = 0.60         # soft floor on pose visibility (a method must at least see the wrist)
 REPCOUNT_TOL = 2        # max |pose reps - flow reps| for pose to be plausible (cross-method check)
 AGREE_TOL = 0.15        # rel. agreement (pose vs flow-anthro) for HIGH vs MEDIUM
+FLOW_ANCHOR = 0.3       # rim-centre position anchor for the flow methods (fixes row-arc over-read)
 
 
 def _mean(xs):
@@ -42,7 +43,8 @@ def _mean(xs):
 
 
 def _run(clip, tracker, scale, height, seed):
-    cfg = VideoConfig(tracker=tracker, scale=scale, height_m=height)
+    cfg = VideoConfig(tracker=tracker, scale=scale, height_m=height,
+                      flow_anchor_alpha=(FLOW_ANCHOR if tracker == "flow" else 0.0))
     reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed)
     return [r["mean_velocity"] for r in reps], meta
 
