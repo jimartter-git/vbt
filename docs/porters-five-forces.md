@@ -71,9 +71,13 @@ That's concentrated, structural supplier power.
 commoditized — moderate.
 **Talent & data:** CV/ML + sports-science talent is moderate; **data is
 self-generated** (low dependency — a plus).
-**Play.** Stay multi-platform via the `VelocitySource` abstraction (Android,
-Garmin, device-agnostic); own the data; keep a hardware option so the company
-isn't 100% hostage to one OS.
+**Play.** Stay **device-agnostic** via the `VelocitySource` abstraction — ride
+whatever the user already wears (Apple, Fitbit, Garmin, Whoop, Oura, or a
+vendor-neutral tape-on IMU), sanctioned-API-first with reverse-engineered local
+BLE only as a best-effort, never-load-bearing fallback. Own the data; keep a
+hardware option so the company isn't 100% hostage to one OS. Interoperability
+flips this force: the more sources we accept, the less any single supplier (Apple)
+can squeeze us.
 
 ---
 
@@ -82,6 +86,14 @@ isn't 100% hostage to one OS.
 - **Three moats to build, in order:** (1) the **unique signal** no one else
   computes (lifting strain), (2) a **compounding per-user data/prior** moat,
   (3) **fusion + calibration IP** (the multi-vendor dataset).
+- **Interoperability is a moat-*protector*, not a moat itself.** The defensible
+  asset is the fusion model + the muscular layer; the **device is interchangeable.**
+  Being source-agnostic (Apple/Fitbit/Garmin/Whoop/Oura, or a tape-on IMU) does
+  triple duty: (a) **defuses Apple supplier power** — not hostage to one OS; (b)
+  **lowers buyer adoption friction** — use the wearable you already own, no new
+  purchase; (c) **widens TAM** beyond any one installed base. Policy: sanctioned
+  APIs first; RE'd local BLE only as best-effort behind the abstraction — it's
+  OTA-fragile (cf. the Whoop BLE-RE arms race), so never let it become load-bearing.
 - **Two existential risks to manage:** incumbent entry (move fast, go deep) and
   Apple platform dependency (stay cross-platform, keep a hardware option).
 - **Sequencing:** the *accessible velocity tool* is the wedge that builds moats #1

@@ -33,14 +33,36 @@ signal**. Sources are asymmetric and complementary:
 | Source | Measures | Rate | Strengths | Failure modes |
 |---|---|---|---|---|
 | **Watch IMU** | accel (integrates → velocity) | ~100–200 Hz | always-on, no setup; best on DL/bench | drift; squat = arm noise; wrist ≠ bar |
+| **Generic wrist IMU** (Movella DOT, Movesense, mbientlab) | accel/gyro (integrates → velocity) | ~50–200 Hz | vendor-neutral, open BLE SDKs, *literally tape it on*; identical contract to the watch | drift; extra device to pair/charge; not always-on |
 | **AirPods IMU** (`CMHeadphoneMotionManager`) | head accel/attitude | ~25 Hz | 2nd independent timing/turnaround signal; squat vertical proxy | head ≠ bar; foreground-biased; low rate |
 | **Phone video** (Vision) | displacement **directly** | 60–240 fps | drift-free ROM; near-ground-truth; any angle if region-tracked | needs setup/angle; lighting; occlusion |
 | **BLE bar device** (Vitruve/Stance) | displacement **directly** | device | accurate, drift-free; calibration ground truth | must strap to bar; barbell-only |
-| **HR** (Watch / AirPods Pro 3 via HealthKit) | heart rate | ~1 Hz | rest-recovery, cardio cost context | blind to muscular strain (the whole thesis) |
+| **HR / HRV wearable** (Apple · Fitbit · Garmin · Whoop · Oura) | heart rate / HRV | ~1 Hz | rest-recovery & cardio-cost context; rides whatever you already wear | blind to muscular strain (the whole thesis); access varies (see policy below) |
 
 **Key asymmetry:** video and BLE measure displacement *directly* (no drift); the
 IMUs *integrate* (drift). So video/BLE anchor absolute ROM and the IMUs fill
 gaps and work with no camera. Each covers the other's failure mode.
+
+### Device-agnostic by design — interoperability protects the moat
+
+The `VelocitySource` contract means **no source is privileged.** The Apple Watch
+is first only because it's convenient — the *same* interface ingests a Fitbit or
+Garmin IMU, a Whoop's/Oura's HR, or a **vendor-neutral tape-on motion sensor**.
+(Those exist and are real: Movella DOT, Movesense, mbientlab MetaMotion are BLE,
+open-SDK IMUs you can strap anywhere. Note the honest limit — they give
+*orientation + acceleration*, not drift-free absolute position; a self-contained
+"position tracker" you tape to a wrist doesn't exist without an external reference
+— cameras, UWB anchors, lighthouse. That gap is *exactly* why we do IMU + ZUPT +
+fusion rather than wait for a magic sensor.)
+
+So the moat is the **primary-data fusion model + the muscular-strain layer — not
+any one device.** We ride whatever the user already owns instead of forcing a
+purchase. **Access policy, in order:** (1) the **sanctioned API** (HealthKit,
+Health Connect, a vendor partner/OAuth API); (2) a vendor-neutral IMU over its
+open SDK; (3) **reverse-engineered local BLE only as best-effort, last resort** —
+and, like every source, kept behind the abstraction so an OTA that breaks it
+*degrades gracefully* (weight shifts to the prior/other sources) instead of taking
+the product down. We never make an RE'd protocol load-bearing.
 
 ## The prior is learned and personal — the flywheel
 
