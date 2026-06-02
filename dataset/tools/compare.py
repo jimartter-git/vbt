@@ -26,10 +26,13 @@ def load():
 
 
 def velocity_loss(series: pd.Series) -> float:
-    s = series.dropna()
+    """Velocity loss = drop from the best rep to the **last** (terminal) rep — the
+    proximity-to-failure proxy (matches Vitruve's 'Drop' and the common-window calc).
+    NOT best→min: a mid-set slow rep shouldn't inflate the loss past the terminal rep."""
+    s = series.dropna().sort_index()
     if len(s) < 2 or s.max() <= 0:
         return float("nan")
-    return (s.max() - s.min()) / s.max() * 100.0
+    return (s.max() - s.iloc[-1]) / s.max() * 100.0
 
 
 def main() -> int:
