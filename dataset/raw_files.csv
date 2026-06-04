@@ -17,4 +17,4 @@ set_id,vendor,path,kind,notes
 20260601-ROW-1,video,raw/20260601-ROW-1.mp4,video_mp4,"Pendlay row, SIDE, 720p. FlowTracker 10/10. Known row-arc velocity over-read (anchor_alpha mitigates). seed 200,690,270,270"
 20260601-ROW-2,video,raw/20260601-ROW-2.mp4,video_mp4,"Pendlay row, ANGLE, 720p. FlowTracker 10/10 (beats SmartBarbell 9). seed 300,660,260,250"
 20260601-ROW-3,video,raw/20260601-ROW-3.mp4,video_mp4,"Pendlay row, FRONT, 720p. FlowTracker 10/10. seed 415,615,120,150"
-20260529-DL-pending,video,raw/20260529-DL-pending.mp4,video_mp4,"Deadlift, bumper plates, front-quarter, 1080x1440. SET MAPPING PENDING (DL-1 vs DL-3) - awaiting user confirm; not yet seeded/in cv_eval board"
+20240531-DL-1,video,raw/20240531-DL-1.mp4,video_mp4,"Deadlift ~355lb, bumper plates, front-quarter, 1080x1440. SmartBarbell 2 reps; our FlowTracker agrees 2 (bumper-plate scale valid, not flagged). seed 600,580,200,200"

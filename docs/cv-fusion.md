@@ -41,6 +41,10 @@ Hard clips (the robustness wins):
 | SQ-1 | mirror/rack, low-res | 8 | **10** | 10 | 5 |
 | SQ-3 | fast touch-and-go (adversarial) | 4 | **9** | 10 | 3 |
 | SC-1 | DB press, hex DB end, side-on | pose 32 | **10** | 11 | — |
+| DL-1 | deadlift, bumper, front-quarter | — | **2** | — | 2 (=) |
+
+(DL-1 count matches SmartBarbell exactly; its velocity reads ~1.5× high — a
+*moderate* scale error that slips under the plausibility flag, the roadmap-#2 case.)
 
 We **beat SmartBarbell on count everywhere there's a comparison** and ~match ground
 truth on all clips — preserving the device-grade good cases (IB-1 byte-identical,

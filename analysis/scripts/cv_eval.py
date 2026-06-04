@@ -48,8 +48,9 @@ CLIPS = {
     "20260602-SC-1": ("dataset/raw/20260602-SC-1.mov",
                       {"flow": (110, 115, 55, 55), "pose": None},
                       "DB press, hex DB end, side-on (flow on DB end >> pose)", None),
-    # NOTE: dataset/raw/20260529-DL-pending.mp4 (a deadlift) is registered but NOT in the
-    # board yet — its set mapping (DL-1 vs DL-3) and a seed are unconfirmed. Add once mapped.
+    "20240531-DL-1": ("dataset/raw/20240531-DL-1.mp4",
+                      {"flow": (600, 580, 200, 200)},
+                      "deadlift ~355lb, bumper plates, front-quarter (CV+SmartBarbell agree 2 reps)", None),
 }
 
 
