@@ -11,4 +11,4 @@ set_id,vendor,path,kind,notes
 20260604-SQ-1,vitruve,raw/20260604-SQ_vitruve.csv,vitruve_csv,"Vitruve export, 3 squat sets (this row=Set1)"
 20260604-SQ-2,vitruve,raw/20260604-SQ_vitruve.csv,vitruve_csv,"Vitruve export (Set2, no video)"
 20260604-SQ-3,vitruve,raw/20260604-SQ_vitruve.csv,vitruve_csv,Vitruve export (Set3)
-20260604-SQ-1,video,raw/20260604-SQ-1.mov,video_mov,"Set 1 (longer video), behind/mirror view. SmartBarbell 5/10, our FlowTracker 4/10 - clip too noisy (low-res, edge plates, hex, mirror, rack). Set-3 video pending re-upload."
+20260604-SQ-3,video,raw/20260604-SQ-3.mov,video_mov,"Set 3 (the ~22s behind/mirror video). SmartBarbell 5/10, our FlowTracker 4/10 - clip too noisy. Set-1 video pending re-upload."
