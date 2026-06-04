@@ -42,9 +42,9 @@ CLIPS = {
                        {"flow": (415, 615, 120, 150)}, "barbell row, front (good clip)", None),
     # --- hard clips ---
     "20260604-SQ-1": ("dataset/raw/20260604-SQ-1.mov",
-                      {"flow": (210, 85, 55, 65)}, "squat set1, mirror/rack, low-res", None),
+                      {"flow": (192, 72, 90, 90)}, "squat set1, mirror/rack, low-res", None),
     "20260604-SQ-3": ("dataset/raw/20260604-SQ-3.mov",
-                      {"flow": (190, 95, 60, 70)}, "squat set3, fast TnG (adversarial)", None),
+                      {"flow": (165, 77, 110, 110)}, "squat set3, fast TnG (adversarial)", None),
     "20260602-SC-1": ("dataset/raw/20260602-SC-1.mov",
                       {"flow": (110, 115, 55, 55), "pose": None},
                       "DB press, hex DB end, side-on (flow on DB end >> pose)", None),

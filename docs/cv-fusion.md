@@ -101,6 +101,16 @@ Ranked by user-visible failure. Each is additive behind the existing seams.
    hex vs change plate — stop hardcoding 0.45 m), and a real **plate-vs-anthro
    cross-check** (the seam exists; needs the pose pass wired + a disagreement flag).
    This is what fixes the velocities, not just flags them.
+   - **Seed-independent scale (confirmed sharp edge, 2026-06-04).** Today the scale
+     detector's Hough radius search is locked to ±20% of the *seed box*, and the scale
+     lane is derived from the seed too. A too-small seed therefore under-sizes the
+     plate → m/px (hence velocity AND ROM) inflate by the same factor. Verified on the
+     squats: a too-small seed gave velocity 1.40/1.75 (plate 60/54 px); sizing the seed
+     to the true plate (98/94 px) dropped it to **0.91/0.92** vs Vitruve 0.80/0.79.
+     SmartBarbell sizes the plate itself, so its velocity was fine even where its rep
+     *count* failed. Fix: a wide, seed-size-independent scale calibration (robust
+     clip-median radius + a seed-independent lane), so a loose/auto seed can't wreck the
+     scale. The residual ~14% after the fix is the out-of-plane / hex-plate term.
 3. **Viewpoint / angle.** Camera-angle estimation + out-of-plane correction (the
    rim-anchor patches only the row-arc symptom). At minimum, detect oblique views and
    widen confidence.

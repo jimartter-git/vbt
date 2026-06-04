@@ -11,8 +11,8 @@ set_id,vendor,path,kind,notes
 20260604-SQ-1,vitruve,raw/20260604-SQ_vitruve.csv,vitruve_csv,"Vitruve export, 3 squat sets (this row=Set1)"
 20260604-SQ-2,vitruve,raw/20260604-SQ_vitruve.csv,vitruve_csv,"Vitruve export (Set2, no video)"
 20260604-SQ-3,vitruve,raw/20260604-SQ_vitruve.csv,vitruve_csv,Vitruve export (Set3)
-20260604-SQ-3,video,raw/20260604-SQ-3.mov,video_mov,"Set 3 (~22s, behind/mirror), low-res. Vitruve 10. Fast touch-and-go (adversarial). Our FlowTracker 9/10 (occlusion auto-fallback recovered lost-lock; baseline was 4); SmartBarbell 3/10+phantom. seed 190,95,60,70"
-20260604-SQ-1,video,raw/20260604-SQ-1.mov,video_mov,"Set 1, behind/mirror+rack, low-res 440px. Vitruve 10. Our FlowTracker 10/10 (adaptive gate); SmartBarbell 5/10. Velocity scale unreliable (low-res). seed 210,85,55,65"
+20260604-SQ-3,video,raw/20260604-SQ-3.mov,video_mov,"Set 3 (~22s, behind/mirror), low-res. Vitruve 10 @ 0.79. Fast TnG. Our FlowTracker 10/10 @ 0.92 (seed 165,77,110,110 sized to true plate; occlusion auto-fallback). SmartBarbell 3/10+phantom @ 0.80."
+20260604-SQ-1,video,raw/20260604-SQ-1.mov,video_mov,"Set 1, behind/mirror+rack, low-res 440px. Vitruve 10 @ 0.80. Our FlowTracker 10/10 @ 0.91 (seed 192,72,90,90 - sized to true plate; a too-small seed inflates scale). SmartBarbell 5/10 @ 0.72."
 20260528-IB-1,video,raw/20260528-IB-1.mp4,video_mp4,"Incline bench 185lb x10. DEVICE-GRADE: FlowTracker 10/10, mean 0.437 m/s ~ rmse 0.033 vs Stance. seed 323,163,316,316 band 295,720"
 20260601-ROW-1,video,raw/20260601-ROW-1.mp4,video_mp4,"Pendlay row, SIDE, 720p. FlowTracker 10/10. Known row-arc velocity over-read (anchor_alpha mitigates). seed 200,690,270,270"
 20260601-ROW-2,video,raw/20260601-ROW-2.mp4,video_mp4,"Pendlay row, ANGLE, 720p. FlowTracker 10/10 (beats SmartBarbell 9). seed 300,660,260,250"
