@@ -58,7 +58,8 @@ def run(clip, tracker, seed, adaptive, occlusion=False):
                       occlusion_robust=(occlusion and tracker == "flow"))
     reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed)
     mv = [r["mean_velocity"] for r in reps]
-    return len(reps), (sum(mv) / len(mv) if mv else float("nan")), meta["track_confidence"]
+    return (len(reps), (sum(mv) / len(mv) if mv else float("nan")),
+            meta["track_confidence"], meta.get("scale_suspect", False))
 
 
 def main():
@@ -81,9 +82,9 @@ def main():
         first = True
         for tracker, seed in trackers.items():
             try:
-                n, mean, conf = run(clip, tracker, seed, args.adaptive, args.occlusion)
+                n, mean, conf, suspect = run(clip, tracker, seed, args.adaptive, args.occlusion)
                 delta = f"{n}({n - gtn:+d})"
-                meanstr = f"{mean:.2f}"
+                meanstr = (f"{mean:.2f}?" if suspect else f"{mean:.2f}")   # ? = scale flagged
             except Exception as e:
                 delta, meanstr, conf = f"ERR", "-", 0.0
                 note = note + f" [{type(e).__name__}: {e}]"

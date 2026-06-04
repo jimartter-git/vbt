@@ -25,6 +25,8 @@ class Track:
     traj: np.ndarray          # N x 3  (t, cx, cy) pixels
     target_px: float          # median target size (≈ plate diameter in px)
     confidence: float         # 0..1  (fraction of frames the tracker held lock)
+    size_cv: float = 0.0      # coeff. of variation of the size samples — a scale-quality
+    #   signal (a jittery plate radius = unreliable px→m). 0 = unknown/stable.
 
 
 class Tracker(ABC):
@@ -370,9 +372,11 @@ class FlowTracker(Tracker):
         if n == 0:
             raise ValueError("no frames decoded")
         rmed = float(np.median(radii)) if radii else r0
+        size_cv = (float(np.std(radii) / np.mean(radii))
+                   if len(radii) >= 3 and np.mean(radii) > 0 else 0.0)
         traj = np.column_stack([np.asarray(ts, float), np.asarray(xs), np.asarray(ys)])
         return Track(traj=traj, target_px=2.0 * rmed,
-                     confidence=round(healthy / max(1, n - 1), 3))
+                     confidence=round(healthy / max(1, n - 1), 3), size_cv=round(size_cv, 3))
 
 
 # ---- Pose front-end: the equipment-free, universal tracker ----

@@ -7,6 +7,8 @@ so it drops straight into the dataset next to the commercial tools and into fusi
 from __future__ import annotations
 from dataclasses import dataclass
 
+import numpy as np
+
 from .frames import FrameSource, PyAVDecoder
 from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, Tracker,
                     auto_seed_bbox)
@@ -110,6 +112,30 @@ class VideoVelocitySource:
         return PlateDiameterScaler(self.cfg.plate_m).m_per_px(track.target_px), \
             {"scale_source": "implement"}
 
+    # Bar speeds above this (m/s, mean concentric) are physically implausible for a loaded
+    # lift — a near-certain sign of an inflated px→m scale (wrong/clipped plate, low-res
+    # Hough under-sizing the radius). A pose-free sanity prior; tune as the corpus grows.
+    _MAX_PLAUSIBLE_MEAN_VEL = 1.6
+    _SIZE_CV_SUSPECT = 0.18        # plate-radius jitter above which the scale is unreliable
+
+    def _scale_confidence(self, track, reps, scale_meta):
+        """(scale_confidence 0..1, scale_suspect bool). Two pose-free signals:
+        plate-radius stability (a jittery ruler is a bad ruler) and bar-speed
+        plausibility (a 2× scale error shows up as impossible velocities). When pose
+        gives a second ruler, scale_meta carries its own confidence and we defer to it."""
+        if scale_meta.get("scale_source") == "anthro":
+            return float(scale_meta.get("scale_confidence", 1.0)), False
+        conf = 1.0
+        cv = getattr(track, "size_cv", 0.0)
+        if cv > 0:                                   # implement scale: penalise a jittery radius
+            conf = max(0.0, 1.0 - cv / self._SIZE_CV_SUSPECT * 0.5)
+        mvs = [r["mean_velocity"] for r in reps]
+        implausible = bool(mvs) and float(np.median(mvs)) > self._MAX_PLAUSIBLE_MEAN_VEL
+        if implausible:
+            conf = min(conf, 0.3)
+        suspect = implausible or cv > self._SIZE_CV_SUSPECT
+        return round(conf, 3), suspect
+
     def estimate(self, source_or_path, seed_bbox=None):
         """`source_or_path`: a FrameSource or a video path. `seed_bbox`: (x,y,w,h)
         around the target; if None, auto-seed from the first frame. The pose tracker
@@ -131,11 +157,19 @@ class VideoVelocitySource:
         mpp, scale_meta = self._resolve_scale(src, track)
         reps = trajectory_to_reps(track.traj, mpp, self.cfg.peak_min, self.cfg.rom_min,
                                   rep_gate=self.cfg.rep_gate)
+        scale_conf, scale_suspect = self._scale_confidence(track, reps, scale_meta)
+        if scale_suspect:
+            # Honest-velocity rule (CLAUDE.md / docs): when the px→m ruler can't be
+            # trusted, don't report a confident absolute m/s — mark reps relative-only.
+            for r in reps:
+                r["velocity_relative_only"] = True
         meta = {
             "m_per_px": mpp,
             "target_px": track.target_px,
             "track_confidence": track.confidence,
             "occlusion_used": used_occlusion,
+            "scale_confidence": scale_conf,
+            "scale_suspect": scale_suspect,
             "n_frames": len(track.traj),
             "fps": round(src.fps, 2),
             "seed_bbox": tuple(int(v) for v in seed_bbox) if seed_bbox else None,

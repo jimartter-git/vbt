@@ -209,6 +209,23 @@ def test_auto_fallback_engages_occlusion_only_when_lock_is_poor():
     assert m_off["occlusion_used"] is False        # policy disabled → default track only
 
 
+def test_scale_confidence_flags_implausible_velocity():
+    # A clean disc with a CORRECT plate-diameter scale yields plausible velocities → the
+    # scale is trusted (not suspect). But a grossly over-sized plate_m (here 5× too big)
+    # inflates px→m and velocity ~5× → the bar-speed plausibility prior flags it, and the
+    # reps are marked relative-only rather than reporting a confident wrong m/s.
+    src = lambda: ArrayFrameSource(_frames(), FPS)
+    _, m_ok = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="csrt")).estimate(
+        src(), seed_bbox=_seed())
+    assert m_ok["scale_suspect"] is False
+    assert m_ok["scale_confidence"] > 0.5
+
+    reps_bad, m_bad = VideoVelocitySource(
+        VideoConfig(plate_m=PLATE_M * 5.0, tracker="csrt")).estimate(src(), seed_bbox=_seed())
+    assert m_bad["scale_suspect"] is True
+    assert all(r.get("velocity_relative_only") for r in reps_bad)
+
+
 def test_flow_tracker_holds_lock_through_the_set():
     # The optical-flow default: track texture frame-to-frame, hold lock the whole set
     # (high confidence), and recover the reps — the never-drops-a-rep behaviour.
