@@ -51,30 +51,66 @@ class AnthropometricScaler:
         return (self.height_m * frac) / target_px
 
 
-def _segment_concentric(t, v, pos, peak_min, rom_min, fs):
-    """Positive-velocity runs that clear a peak and a real ROM. `rom_min` (real
-    travel) is the primary gate; `peak_min` is a low noise gate kept BELOW grind-
-    rep speed so terminal reps aren't dropped (mirrors the WL importer)."""
+def _candidate_concentrics(t, v, pos, fs):
+    """All positive-velocity runs between velocity sign-changes (the tempo-invariant
+    rep turnarounds), with a minimum duration to drop chatter. Returns a list of
+    (start, end, peak_velocity, rom_m) — *ungated*; the caller decides what's a rep."""
     b, a = butter(2, min(0.99, 0.1 / (fs / 2)), btype="high")
     vh = filtfilt(b, a, v)
     sign = np.sign(vh); sign[sign == 0] = 1
     crossings = np.where(np.diff(sign) != 0)[0]
     bounds = [0, *crossings.tolist(), len(v) - 1]
-    segs = []
+    cands = []
     for s, e in zip(bounds[:-1], bounds[1:]):
         if e - s < max(2, int(0.12 * fs)):
             continue
         seg_v = v[s:e + 1]
-        if seg_v.mean() <= 0 or seg_v.max() < peak_min:
+        if seg_v.mean() <= 0:
             continue
-        if (pos[e] - pos[s]) < rom_min:        # absolute travel over the run
-            continue
-        segs.append((s, e))
-    return segs
+        cands.append((s, e, float(seg_v.max()), float(pos[e] - pos[s])))
+    return cands
 
 
-def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25):
-    """`track_traj` = N x 3 (t, cx, cy) px. Returns list of per-rep dicts."""
+def _segment_concentric(t, v, pos, peak_min, rom_min, fs, rep_gate="absolute",
+                        rel_rom_frac=0.5, rel_peak_frac=0.25,
+                        rom_floor=0.04, peak_floor=0.05):
+    """Pick which candidate runs are real reps.
+
+    - `rep_gate="absolute"` (default, validated): keep runs clearing fixed
+      `rom_min` (real travel, the primary gate) and `peak_min` (a low noise gate
+      kept BELOW grind speed so terminal reps survive). Byte-for-byte the v1 rule.
+    - `rep_gate="relative"`: tempo-invariant gating. The discriminator is **peak
+      velocity relative to the set median**, NOT ROM — because a fast touch-and-go
+      or partial-lockout rep has a *small ROM but a normal peak* (you still moved
+      the load), whereas jitter has a *low peak*. A fixed ROM gate silently drops
+      those partial reps; peak-relative gating keeps them and still rejects jitter
+      (which sits an order of magnitude below the set's median peak). A small
+      absolute ROM floor removes high-jerk zero-travel spikes. `rel_rom_frac` is
+      unused here (kept for signature stability). See docs/sources-and-fusion.md
+      "Tempo-invariance".
+    """
+    cands = _candidate_concentrics(t, v, pos, fs)
+    if rep_gate == "absolute":
+        return [(s, e) for (s, e, peak, rom) in cands
+                if peak >= peak_min and rom >= rom_min]
+    if rep_gate != "relative":
+        raise ValueError(f"unknown rep_gate '{rep_gate}'; use 'absolute' or 'relative'")
+    # Drop pure jitter (high-jerk zero-travel spikes) with a small absolute floor,
+    # then gate on PEAK velocity relative to the set median (scale-invariant ratio).
+    floored = [(s, e, peak, rom) for (s, e, peak, rom) in cands
+               if peak >= peak_floor and rom >= rom_floor]
+    if not floored:
+        return []
+    med_peak = float(np.median([c[2] for c in floored]))
+    peak_gate = max(peak_floor, rel_peak_frac * med_peak)
+    return [(s, e) for (s, e, peak, rom) in floored if peak >= peak_gate]
+
+
+def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
+                       rep_gate="absolute"):
+    """`track_traj` = N x 3 (t, cx, cy) px. Returns list of per-rep dicts.
+    `rep_gate`: "absolute" (fixed ROM/peak, validated) or "relative" (adaptive,
+    tempo-invariant — see `_segment_concentric`)."""
     t = track_traj[:, 0].astype(float)
     y_px = track_traj[:, 2].astype(float)
     # image y grows DOWNWARD → bar up = y decreasing → vertical position (up +):
@@ -99,8 +135,9 @@ def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25):
         posu_s = posu
         vel = np.gradient(posu, dt)
 
+    segs = _segment_concentric(tu, vel, posu_s, peak_min, rom_min, fs, rep_gate)
     out = []
-    for i, (s, e) in enumerate(_segment_concentric(tu, vel, posu_s, peak_min, rom_min, fs), 1):
+    for i, (s, e) in enumerate(segs, 1):
         seg_v = vel[s:e + 1]
         peak = float(seg_v.max())
         active = np.where(seg_v >= max(0.05, 0.1 * peak))[0]
@@ -111,4 +148,13 @@ def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25):
             "peak_velocity": round(peak, 3),
             "rom": round(float(posu_s[e] - posu_s[s]) * 100, 1),   # cm
         })
+    # Count vs measure: flag reps whose ROM is well under the set median as
+    # `partial_rom` so downstream velocity/loss comparisons can exclude them
+    # (a partial/no-lockout rep is counted, but isn't apples-to-apples). See
+    # docs/sources-and-fusion.md "Tempo-invariance".
+    if out:
+        med = float(np.median([r["rom"] for r in out]))
+        for r in out:
+            if med > 0 and r["rom"] < 0.7 * med:
+                r["flag"] = "partial_rom"
     return out

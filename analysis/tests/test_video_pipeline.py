@@ -247,6 +247,49 @@ class _FixedForearmProvider:
                 "right_elbow": (W / 2.0, H / 2.0 + self.forearm_px, 0.95)}
 
 
+def _mixed_rom_traj(specs, fps=60.0, mpp=0.005):
+    """Build a synthetic (t, cx, cy) trajectory from per-rep (amplitude_m, period_s)
+    specs — one concentric (up) per period. Lets us test segmentation directly,
+    no rendering. `mpp` is the px→m the caller passes to trajectory_to_reps."""
+    ts, cys, cur = [], [], 0.0
+    for A, T in specs:
+        nf = int(T * fps)
+        for i in range(nf):
+            tt = i / fps
+            pos = -A * np.cos(2 * np.pi * tt / T)        # 0 at bottom → up → bottom
+            ts.append(cur + tt)
+            cys.append(H / 2.0 - pos / mpp)              # image y grows down → up = smaller y
+        cur += nf / fps
+    return np.column_stack([ts, np.full(len(ts), W / 2.0), cys]), mpp
+
+
+def test_relative_gate_recovers_partial_reps_that_absolute_drops():
+    # 3 full slow reps (ROM 0.5 m) + 2 fast partial reps (ROM 0.2 m < absolute rom_min,
+    # but normal peak velocity — the touch-and-go case). Absolute gating drops the
+    # partials; peak-relative gating keeps all 5 and flags the partials as partial_rom.
+    from vbt_video.kinematics import trajectory_to_reps
+    traj, mpp = _mixed_rom_traj([(0.25, 2.0)] * 3 + [(0.10, 1.0)] * 2)
+
+    reps_abs = trajectory_to_reps(traj, mpp, rep_gate="absolute")
+    reps_rel = trajectory_to_reps(traj, mpp, rep_gate="relative")
+
+    assert len(reps_abs) <= 3 + 1                         # absolute keeps ~the 3 full reps
+    assert len(reps_rel) >= len(reps_abs) + 1             # relative recovers the partials
+    assert abs(len(reps_rel) - 5) <= 1                    # ~all 5 reps
+    partials = [r for r in reps_rel if r.get("flag") == "partial_rom"]
+    assert len(partials) >= 2                             # the 2 short reps are flagged
+    assert all(p["rom"] < 35 for p in partials)           # flagged reps are the short ones
+
+
+def test_relative_gate_does_not_invent_reps_from_jitter():
+    # A clean 3-rep set must still read as ~3 under relative gating — the peak-relative
+    # rule rejects sub-threshold chatter rather than inflating the count.
+    from vbt_video.kinematics import trajectory_to_reps
+    traj, mpp = _mixed_rom_traj([(0.25, 2.0)] * 3)
+    reps_rel = trajectory_to_reps(traj, mpp, rep_gate="relative")
+    assert abs(len(reps_rel) - 3) <= 1
+
+
 def test_hybrid_anthro_scale_with_implement_position_tracker():
     # The Scaler seam is independent of the Tracker: track the disc for POSITION (CSRT),
     # but take px→m from a body segment (a separate pose pass) — the plate-type/angle-robust

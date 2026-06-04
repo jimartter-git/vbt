@@ -18,7 +18,10 @@ class VideoConfig:
     plate_m: float = 0.45        # known plate diameter (standard bumper)
     tracker: str = "flow"        # front-end selector (extend as trackers are added)
     peak_min: float = 0.12       # m/s noise gate (below grind speed — keep terminal reps)
-    rom_min: float = 0.25        # m minimum real travel for a rep
+    rom_min: float = 0.25        # m minimum real travel for a rep (absolute gate)
+    rep_gate: str = "absolute"   # "absolute" (fixed gates) | "relative" (adaptive,
+    #   tempo-invariant: gate each rep vs the set median, so fast TnG / partial-lockout
+    #   reps aren't dropped — see kinematics._segment_concentric)
     band: tuple | None = None    # (x0,x1) px lane for the plate detector; None → seed-derived
     # --- px→m scale source (the Scaler seam, chosen independently of the Tracker) ---
     # "implement" → the tracker's own ruler (plate diameter for flow/plate/csrt; body
@@ -105,7 +108,8 @@ class VideoVelocitySource:
             seed_bbox = auto_seed_bbox(src.first().img)
         track = self._tracker().track(src, seed_bbox)
         mpp, scale_meta = self._resolve_scale(src, track)
-        reps = trajectory_to_reps(track.traj, mpp, self.cfg.peak_min, self.cfg.rom_min)
+        reps = trajectory_to_reps(track.traj, mpp, self.cfg.peak_min, self.cfg.rom_min,
+                                  rep_gate=self.cfg.rep_gate)
         meta = {
             "m_per_px": mpp,
             "target_px": track.target_px,
