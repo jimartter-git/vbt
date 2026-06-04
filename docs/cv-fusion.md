@@ -121,10 +121,14 @@ Ranked by user-visible failure. Each is additive behind the existing seams.
      - **BUILT (2026-06-04): user-confirmed plate + camera angle (`plates.ScaleSpec`,
        wired via `VideoConfig.scale_spec`).** Real-world diameter from the *largest* plate
        (stacking → outer rim) + bumper/iron; camera angle gates the rest — **side** =
-       diameter valid, full confidence; **diagonal** = ellipse + out-of-plane arc → auto-
-       enables the rim anchor + reduced confidence; **head-on** = plate edge-on → invalid →
-       falls back to anthropometric, else flagged relative-only. Confidence = plate-certainty
-       × angle factor. Pixel diameter still from the seed (the user adjusts that in-app).
+       diameter valid, full confidence; **diagonal** = ellipse + out-of-plane arc → reduced
+       confidence + flags `needs_anchor` (ADVISORY — the rim anchor stays opt-in: validated
+       that a blanket diagonal→anchor helps the row arc but SPLITS the deadlift 2 reps into 7,
+       so angle alone can't gate it); **head-on** = plate edge-on → invalid → falls back to
+       anthropometric, else flagged relative-only. Confidence = plate-certainty × angle
+       factor. Pixel diameter still from the seed (the user adjusts that in-app).
+       ⚑ Angle/plate/speed vary PER CLIP (deliberately) — `scale_spec` is a per-clip input,
+       never a per-lift-day constant. `cv_eval.py --scale` runs the board angle-aware.
        This is the practical scale fix; the learned detector (roadmap #6) removes the seed.
 
 ## App layer (human-in-the-loop)

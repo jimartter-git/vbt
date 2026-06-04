@@ -70,13 +70,12 @@ class VideoConfig:
 _SEGMENT_LANDMARKS = {"forearm": ("wrist", "elbow"), "upper_arm": ("elbow", "shoulder")}
 
 def _flow_anchor(cfg) -> float:
-    """The FlowTracker rim-anchor gain. A diagonal/oblique camera angle (scale_spec) has an
-    out-of-plane bar arc → auto-enable the validated 0.3 anchor if not already set."""
-    if cfg.flow_anchor_alpha > 0.0:
-        return cfg.flow_anchor_alpha
-    if cfg.scale_spec is not None and cfg.scale_spec.policy["needs_anchor"]:
-        return 0.3
-    return 0.0
+    """The FlowTracker rim-anchor gain (opt-in via `flow_anchor_alpha`). A diagonal
+    scale_spec marks `needs_anchor` in meta as ADVISORY only — we do NOT auto-apply the
+    gain. The right correction is clip-specific: the validated 0.3 helps the barbell-row
+    arc (ROW-2 1.09→0.96) but SPLITS the deadlift 2 reps into 7 (front-quarter view). So
+    surface the hint; let the app/user opt in per clip rather than gate on angle alone."""
+    return cfg.flow_anchor_alpha
 
 
 # Tracker factories receive the VideoConfig so a tracker can read its own knobs

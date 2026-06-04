@@ -23,23 +23,32 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from vbt_video import VideoConfig, VideoVelocitySource  # noqa: E402
+from vbt_video.plates import ScaleSpec  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REPS_CSV = os.path.join(REPO, "dataset", "rep_metrics.csv")
 
-# set_id -> (clip path rel to repo, {tracker: seed_bbox or None}, note, band=(x0,x1) or None)
+# set_id -> (clip path rel to repo, {tracker: seed_bbox or None}, note, band=(x0,x1) or None,
+#            [optional] scale={"angle","plate","kind"} for the --scale (angle-aware) mode)
 # EVERY registered clip with a ground-truth count lives here — the complete board.
+# NOTE: angle/speed/framing vary PER CLIP (deliberately, to stress generalization) — never
+# assume a lift-day is uniform. The `scale` dict below is seeded from each clip's own note;
+# ⚑ CONFIRM the per-clip angle/plate/kind (see the "scale seeded from notes" report).
 CLIPS = {
     # --- device-grade / good clips (regression guards: must stay at GT) ---
     "20260528-IB-1": ("dataset/raw/20260528-IB-1.mp4",
                       {"flow": (323, 163, 316, 316)},
-                      "incline bench 185lb - DEVICE-GRADE (rmse 0.033 vs Stance)", (295, 720)),
+                      "incline bench 185lb - DEVICE-GRADE (rmse 0.033 vs Stance)", (295, 720),
+                      {"angle": "side", "plate": 45, "kind": "iron"}),
     "20260601-ROW-1": ("dataset/raw/20260601-ROW-1.mp4",
-                       {"flow": (200, 690, 270, 270)}, "barbell row, side (good clip)", None),
+                       {"flow": (200, 690, 270, 270)}, "barbell row, side (good clip)", None,
+                       {"angle": "side", "plate": 45, "kind": "iron"}),
     "20260601-ROW-2": ("dataset/raw/20260601-ROW-2.mp4",
-                       {"flow": (300, 660, 260, 250)}, "barbell row, angle (good clip)", None),
+                       {"flow": (300, 660, 260, 250)}, "barbell row, angle (good clip)", None,
+                       {"angle": "diagonal", "plate": 45, "kind": "iron"}),
     "20260601-ROW-3": ("dataset/raw/20260601-ROW-3.mp4",
-                       {"flow": (415, 615, 120, 150)}, "barbell row, front (good clip)", None),
+                       {"flow": (415, 615, 120, 150)}, "barbell row, front (good clip)", None,
+                       {"angle": "front", "plate": 45, "kind": "iron"}),
     # --- hard clips ---
     "20260604-SQ-1": ("dataset/raw/20260604-SQ-1.mov",
                       {"flow": (192, 72, 90, 90)}, "squat set1, mirror/rack, low-res", None),
@@ -50,7 +59,8 @@ CLIPS = {
                       "DB press, hex DB end, side-on (flow on DB end >> pose)", None),
     "20240531-DL-1": ("dataset/raw/20240531-DL-1.mp4",
                       {"flow": (600, 580, 200, 200)},
-                      "deadlift ~355lb, bumper plates, front-quarter (CV+SmartBarbell agree 2 reps)", None),
+                      "deadlift ~355lb, bumper plates, front-quarter (CV+SmartBarbell agree 2 reps)", None,
+                      {"angle": "diagonal", "plate": 45, "kind": "bumper"}),
 }
 
 
@@ -76,9 +86,13 @@ def gt_counts(set_id):
     return (len(real(ref)) if ref else 0, rmean, comp, len(real(comp)) if comp else 0)
 
 
-def run(clip, tracker, seed, adaptive, occlusion=False, band=None):
+def run(clip, tracker, seed, adaptive, occlusion=False, band=None, scale=None):
+    spec = None
+    if scale and tracker != "pose":      # plate scale is N/A for the pose/seed-free path
+        spec = ScaleSpec(top_plate=scale["plate"], kind=scale["kind"], angle=scale["angle"])
     cfg = VideoConfig(tracker=tracker, rep_gate=("relative" if adaptive else "absolute"),
-                      occlusion_robust=(occlusion and tracker == "flow"), band=band)
+                      occlusion_robust=(occlusion and tracker == "flow"), band=band,
+                      scale_spec=spec)
     reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed)
     mv = [r["mean_velocity"] for r in reps]
     return (len(reps), (sum(mv) / len(mv) if mv else float("nan")),
@@ -90,15 +104,20 @@ def main():
     ap.add_argument("--set", dest="only")
     ap.add_argument("--adaptive", action="store_true", help="relative (adaptive) rep gating")
     ap.add_argument("--occlusion", action="store_true", help="flow coast + re-acquire")
+    ap.add_argument("--scale", action="store_true",
+                    help="angle-aware px→m via each clip's plate+angle (ScaleSpec); "
+                         "side=trusted, diagonal=anchored+lower conf, front=relative-only")
     args = ap.parse_args()
 
     sets = [args.only] if args.only else list(CLIPS)
-    print(f"\nCV scoreboard{' [adaptive gate]' if args.adaptive else ''} "
+    print(f"\nCV scoreboard{' [adaptive gate]' if args.adaptive else ''}"
+          f"{' [angle-aware scale]' if args.scale else ''} "
           f"— rep count (Δ vs Vitruve) · mean m/s · track-conf\n")
     hdr = f"{'set':<16}{'GT':>4}{'comp':>14}{'tracker':>9}{'reps':>8}{'mean':>7}{'conf':>7}  note"
     print(hdr); print("-" * len(hdr))
     for sid in sets:
-        clip_rel, trackers, note, band = CLIPS[sid]
+        clip_rel, trackers, note, band = CLIPS[sid][:4]
+        scale = CLIPS[sid][4] if args.scale and len(CLIPS[sid]) > 4 else None
         clip = os.path.join(REPO, clip_rel)
         gtn, gtmean, comp, compn = gt_counts(sid)
         compstr = f"{comp[:5]}={compn}" if comp else "-"
@@ -106,7 +125,7 @@ def main():
         for tracker, seed in trackers.items():
             try:
                 n, mean, conf, suspect = run(clip, tracker, seed, args.adaptive,
-                                             args.occlusion, band)
+                                             args.occlusion, band, scale)
                 delta = f"{n}({n - gtn:+d})"
                 meanstr = (f"{mean:.2f}?" if suspect else f"{mean:.2f}")   # ? = scale flagged
             except Exception as e:
