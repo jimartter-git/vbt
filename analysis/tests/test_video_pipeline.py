@@ -255,6 +255,26 @@ def test_plate_spec_scale_and_angle_policy():
     assert ScaleSpec(angle="front").scale_confidence() == 0.0
 
 
+def test_scale_spec_drives_plate_m_and_angle_flagging():
+    from vbt_video.plates import ScaleSpec
+    src = lambda: ArrayFrameSource(_frames(), FPS)
+    # SIDE view, 45 lb bumper → plate_m 0.45 (== the fixture's implied scale), trusted, not suspect
+    cfg = VideoConfig(tracker="csrt", scale_spec=ScaleSpec(top_plate=45, kind="bumper", angle="side"))
+    reps, m = VideoVelocitySource(cfg).estimate(src(), seed_bbox=_seed())
+    assert m["scale_source"] == "plate_spec"
+    assert m["camera_angle"] == "side"
+    assert abs(m["m_per_px"] - MPP) / MPP < 0.1
+    assert m["scale_suspect"] is False
+    _assert_reps(reps)
+    # HEAD-ON: plate edge-on → plate-diameter invalid; with no pose segment it degrades to the
+    # plate ruler but is FLAGGED (don't report a confident absolute m/s).
+    s2 = VideoVelocitySource(VideoConfig(tracker="csrt", scale_spec=ScaleSpec(angle="front")))
+    s2._scale_pose_provider = lambda img: {}        # pose finds no segment → fall through, flagged
+    reps2, m2 = s2.estimate(src(), seed_bbox=_seed())
+    assert m2["scale_suspect"] is True
+    assert all(r.get("velocity_relative_only") for r in reps2)
+
+
 def test_flow_tracker_holds_lock_through_the_set():
     # The optical-flow default: track texture frame-to-frame, hold lock the whole set
     # (high confidence), and recover the reps — the never-drops-a-rep behaviour.

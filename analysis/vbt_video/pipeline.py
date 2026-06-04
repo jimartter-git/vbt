@@ -13,6 +13,7 @@ from .frames import FrameSource, PyAVDecoder
 from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, Tracker,
                     auto_seed_bbox)
 from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
+from .plates import ScaleSpec
 
 
 @dataclass
@@ -57,17 +58,33 @@ class VideoConfig:
     # rescues the hard one. Set occlusion_conf=0 to disable.
     auto_occlusion: bool = True
     occlusion_conf: float = 0.75
+    # User-confirmed plate + camera angle (vbt_video.plates.ScaleSpec). When set it drives:
+    #   real-world plate_m (largest plate + bumper/iron, handling stacking), scale confidence
+    #   (plate certainty × angle factor), the head-on fallback (plate-diameter invalid → use
+    #   anthro / relative-only), and the diagonal out-of-plane trajectory anchor. Pixel
+    #   diameter still comes from the seed/detector (the user adjusts that surface in-app).
+    scale_spec: ScaleSpec | None = None
 
 
 # Which two landmarks bound each scale segment (their pixel distance = the metric ruler).
 _SEGMENT_LANDMARKS = {"forearm": ("wrist", "elbow"), "upper_arm": ("elbow", "shoulder")}
+
+def _flow_anchor(cfg) -> float:
+    """The FlowTracker rim-anchor gain. A diagonal/oblique camera angle (scale_spec) has an
+    out-of-plane bar arc → auto-enable the validated 0.3 anchor if not already set."""
+    if cfg.flow_anchor_alpha > 0.0:
+        return cfg.flow_anchor_alpha
+    if cfg.scale_spec is not None and cfg.scale_spec.policy["needs_anchor"]:
+        return 0.3
+    return 0.0
+
 
 # Tracker factories receive the VideoConfig so a tracker can read its own knobs
 # (e.g. the x-band, or the pose landmark/side) while trackers that don't need them ignore it.
 _TRACKERS = {
     "csrt": lambda cfg: CSRTTracker(),
     "plate": lambda cfg: PlateTracker(band=cfg.band),
-    "flow": lambda cfg: FlowTracker(band=cfg.band, anchor_alpha=cfg.flow_anchor_alpha,
+    "flow": lambda cfg: FlowTracker(band=cfg.band, anchor_alpha=_flow_anchor(cfg),
                                     occlusion_robust=cfg.occlusion_robust,
                                     robust_scale=cfg.robust_scale),
     "pose": lambda cfg: PoseTracker(landmark=cfg.landmark, side=cfg.side,
@@ -105,7 +122,9 @@ class VideoVelocitySource:
         anthro = AnthropometricScaler(height_m=self.cfg.height_m, segment=self.cfg.segment)
         if self.cfg.tracker == "pose":
             return anthro.m_per_px(track.target_px), {"scale_source": "anthro"}
-        if self.cfg.scale == "anthro":
+        spec = self.cfg.scale_spec
+        # Head-on (plate edge-on) → plate-diameter scaling is invalid; prefer the anthro ruler.
+        if self.cfg.scale == "anthro" or (spec is not None and not spec.policy["valid"]):
             seg = _SEGMENT_LANDMARKS.get(self.cfg.segment, ("wrist", "elbow"))
             ptrack = PoseTracker(landmark=self.cfg.landmark, side=self.cfg.side,
                                  scale_segment=seg,
@@ -116,9 +135,16 @@ class VideoVelocitySource:
                     "scale_target_px": round(ptrack.target_px, 1),
                     "scale_confidence": ptrack.confidence,
                 }
-            # pose found no scale segment — degrade gracefully to the implement ruler
-        return PlateDiameterScaler(self.cfg.plate_m).m_per_px(track.target_px), \
-            {"scale_source": "implement"}
+            # pose found no scale segment — degrade to the plate ruler (flagged below)
+        # Plate-diameter scale: real-world diameter from the user's spec (largest plate +
+        # bumper/iron) if given, else the configured default. Pixel diameter from the tracker.
+        plate_m = spec.plate_m() if spec is not None else self.cfg.plate_m
+        meta = {"scale_source": "plate_spec" if spec is not None else "implement"}
+        if spec is not None:
+            meta["scale_confidence"] = round(spec.scale_confidence(), 3)
+            meta["camera_angle"] = spec.angle
+            meta["scale_valid"] = spec.policy["valid"]
+        return PlateDiameterScaler(plate_m).m_per_px(track.target_px), meta
 
     # Bar speeds above this (m/s, mean concentric) are physically implausible for a loaded
     # lift — a near-certain sign of an inflated px→m scale (wrong/clipped plate, low-res
@@ -133,15 +159,18 @@ class VideoVelocitySource:
         gives a second ruler, scale_meta carries its own confidence and we defer to it."""
         if scale_meta.get("scale_source") == "anthro":
             return float(scale_meta.get("scale_confidence", 1.0)), False
-        conf = 1.0
+        # plate_spec carries plate-certainty × angle factor; plain implement starts at 1.0
+        conf = float(scale_meta.get("scale_confidence", 1.0))
         cv = getattr(track, "size_cv", 0.0)
-        if cv > 0:                                   # implement scale: penalise a jittery radius
-            conf = max(0.0, 1.0 - cv / self._SIZE_CV_SUSPECT * 0.5)
+        if cv > 0:                                   # penalise a jittery plate radius
+            conf = min(conf, max(0.0, 1.0 - cv / self._SIZE_CV_SUSPECT * 0.5))
         mvs = [r["mean_velocity"] for r in reps]
         implausible = bool(mvs) and float(np.median(mvs)) > self._MAX_PLAUSIBLE_MEAN_VEL
         if implausible:
             conf = min(conf, 0.3)
-        suspect = implausible or cv > self._SIZE_CV_SUSPECT
+        # head-on with no anthro fallback → plate scale is invalid; don't report a real m/s
+        invalid_angle = scale_meta.get("scale_valid", True) is False
+        suspect = implausible or cv > self._SIZE_CV_SUSPECT or invalid_angle
         return round(conf, 3), suspect
 
     def estimate(self, source_or_path, seed_bbox=None):

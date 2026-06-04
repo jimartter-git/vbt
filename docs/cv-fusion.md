@@ -118,6 +118,28 @@ Ranked by user-visible failure. Each is additive behind the existing seams.
        safe to default-on. Left as an opt-in. **The durable fix is roadmap #6 (a learned
        plate detector) or a user-confirmed plate size** — that's what makes scale truly
        seed-independent. Reliable path today: a well-sized seed (board uses these).
+     - **BUILT (2026-06-04): user-confirmed plate + camera angle (`plates.ScaleSpec`,
+       wired via `VideoConfig.scale_spec`).** Real-world diameter from the *largest* plate
+       (stacking → outer rim) + bumper/iron; camera angle gates the rest — **side** =
+       diameter valid, full confidence; **diagonal** = ellipse + out-of-plane arc → auto-
+       enables the rim anchor + reduced confidence; **head-on** = plate edge-on → invalid →
+       falls back to anthropometric, else flagged relative-only. Confidence = plate-certainty
+       × angle factor. Pixel diameter still from the seed (the user adjusts that in-app).
+       This is the practical scale fix; the learned detector (roadmap #6) removes the seed.
+
+## App layer (human-in-the-loop)
+
+The Python side exposes proposals + editable boundaries; the app makes them correctable
+(the project's core principle — surface confidence, let the human correct, learn from it):
+
+- **Plate confirm/adjust** — show the detected plate box + inferred size/kind; one tap to
+  correct. This *is* the robust "pixel measurement" — more reliable than any auto-detector.
+- **Draggable rep start/stop markers on a SmartBarbell-style time series**, editable while
+  scrubbing the clip (so a deadlift rep starts on the pull, not on pulling bar slack). This
+  is the manual editor from `sources-and-fusion.md`; the segmenter already emits per-rep
+  boundaries + `partial_rom`/confidence for it to bind to.
+- **Auto camera-angle** (follow-up) — infer side/diagonal/head-on from the plate's ellipse
+  aspect ratio to pre-fill the manual pick.
 3. **Viewpoint / angle.** Camera-angle estimation + out-of-plane correction (the
    rim-anchor patches only the row-arc symptom). At minimum, detect oblique views and
    widen confidence.
