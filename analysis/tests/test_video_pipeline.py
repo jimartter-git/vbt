@@ -226,6 +226,16 @@ def test_scale_confidence_flags_implausible_velocity():
     assert all(r.get("velocity_relative_only") for r in reps_bad)
 
 
+def test_flow_tracker_survives_a_featureless_seed():
+    # A seed on a blank region finds no corner features. The tracker must NOT crash
+    # (calcOpticalFlowPyrLK on an empty cloud used to assert-fail) — it should return a
+    # low-confidence track gracefully.
+    blank = [np.full((H, W, 3), 230, np.uint8) for _ in range(30)]
+    track = FlowTracker().track(ArrayFrameSource(blank, FPS), (10, 10, 20, 20))
+    assert track.traj.shape[0] == 30
+    assert track.confidence < 0.5                         # nothing to track → honest low conf
+
+
 def test_flow_tracker_holds_lock_through_the_set():
     # The optical-flow default: track texture frame-to-frame, hold lock the whole set
     # (high confidence), and recover the reps — the never-drops-a-rep behaviour.

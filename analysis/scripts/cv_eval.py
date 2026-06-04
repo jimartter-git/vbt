@@ -34,7 +34,8 @@ CLIPS = {
     "20260604-SQ-3": ("dataset/raw/20260604-SQ-3.mov",
                       {"flow": (190, 95, 60, 70)}, "squat set3, fast TnG (adversarial)"),
     "20260602-SC-1": ("dataset/raw/20260602-SC-1.mov",
-                      {"pose": None}, "skullcrusher, hex DB, side-on (pose path)"),
+                      {"flow": (110, 115, 55, 55), "pose": None},
+                      "DB press, hex DB end, side-on (flow on the DB end >> pose here)"),
 }
 
 

@@ -323,11 +323,17 @@ class FlowTracker(Tracker):
                     radii.append(d[2])
                 pts = self._seed(g, cx, cy, rmed)
             else:
-                npts, st1, _ = cv2.calcOpticalFlowPyrLK(prev, g, pts, None, **self.lk)
-                bpts, st2, _ = cv2.calcOpticalFlowPyrLK(g, prev, npts, None, **self.lk)
-                fb = np.abs(bpts - pts).reshape(-1, 2).max(axis=1)
-                good = (st1[:, 0] == 1) & (st2[:, 0] == 1) & (fb < self.fb_thresh)
-                if good.sum() >= 8:
+                if pts is None or pts.shape[0] < 4:
+                    pts = self._seed(g, cx, cy, rmed)        # recover an empty/depleted cloud
+                ok_flow = pts is not None and pts.shape[0] >= 4
+                if ok_flow:
+                    npts, st1, _ = cv2.calcOpticalFlowPyrLK(prev, g, pts, None, **self.lk)
+                    bpts, st2, _ = cv2.calcOpticalFlowPyrLK(g, prev, npts, None, **self.lk)
+                    fb = np.abs(bpts - pts).reshape(-1, 2).max(axis=1)
+                    good = (st1[:, 0] == 1) & (st2[:, 0] == 1) & (fb < self.fb_thresh)
+                else:
+                    good = np.zeros(0, dtype=bool)            # no features to track this frame
+                if ok_flow and good.sum() >= 8:
                     dxy = np.median((npts[good] - pts[good]).reshape(-1, 2), axis=0)
                     cx += float(dxy[0]); cy += float(dxy[1])
                     pts = npts[good].reshape(-1, 1, 2)

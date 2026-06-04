@@ -31,9 +31,22 @@ in brackets):
 |---|---|---|---|---|---|
 | SQ-1 | mirror/rack, low-res | 8 | **10** | 10 | 5 |
 | SQ-3 | fast touch-and-go (adversarial) | 4 | **9** | 10 | 3 |
+| SC-1 | DB press, hex DB end, side-on | pose 32 | **10** | 11 | — |
 
-We now **beat SmartBarbell decisively on count** and ~match ground truth on both —
-including the clip that previously defeated every tracker.
+We **beat SmartBarbell decisively on count** and ~match ground truth on all three —
+including the clip that previously defeated every tracker (SQ-3) and one the notes
+called "CV unreliable here" (SC-1).
+
+**Two findings from the corpus (design rules):**
+- **Track the object, not the joint, when there's an object.** SC-1 pose (wrist
+  landmark) invents reps side-on (32 / 45 vs GT 11); flow on the **dumbbell end**
+  gets 10/11. Pose is the *fallback* for equipment-free / no-trackable-object cases,
+  not the default when a plate/DB face is visible.
+- **Relative gating assumes a healthy track.** Peak-relative gating recovers partial
+  reps when the candidate runs are dominated by *real* reps. When the **tracker is
+  broken** (pose garbage), candidates are dominated by noise, the median is noise, and
+  relative gating admits *more* — it made SC-1-pose worse (32→45). No gating fixes a
+  broken tracker; relative gating is for recovering partials on a track that held.
 
 1. **Adaptive rep gating** (`rep_gate="relative"`). The rep discriminator is **peak
    velocity relative to the set median**, not absolute ROM — because a fast
