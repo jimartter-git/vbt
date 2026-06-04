@@ -101,16 +101,23 @@ Ranked by user-visible failure. Each is additive behind the existing seams.
    hex vs change plate — stop hardcoding 0.45 m), and a real **plate-vs-anthro
    cross-check** (the seam exists; needs the pose pass wired + a disagreement flag).
    This is what fixes the velocities, not just flags them.
-   - **Seed-independent scale (confirmed sharp edge, 2026-06-04).** Today the scale
-     detector's Hough radius search is locked to ±20% of the *seed box*, and the scale
-     lane is derived from the seed too. A too-small seed therefore under-sizes the
-     plate → m/px (hence velocity AND ROM) inflate by the same factor. Verified on the
-     squats: a too-small seed gave velocity 1.40/1.75 (plate 60/54 px); sizing the seed
-     to the true plate (98/94 px) dropped it to **0.91/0.92** vs Vitruve 0.80/0.79.
-     SmartBarbell sizes the plate itself, so its velocity was fine even where its rep
-     *count* failed. Fix: a wide, seed-size-independent scale calibration (robust
-     clip-median radius + a seed-independent lane), so a loose/auto seed can't wreck the
-     scale. The residual ~14% after the fix is the out-of-plane / hex-plate term.
+   - **Seed-independent scale (confirmed sharp edge, 2026-06-04).** The scale detector's
+     Hough radius search is locked to ±20% of the *seed box*, and the scale lane is derived
+     from the seed too. A too-small seed under-sizes the plate → m/px (hence velocity AND
+     ROM) inflate by the same factor. Verified on the squats: a too-small seed gave 1.40/1.75
+     (plate 60/54 px); sizing the seed to the true plate (98/94 px) dropped it to **0.91/0.92**
+     vs Vitruve 0.80/0.79. SmartBarbell sizes the plate itself, so its velocity was fine even
+     where its rep *count* failed.
+     - **Attempted fix + outcome (`robust_scale`, EXPERIMENTAL, default-OFF).** Built a wide,
+       seed-independent calibration scan (`FlowTracker._calibrate_scale`) and stress-tested
+       three circle-selection rules across the corpus. None is robust across plate-size ×
+       clutter: *nearest-to-centre* grabs the concentric hub (misses the squat); *all-pooled
+       median* is dragged down by background circles (broke device-grade IB-1 0.44→0.79 and
+       the rows); *largest-near-centre* preserved IB-1/ROW-1 but broke ROW-2 and over-sized
+       the deadlift, and still missed the squat. Conclusion: simple Hough auto-sizing isn't
+       safe to default-on. Left as an opt-in. **The durable fix is roadmap #6 (a learned
+       plate detector) or a user-confirmed plate size** — that's what makes scale truly
+       seed-independent. Reliable path today: a well-sized seed (board uses these).
 3. **Viewpoint / angle.** Camera-angle estimation + out-of-plane correction (the
    rim-anchor patches only the row-arc symptom). At minimum, detect oblique views and
    widen confidence.

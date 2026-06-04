@@ -44,6 +44,13 @@ class VideoConfig:
     # detector when the target leaves frame / is occluded. Off by default (validated path
     # unchanged); force-on for cluttered or edge-clipping clips.
     occlusion_robust: bool = False
+    # Seed-size-independent plate-size calibration (FlowTracker): a wide Hough scan tries to
+    # re-anchor the px→m scale so a too-small/loose seed can't inflate velocity. EXPERIMENTAL,
+    # default OFF: stress-tested across the corpus, no single circle-selection rule is robust
+    # across plate-size × clutter (it either misses the under-sized squat or breaks the
+    # device-grade bench/rows). The reliable path today is a well-sized seed; the durable fix
+    # is a learned plate detector (cv-fusion.md roadmap #6). Opt in per clip if it helps.
+    robust_scale: bool = False
     # Auto-fallback: if the default flow track comes back with LOW confidence (it lost lock),
     # transparently retry with occlusion_robust and keep the better track. No-op on healthy
     # clips (they never trip the threshold), so it can't regress the easy case — it only
@@ -61,7 +68,8 @@ _TRACKERS = {
     "csrt": lambda cfg: CSRTTracker(),
     "plate": lambda cfg: PlateTracker(band=cfg.band),
     "flow": lambda cfg: FlowTracker(band=cfg.band, anchor_alpha=cfg.flow_anchor_alpha,
-                                    occlusion_robust=cfg.occlusion_robust),
+                                    occlusion_robust=cfg.occlusion_robust,
+                                    robust_scale=cfg.robust_scale),
     "pose": lambda cfg: PoseTracker(landmark=cfg.landmark, side=cfg.side,
                                     scale_segment=_SEGMENT_LANDMARKS.get(cfg.segment,
                                                                          ("wrist", "elbow"))),
@@ -151,7 +159,8 @@ class VideoVelocitySource:
                 and not self.cfg.occlusion_robust
                 and track.confidence < self.cfg.occlusion_conf):
             alt = FlowTracker(band=self.cfg.band, anchor_alpha=self.cfg.flow_anchor_alpha,
-                              occlusion_robust=True).track(src, seed_bbox)
+                              occlusion_robust=True, robust_scale=self.cfg.robust_scale
+                              ).track(src, seed_bbox)
             if alt.confidence > track.confidence:
                 track, used_occlusion = alt, True
         mpp, scale_meta = self._resolve_scale(src, track)

@@ -199,16 +199,19 @@ class PlateTracker(Tracker):
         return Track(traj=traj, target_px=2.0 * rmed, confidence=round(real / n, 3))
 
 
-def _detect_plate(img, x0b, x1b, r0, near=None):
+def _detect_plate(img, x0b, x1b, r0, near=None, minR=None, maxR=None, param2=None):
     """One Hough plate detection in the x-band, nearest to `near` (or band centre).
-    Returns (cx, cy, r) or None. Vote threshold scales with radius (small plate → fewer
-    votes), so it generalises across plate sizes. Used by FlowTracker for *scale only*."""
-    x1b = min(int(x1b), img.shape[1])
-    roi = img[:, int(x0b):x1b]
+    Returns (cx, cy, r) or None. Default radius window is ±20% of `r0`; pass absolute
+    `minR`/`maxR` for a wide, seed-size-independent search (scale calibration). Vote
+    threshold scales with radius unless `param2` is given. Used by FlowTracker for scale."""
+    x0b = max(0, int(x0b)); x1b = min(int(x1b), img.shape[1])
+    roi = img[:, x0b:x1b]
     g = cv2.medianBlur(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), 5)
-    p2 = int(np.clip(0.25 * r0, 18, 42))
+    p2 = param2 if param2 is not None else int(np.clip(0.25 * r0, 18, 42))
+    mn = int(minR) if minR is not None else int(0.80 * r0)
+    mx = int(maxR) if maxR is not None else int(1.20 * r0)
     circ = cv2.HoughCircles(g, cv2.HOUGH_GRADIENT, dp=1.2, minDist=80, param1=120,
-                            param2=p2, minRadius=int(0.80 * r0), maxRadius=int(1.20 * r0))
+                            param2=p2, minRadius=mn, maxRadius=max(mn + 1, mx))
     if circ is None:
         return None
     cand = [(x0b + float(q[0]), float(q[1]), float(q[2])) for q in circ[0]]
@@ -262,11 +265,31 @@ class FlowTracker(Tracker):
     (b) **re-acquires** by re-detecting the plate near the predicted position and
     re-seeding the cloud the instant the target reappears. Default OFF — the validated
     default path is byte-for-byte unchanged; enable it for cluttered/edge-clipping clips.
+
+    SCALE (2026-06-04): px→m comes from the plate diameter, and v1 sizes the plate with a
+    Hough search locked to ±20% of the SEED box — so a too-small seed under-sizes the
+    plate and inflates velocity AND ROM by the same factor (squats read ~2× high). The
+    reliable fix is a well-sized seed. `robust_scale=True` is an EXPERIMENTAL (default-OFF)
+    attempt to make size seed-independent via a wide calibration scan (`_calibrate_scale`);
+    stress-testing showed no simple circle-selection rule is robust across plate-size ×
+    clutter — it either misses the under-sized squat or breaks the device-grade bench/rows.
+    The durable fix is a learned plate detector (docs/cv-fusion.md roadmap #6) or a
+    user-confirmed plate size. Left in, opt-in, for experimentation on a given clip.
     """
     def __init__(self, band=None, band_lr=(1.18, 1.51), win=41, levels=4,
                  fb_thresh=1.0, min_pts=25, seed_pts=140, scale_every=10,
                  lat_cull=1.4, anchor_alpha=0.0, anchor_every=3,
-                 occlusion_robust=False, coast_frames=4, coast_decay=0.8, min_lost=3):
+                 occlusion_robust=False, coast_frames=4, coast_decay=0.8, min_lost=3,
+                 robust_scale=False, cal_frames=24, cal_stride=2, cal_lane_frac=0.18,
+                 cal_min_r=8, cal_max_frac=0.25, cal_param2=28, cal_min_hits=4):
+        self.robust_scale = robust_scale      # EXPERIMENTAL seed-independent scale (default off)
+        self.cal_frames = cal_frames          # how many early frames to scan
+        self.cal_stride = cal_stride          # scan every Nth frame
+        self.cal_lane_frac = cal_lane_frac    # scan lane half-width as a fraction of frame W
+        self.cal_min_r = cal_min_r            # absolute min plate radius (px)
+        self.cal_max_frac = cal_max_frac      # absolute max plate radius as a fraction of frame H
+        self.cal_param2 = cal_param2          # Hough vote threshold for the wide scan
+        self.cal_min_hits = cal_min_hits      # min detections before trusting the median
         self.occlusion_robust = occlusion_robust
         self.coast_frames = coast_frames     # max consecutive lost frames to coast through
         self.coast_decay = coast_decay        # per-frame velocity decay while coasting
@@ -296,10 +319,49 @@ class FlowTracker(Tracker):
         return cv2.goodFeaturesToTrack(g, maxCorners=self.seed_pts, qualityLevel=0.01,
                                        minDistance=8, mask=mask)
 
+    def _calibrate_scale(self, source, cx, cy, r0_hint):
+        """Find the true plate radius independent of the seed's size: a WIDE-radius Hough
+        scan over a generous lane on early frames. Per frame, take the LARGEST circle whose
+        centre is concentric with the seed (the rim encloses the hub; both are centred, so
+        'nearest' wrongly grabs the small hub and 'all-pooled' is dragged down by background
+        clutter). Median those per-frame rims across frames for robustness. Returns the
+        median radius or None if too few hits. The seed gives WHERE; this gives HOW BIG."""
+        rims = []
+        for j, f in enumerate(source):
+            if j >= self.cal_frames:
+                break
+            if j % self.cal_stride:
+                continue
+            H, W = f.img.shape[:2]
+            half = max(self.band_lr[0] * r0_hint, self.cal_lane_frac * W)
+            x0 = max(0, int(cx - half)); x1 = min(W, int(cx + half))
+            g = cv2.medianBlur(cv2.cvtColor(f.img[:, x0:x1], cv2.COLOR_BGR2GRAY), 5)
+            maxR = min(int(self.cal_max_frac * H), (x1 - x0) // 2)   # can't be wider than the lane
+            circ = cv2.HoughCircles(g, cv2.HOUGH_GRADIENT, dp=1.2, minDist=60, param1=120,
+                                    param2=self.cal_param2, minRadius=self.cal_min_r,
+                                    maxRadius=max(self.cal_min_r + 1, maxR))
+            if circ is None:
+                continue
+            prox = max(0.6 * r0_hint, 0.06 * W)     # rim/hub are concentric with the seed
+            near = [q[2] for q in circ[0]
+                    if (x0 + q[0] - cx) ** 2 + (q[1] - cy) ** 2 <= prox ** 2]
+            if near:
+                rims.append(max(near))               # the rim is the largest concentric circle
+        if len(rims) >= self.cal_min_hits:
+            return float(np.median(rims))
+        return None
+
     def track(self, source: FrameSource, seed_bbox) -> Track:
         x, y, w, h = [float(v) for v in seed_bbox]
         cx, cy = x + w / 2.0, y + h / 2.0
         r0 = (w + h) / 4.0
+        # Seed-size-independent scale: re-anchor the plate radius from a wide calibration
+        # scan (the seed only localises WHERE the plate is). No-op if the seed is already
+        # well-sized — the median lands on the same radius. See class docstring "SCALE".
+        if self.robust_scale:
+            rcal = self._calibrate_scale(source, cx, cy, r0)
+            if rcal is not None:
+                r0 = rcal
         rmed = r0
         if self.band is not None:
             x0b, x1b = int(self.band[0]), int(self.band[1])
