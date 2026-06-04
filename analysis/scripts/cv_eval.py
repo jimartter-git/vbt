@@ -36,11 +36,25 @@ CLIPS = {
     "20260602-SC-1": ("dataset/raw/20260602-SC-1.mov",
                       {"flow": (110, 115, 55, 55), "pose": None},
                       "DB press, hex DB end, side-on (flow on the DB end >> pose here)"),
+    # The high-quality "good" clips — square-on-ish 720p rows, GT=10. Kept in the board as
+    # a REGRESSION GUARD: robustness changes for the hard clips must leave these at 10.
+    "20260601-ROW-1": ("dataset/raw/060126_pendlay1_side.mp4",
+                       {"flow": (200, 690, 270, 270)}, "barbell row, side (good clip)"),
+    "20260601-ROW-2": ("dataset/raw/060126_pendlay2_angle.mp4",
+                       {"flow": (300, 660, 260, 250)}, "barbell row, angle (good clip)"),
+    "20260601-ROW-3": ("dataset/raw/060126_pendlay3_front.mp4",
+                       {"flow": (415, 615, 120, 150)}, "barbell row, front (good clip)"),
 }
 
 
+# Reference trust order: Vitruve (ground truth) > on-bar BLE apps. The highest-priority
+# vendor present is the GT reference; the next is shown as the competitor to beat.
+_REF_PRIORITY = ["vitruve", "stance", "smartbarbell", "metric"]
+
+
 def gt_counts(set_id):
-    """(vitruve_count, vitruve_mean, competitor_label, competitor_count) from the DB."""
+    """(ref_count, ref_mean, competitor_label, competitor_count) from the DB — falls back
+    to the best on-bar app when there's no Vitruve row (e.g. the row clips)."""
     rows = [r for r in csv.DictReader(open(REPS_CSV))
             if r["set_id"] == set_id and r["metric"] == "mean_velocity"]
     out = {}
@@ -48,10 +62,11 @@ def gt_counts(set_id):
         out.setdefault(r["vendor"], []).append(r)
     def real(v):  # drop phantom rows
         return [x for x in out.get(v, []) if (x["flag"] or "") != "phantom"]
-    vit = real("vitruve")
-    vmean = sum(float(x["value"]) for x in vit) / len(vit) if vit else float("nan")
-    comp = next((v for v in ("smartbarbell", "stance", "metric") if out.get(v)), None)
-    return (len(vit), vmean, comp, len(real(comp)) if comp else 0)
+    present = [v for v in _REF_PRIORITY if real(v)]
+    ref = present[0] if present else None
+    comp = present[1] if len(present) > 1 else None
+    rmean = (sum(float(x["value"]) for x in real(ref)) / len(real(ref))) if ref else float("nan")
+    return (len(real(ref)) if ref else 0, rmean, comp, len(real(comp)) if comp else 0)
 
 
 def run(clip, tracker, seed, adaptive, occlusion=False):
