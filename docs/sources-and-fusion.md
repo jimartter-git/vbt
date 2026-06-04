@@ -104,6 +104,40 @@ relative metrics; absolute-velocity calibration (Vitruve) is reserved for the
 big lifts where the wrist tracks the bar. **Discipline: never report an absolute
 m/s we can't back — show relative, and show confidence.**
 
+## Tempo-invariance: a rep is a *reversal*, not a lockout or a pause
+
+A rep is one **load direction reversal** — full stop. It is *not* defined by a
+lockout, a pause, or a minimum ROM. So segmentation must anchor on the
+**turnaround (displacement extremum)**, keying on the **more-consistent extreme**
+(squat → the bottom/depth; bench → the chest), with a **prominence** threshold to
+reject jitter. Lockout height and pause length are *style*, not rep boundaries.
+
+**Fixed absolute gates are tempo-fragile.** Gating candidate reps on an absolute
+ROM / duration / peak (as v1 does) silently drops fast **touch-and-go** or
+**partial-lockout** reps that fall under the threshold → undercount. Verified on a
+deliberately adversarial set (20260604-SQ-3, first ~5 reps fast TnG, no
+lockout/pause): the commercial video tracker caught 3, ours 4, **Vitruve 10** —
+and simply relaxing our absolute ROM/peak gates recovered **4 → 8** of the missing
+reps (the rest was lost tracking, not gating).
+
+**But the fix is *relative*, not *looser*.** Dropping the absolute gate globally
+just lets **noise** through as phantom reps on clean sets. So gate **relative to
+the set's own distribution** (a rep is valid at ≥ X% of the set's median
+excursion) or, better, against the **learned per-user rep-shape prior** — which is
+precisely what lets us recognize "that short fast one is still a rep" without
+admitting jitter. Tempo variation is a strong argument *for* the prior.
+
+**Separate counting from measuring.** Counting survives TnG (just follow
+turnarounds); but a partial / no-pause / short-ROM rep is *mechanically* different,
+so **flag it** (`partial_rom`, `no_pause`, `short`) and keep it out of
+apples-to-apples velocity/loss comparisons. Surface the ROM variance itself — it's
+both a data-quality flag and a real coaching signal.
+
+**Sample rate arbitrates.** Fast TnG + low-fps video *aliases* (reversals within
+1–2 frames merge). A high-rate IMU (watch, 100–200 Hz) resolves the same reversal
+cleanly — so in fusion the **highest-rate source arbitrates rep boundaries**,
+rather than a blind average. (Vitruve got all 10 here for exactly this reason.)
+
 ## Rep plausibility & re-segmentation (the SmartBarbell 2/3 fix)
 
 A rep has a canonical shape (bottom → ascend → top → optional pause → descend →
