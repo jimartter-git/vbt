@@ -153,6 +153,62 @@ def _textured_frames():
     return imgs
 
 
+def _occluded_textured_frames(occ):
+    """The textured rep disc, but BLANKED (background only) on frame indices in `occ` —
+    the plate leaves frame / is blocked for a beat while still 'moving' behind the gap,
+    then reappears at its true (moved) position. Exercises coast + re-acquire."""
+    rng = np.random.default_rng(0)
+    texture = rng.integers(0, 255, (2 * R, 2 * R, 3), dtype=np.uint8)
+    circ_mask = np.zeros((2 * R, 2 * R), np.uint8)
+    cv2.circle(circ_mask, (R, R), R, 255, -1)
+    cy0 = H / 2.0
+    imgs = []
+    for i in range(int(N_REPS * T * FPS)):
+        t = i / FPS
+        pos = -A * np.cos(2 * np.pi * t / T)
+        cy = int(round(cy0 - pos / MPP))
+        im = np.full((H, W, 3), 230, np.uint8)
+        if i not in occ:                                 # disc hidden during the gap
+            sub = im[cy - R:cy + R, W // 2 - R:W // 2 + R]
+            sub[circ_mask > 0] = texture[circ_mask > 0]
+        imgs.append(im)
+    return imgs
+
+
+def test_occlusion_robust_recovers_after_target_leaves_frame():
+    # The plate is occluded for ~0.4 s mid-set. Default flow freezes on the stale point
+    # cloud and can't re-lock when it reappears at a new position; occlusion_robust
+    # re-acquires via the detector and recovers the full rep count.
+    occ = set(range(130, 155))                           # ~0.4 s blackout mid rep-2
+    frames = _occluded_textured_frames(occ)
+    plain = FlowTracker(occlusion_robust=False).track(ArrayFrameSource(frames, FPS), _seed())
+    robust = FlowTracker(occlusion_robust=True).track(ArrayFrameSource(frames, FPS), _seed())
+    assert robust.confidence >= plain.confidence          # re-acquire restores lock
+
+    reps_plain, _ = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow")).estimate(
+        ArrayFrameSource(frames, FPS), seed_bbox=_seed())
+    reps_robust, _ = VideoVelocitySource(
+        VideoConfig(plate_m=PLATE_M, tracker="flow", occlusion_robust=True)).estimate(
+        ArrayFrameSource(frames, FPS), seed_bbox=_seed())
+    assert len(reps_robust) >= len(reps_plain)            # never worse
+    assert abs(len(reps_robust) - N_REPS) <= 1            # and recovers ~all reps
+
+
+def test_auto_fallback_engages_occlusion_only_when_lock_is_poor():
+    # The pipeline retries occlusion-robust when the default flow track is low-confidence,
+    # and keeps it only if it tracks better. occlusion_conf=1.0 forces the retry to be
+    # considered; auto_occlusion=False disables the whole policy.
+    frames = _occluded_textured_frames(set(range(130, 155)))
+    auto = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow",
+                                           occlusion_conf=1.0))
+    off = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow",
+                                          auto_occlusion=False))
+    _, m_auto = auto.estimate(ArrayFrameSource(frames, FPS), seed_bbox=_seed())
+    _, m_off = off.estimate(ArrayFrameSource(frames, FPS), seed_bbox=_seed())
+    assert m_auto["occlusion_used"] is True       # retried and kept the better (robust) track
+    assert m_off["occlusion_used"] is False        # policy disabled → default track only
+
+
 def test_flow_tracker_holds_lock_through_the_set():
     # The optical-flow default: track texture frame-to-frame, hold lock the whole set
     # (high confidence), and recover the reps — the never-drops-a-rep behaviour.

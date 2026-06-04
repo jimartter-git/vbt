@@ -53,8 +53,9 @@ def gt_counts(set_id):
     return (len(vit), vmean, comp, len(real(comp)) if comp else 0)
 
 
-def run(clip, tracker, seed, adaptive):
-    cfg = VideoConfig(tracker=tracker, rep_gate=("relative" if adaptive else "absolute"))
+def run(clip, tracker, seed, adaptive, occlusion=False):
+    cfg = VideoConfig(tracker=tracker, rep_gate=("relative" if adaptive else "absolute"),
+                      occlusion_robust=(occlusion and tracker == "flow"))
     reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed)
     mv = [r["mean_velocity"] for r in reps]
     return len(reps), (sum(mv) / len(mv) if mv else float("nan")), meta["track_confidence"]
@@ -64,6 +65,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--set", dest="only")
     ap.add_argument("--adaptive", action="store_true", help="relative (adaptive) rep gating")
+    ap.add_argument("--occlusion", action="store_true", help="flow coast + re-acquire")
     args = ap.parse_args()
 
     sets = [args.only] if args.only else list(CLIPS)
@@ -79,7 +81,7 @@ def main():
         first = True
         for tracker, seed in trackers.items():
             try:
-                n, mean, conf = run(clip, tracker, seed, args.adaptive)
+                n, mean, conf = run(clip, tracker, seed, args.adaptive, args.occlusion)
                 delta = f"{n}({n - gtn:+d})"
                 meanstr = f"{mean:.2f}"
             except Exception as e:

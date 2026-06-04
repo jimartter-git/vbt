@@ -38,6 +38,16 @@ class VideoConfig:
     # >0 slowly pulls position to the plate's rim centre, correcting the smooth centroid
     # migration on row arcs (side 1.17→0.86 at 0.3; a no-op on square-on bench). Opt-in.
     flow_anchor_alpha: float = 0.0
+    # FlowTracker occlusion handling: coast through short gaps + re-acquire via the plate
+    # detector when the target leaves frame / is occluded. Off by default (validated path
+    # unchanged); force-on for cluttered or edge-clipping clips.
+    occlusion_robust: bool = False
+    # Auto-fallback: if the default flow track comes back with LOW confidence (it lost lock),
+    # transparently retry with occlusion_robust and keep the better track. No-op on healthy
+    # clips (they never trip the threshold), so it can't regress the easy case — it only
+    # rescues the hard one. Set occlusion_conf=0 to disable.
+    auto_occlusion: bool = True
+    occlusion_conf: float = 0.75
 
 
 # Which two landmarks bound each scale segment (their pixel distance = the metric ruler).
@@ -48,7 +58,8 @@ _SEGMENT_LANDMARKS = {"forearm": ("wrist", "elbow"), "upper_arm": ("elbow", "sho
 _TRACKERS = {
     "csrt": lambda cfg: CSRTTracker(),
     "plate": lambda cfg: PlateTracker(band=cfg.band),
-    "flow": lambda cfg: FlowTracker(band=cfg.band, anchor_alpha=cfg.flow_anchor_alpha),
+    "flow": lambda cfg: FlowTracker(band=cfg.band, anchor_alpha=cfg.flow_anchor_alpha,
+                                    occlusion_robust=cfg.occlusion_robust),
     "pose": lambda cfg: PoseTracker(landmark=cfg.landmark, side=cfg.side,
                                     scale_segment=_SEGMENT_LANDMARKS.get(cfg.segment,
                                                                          ("wrist", "elbow"))),
@@ -107,6 +118,16 @@ class VideoVelocitySource:
         if seed_bbox is None and self.cfg.tracker != "pose":
             seed_bbox = auto_seed_bbox(src.first().img)
         track = self._tracker().track(src, seed_bbox)
+        # Auto-fallback: a low-confidence flow track means lost lock — retry occlusion-robust
+        # and keep whichever held better. Healthy clips skip this entirely (no regression).
+        used_occlusion = self.cfg.occlusion_robust
+        if (self.cfg.auto_occlusion and self.cfg.tracker == "flow"
+                and not self.cfg.occlusion_robust
+                and track.confidence < self.cfg.occlusion_conf):
+            alt = FlowTracker(band=self.cfg.band, anchor_alpha=self.cfg.flow_anchor_alpha,
+                              occlusion_robust=True).track(src, seed_bbox)
+            if alt.confidence > track.confidence:
+                track, used_occlusion = alt, True
         mpp, scale_meta = self._resolve_scale(src, track)
         reps = trajectory_to_reps(track.traj, mpp, self.cfg.peak_min, self.cfg.rom_min,
                                   rep_gate=self.cfg.rep_gate)
@@ -114,6 +135,7 @@ class VideoVelocitySource:
             "m_per_px": mpp,
             "target_px": track.target_px,
             "track_confidence": track.confidence,
+            "occlusion_used": used_occlusion,
             "n_frames": len(track.traj),
             "fps": round(src.fps, 2),
             "seed_bbox": tuple(int(v) for v in seed_bbox) if seed_bbox else None,

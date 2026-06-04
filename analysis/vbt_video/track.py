@@ -251,10 +251,26 @@ class FlowTracker(Tracker):
     rim centre (side 1.17→0.86; a no-op on square-on bench, rmse 0.033 preserved). Not yet a
     full closure — residual gap is plate-detector-quality-limited (robust rim fit = next
     step). See docs/generalization.md "Field finding (2026-06-01)".
+
+    OCCLUSION (2026-06-04): when flow loses lock (a hand/rack crosses the plate, the
+    bar clips the frame edge for a beat, motion-blur kills the texture), v1 *freezes*
+    position — flattening the trajectory and erasing whatever reps happen in that gap.
+    Opt-in `occlusion_robust=True` instead (a) **coasts** through a short gap on the
+    last good velocity (decaying, so it doesn't run away or overshoot a turnaround) and
+    (b) **re-acquires** by re-detecting the plate near the predicted position and
+    re-seeding the cloud the instant the target reappears. Default OFF — the validated
+    default path is byte-for-byte unchanged; enable it for cluttered/edge-clipping clips.
     """
     def __init__(self, band=None, band_lr=(1.18, 1.51), win=41, levels=4,
                  fb_thresh=1.0, min_pts=25, seed_pts=140, scale_every=10,
-                 lat_cull=1.4, anchor_alpha=0.0, anchor_every=3):
+                 lat_cull=1.4, anchor_alpha=0.0, anchor_every=3,
+                 occlusion_robust=False, coast_frames=4, coast_decay=0.8, min_lost=3):
+        self.occlusion_robust = occlusion_robust
+        self.coast_frames = coast_frames     # max consecutive lost frames to coast through
+        self.coast_decay = coast_decay        # per-frame velocity decay while coasting
+        self.min_lost = min_lost              # only re-acquire after this many lost frames —
+        #   so an isolated dropped frame on a HEALTHY track just coasts (gentle), and we never
+        #   snap to a distractor on a clip that doesn't need it (no-op when lock is good)
         self.band = band
         self.band_lr = band_lr
         self.lk = dict(winSize=(win, win), maxLevel=levels,
@@ -294,6 +310,8 @@ class FlowTracker(Tracker):
         ts, xs, ys, radii = [], [], [], []
         healthy = 0
         n = 0
+        last_v = np.zeros(2)     # last good per-frame displacement (for occlusion coast)
+        fails = 0                # consecutive lost-lock frames
         for f in source:
             g = cv2.cvtColor(f.img, cv2.COLOR_BGR2GRAY)
             if prev is None:
@@ -316,6 +334,25 @@ class FlowTracker(Tracker):
                     if keep.sum() >= 8:
                         pts = pts[keep].reshape(-1, 1, 2)
                     healthy += 1
+                    last_v = dxy; fails = 0
+                elif self.occlusion_robust:
+                    # Lost lock. Predict where the target should be, try to RE-ACQUIRE
+                    # via the plate detector near that prediction; else COAST briefly.
+                    fails += 1
+                    pred = (cx + float(last_v[0]), cy + float(last_v[1]))
+                    d = (_detect_plate(f.img, x0b, x1b, rmed, near=pred)
+                         if fails >= self.min_lost else None)    # re-acquire only on sustained loss
+                    # accept only a detection that's BOTH near the prediction AND the right
+                    # size (a reflection/background circle usually fails the radius check)
+                    if (d is not None and (d[0] - pred[0]) ** 2 + (d[1] - pred[1]) ** 2 < (1.5 * rmed) ** 2
+                            and abs(d[2] - rmed) / max(rmed, 1.0) < 0.40):
+                        cx, cy, rmed = d[0], d[1], d[2]      # re-acquired — re-seed the cloud
+                        pts = self._seed(g, cx, cy, rmed)
+                        radii.append(d[2]); healthy += 1; fails = 0; last_v = np.zeros(2)
+                    elif fails <= self.coast_frames:         # bridge a short gap on last velocity
+                        cx += float(last_v[0]) * self.coast_decay ** fails
+                        cy += float(last_v[1]) * self.coast_decay ** fails
+                    # else: sustained loss with no re-acquire → hold (the v1 freeze)
                 cadence = self.anchor_every if self.anchor_alpha > 0.0 else self.scale_every
                 if (n % cadence) == 0:                           # SCALE sample (+ optional anchor)
                     d = _detect_plate(f.img, x0b, x1b, rmed, near=(cx, cy))
