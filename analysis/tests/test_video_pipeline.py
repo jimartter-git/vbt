@@ -236,6 +236,25 @@ def test_flow_tracker_survives_a_featureless_seed():
     assert track.confidence < 0.5                         # nothing to track → honest low conf
 
 
+def test_plate_spec_scale_and_angle_policy():
+    from vbt_video.plates import plate_diameter_m, largest_plate, ScaleSpec
+    # stacking: the outer rim = the largest plate
+    assert largest_plate([45, 35, 25, 10, 5]) == 45
+    # bumper ≥10 kg is ~450 mm and high-confidence; iron is approximate (lower conf)
+    assert plate_diameter_m(45, "bumper") == (0.450, 0.95)
+    d_iron, c_iron = plate_diameter_m(25, "iron")
+    assert d_iron < 0.450 and c_iron < 0.95          # smaller iron plate, less certain
+    assert plate_diameter_m(20, "bumper", unit="kg")[0] == 0.450
+    # angle policy: side fully valid, diagonal needs the out-of-plane correction, head-on invalid
+    assert ScaleSpec(angle="side").policy["valid"] is True
+    assert ScaleSpec(angle="diagonal").policy["needs_anchor"] is True
+    assert ScaleSpec(angle="front").policy["valid"] is False
+    # combined confidence = plate certainty × angle factor (0 head-on, reduced diagonal)
+    assert ScaleSpec(angle="side").scale_confidence() == 0.95
+    assert ScaleSpec(angle="diagonal").scale_confidence() < 0.95
+    assert ScaleSpec(angle="front").scale_confidence() == 0.0
+
+
 def test_flow_tracker_holds_lock_through_the_set():
     # The optical-flow default: track texture frame-to-frame, hold lock the whole set
     # (high confidence), and recover the reps — the never-drops-a-rep behaviour.
