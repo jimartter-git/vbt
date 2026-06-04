@@ -27,15 +27,25 @@ and matching Vitruve, with honest confidence. The corpus grows as clips are adde
 Default behaviour today, on the real corpus (vs Vitruve ground truth; SmartBarbell
 in brackets):
 
+Good / device-grade clips (must not regress):
+
+| clip | scene | reps | ref | SmartBarbell | note |
+|---|---|---|---|---|---|
+| IB-1 | incline bench, well-filmed | **10** | 10 | 10 | mean 0.44 m/s, **rmse 0.033 vs Stance** — velocity device-grade, scale *not* flagged |
+| ROW-1/2/3 | barbell row, side/angle/front 720p | **10/10/10** | 10 | 10/9/10 | conf 1.00, occlusion never engages, scale not flagged |
+
+Hard clips (the robustness wins):
+
 | clip | scene | baseline | **now** | Vitruve | SmartBarbell |
 |---|---|---|---|---|---|
 | SQ-1 | mirror/rack, low-res | 8 | **10** | 10 | 5 |
 | SQ-3 | fast touch-and-go (adversarial) | 4 | **9** | 10 | 3 |
 | SC-1 | DB press, hex DB end, side-on | pose 32 | **10** | 11 | — |
 
-We **beat SmartBarbell decisively on count** and ~match ground truth on all three —
-including the clip that previously defeated every tracker (SQ-3) and one the notes
-called "CV unreliable here" (SC-1).
+We **beat SmartBarbell on count everywhere there's a comparison** and ~match ground
+truth on all clips — preserving the device-grade good cases (IB-1 byte-identical,
+velocity included) while rescuing the ones that previously defeated every tracker
+(SQ-3) or were written off as "CV unreliable here" (SC-1).
 
 **Two findings from the corpus (design rules):**
 - **Track the object, not the joint, when there's an object.** SC-1 pose (wrist

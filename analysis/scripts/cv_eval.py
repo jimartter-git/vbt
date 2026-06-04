@@ -27,23 +27,29 @@ from vbt_video import VideoConfig, VideoVelocitySource  # noqa: E402
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REPS_CSV = os.path.join(REPO, "dataset", "rep_metrics.csv")
 
-# set_id -> (clip path rel to repo, {tracker: seed_bbox or None}, note)
+# set_id -> (clip path rel to repo, {tracker: seed_bbox or None}, note, band=(x0,x1) or None)
+# EVERY registered clip with a ground-truth count lives here — the complete board.
 CLIPS = {
+    # --- device-grade / good clips (regression guards: must stay at GT) ---
+    "20260528-IB-1": ("dataset/raw/20260528-IB-1.mp4",
+                      {"flow": (323, 163, 316, 316)},
+                      "incline bench 185lb - DEVICE-GRADE (rmse 0.033 vs Stance)", (295, 720)),
+    "20260601-ROW-1": ("dataset/raw/20260601-ROW-1.mp4",
+                       {"flow": (200, 690, 270, 270)}, "barbell row, side (good clip)", None),
+    "20260601-ROW-2": ("dataset/raw/20260601-ROW-2.mp4",
+                       {"flow": (300, 660, 260, 250)}, "barbell row, angle (good clip)", None),
+    "20260601-ROW-3": ("dataset/raw/20260601-ROW-3.mp4",
+                       {"flow": (415, 615, 120, 150)}, "barbell row, front (good clip)", None),
+    # --- hard clips ---
     "20260604-SQ-1": ("dataset/raw/20260604-SQ-1.mov",
-                      {"flow": (210, 85, 55, 65)}, "squat set1, mirror/rack, low-res"),
+                      {"flow": (210, 85, 55, 65)}, "squat set1, mirror/rack, low-res", None),
     "20260604-SQ-3": ("dataset/raw/20260604-SQ-3.mov",
-                      {"flow": (190, 95, 60, 70)}, "squat set3, fast TnG (adversarial)"),
+                      {"flow": (190, 95, 60, 70)}, "squat set3, fast TnG (adversarial)", None),
     "20260602-SC-1": ("dataset/raw/20260602-SC-1.mov",
                       {"flow": (110, 115, 55, 55), "pose": None},
-                      "DB press, hex DB end, side-on (flow on the DB end >> pose here)"),
-    # The high-quality "good" clips — square-on-ish 720p rows, GT=10. Kept in the board as
-    # a REGRESSION GUARD: robustness changes for the hard clips must leave these at 10.
-    "20260601-ROW-1": ("dataset/raw/060126_pendlay1_side.mp4",
-                       {"flow": (200, 690, 270, 270)}, "barbell row, side (good clip)"),
-    "20260601-ROW-2": ("dataset/raw/060126_pendlay2_angle.mp4",
-                       {"flow": (300, 660, 260, 250)}, "barbell row, angle (good clip)"),
-    "20260601-ROW-3": ("dataset/raw/060126_pendlay3_front.mp4",
-                       {"flow": (415, 615, 120, 150)}, "barbell row, front (good clip)"),
+                      "DB press, hex DB end, side-on (flow on DB end >> pose)", None),
+    # NOTE: dataset/raw/20260529-DL-pending.mp4 (a deadlift) is registered but NOT in the
+    # board yet — its set mapping (DL-1 vs DL-3) and a seed are unconfirmed. Add once mapped.
 }
 
 
@@ -69,9 +75,9 @@ def gt_counts(set_id):
     return (len(real(ref)) if ref else 0, rmean, comp, len(real(comp)) if comp else 0)
 
 
-def run(clip, tracker, seed, adaptive, occlusion=False):
+def run(clip, tracker, seed, adaptive, occlusion=False, band=None):
     cfg = VideoConfig(tracker=tracker, rep_gate=("relative" if adaptive else "absolute"),
-                      occlusion_robust=(occlusion and tracker == "flow"))
+                      occlusion_robust=(occlusion and tracker == "flow"), band=band)
     reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed)
     mv = [r["mean_velocity"] for r in reps]
     return (len(reps), (sum(mv) / len(mv) if mv else float("nan")),
@@ -91,14 +97,15 @@ def main():
     hdr = f"{'set':<16}{'GT':>4}{'comp':>14}{'tracker':>9}{'reps':>8}{'mean':>7}{'conf':>7}  note"
     print(hdr); print("-" * len(hdr))
     for sid in sets:
-        clip_rel, trackers, note = CLIPS[sid]
+        clip_rel, trackers, note, band = CLIPS[sid]
         clip = os.path.join(REPO, clip_rel)
         gtn, gtmean, comp, compn = gt_counts(sid)
         compstr = f"{comp[:5]}={compn}" if comp else "-"
         first = True
         for tracker, seed in trackers.items():
             try:
-                n, mean, conf, suspect = run(clip, tracker, seed, args.adaptive, args.occlusion)
+                n, mean, conf, suspect = run(clip, tracker, seed, args.adaptive,
+                                             args.occlusion, band)
                 delta = f"{n}({n - gtn:+d})"
                 meanstr = (f"{mean:.2f}?" if suspect else f"{mean:.2f}")   # ? = scale flagged
             except Exception as e:

@@ -11,5 +11,10 @@ set_id,vendor,path,kind,notes
 20260604-SQ-1,vitruve,raw/20260604-SQ_vitruve.csv,vitruve_csv,"Vitruve export, 3 squat sets (this row=Set1)"
 20260604-SQ-2,vitruve,raw/20260604-SQ_vitruve.csv,vitruve_csv,"Vitruve export (Set2, no video)"
 20260604-SQ-3,vitruve,raw/20260604-SQ_vitruve.csv,vitruve_csv,Vitruve export (Set3)
-20260604-SQ-3,video,raw/20260604-SQ-3.mov,video_mov,"Set 3 (the ~22s behind/mirror video). SmartBarbell 5/10, our FlowTracker 4/10 - clip too noisy. Set-1 video pending re-upload."
-20260604-SQ-1,video,raw/20260604-SQ-1.mov,video_mov,"Set 1 (longer ~31s video), behind/mirror+rack, low-res 440px. SmartBarbell 5/10."
+20260604-SQ-3,video,raw/20260604-SQ-3.mov,video_mov,"Set 3 (~22s, behind/mirror), low-res. Vitruve 10. Fast touch-and-go (adversarial). Our FlowTracker 9/10 (occlusion auto-fallback recovered lost-lock; baseline was 4); SmartBarbell 3/10+phantom. seed 190,95,60,70"
+20260604-SQ-1,video,raw/20260604-SQ-1.mov,video_mov,"Set 1, behind/mirror+rack, low-res 440px. Vitruve 10. Our FlowTracker 10/10 (adaptive gate); SmartBarbell 5/10. Velocity scale unreliable (low-res). seed 210,85,55,65"
+20260528-IB-1,video,raw/20260528-IB-1.mp4,video_mp4,"Incline bench 185lb x10. DEVICE-GRADE: FlowTracker 10/10, mean 0.437 m/s ~ rmse 0.033 vs Stance. seed 323,163,316,316 band 295,720"
+20260601-ROW-1,video,raw/20260601-ROW-1.mp4,video_mp4,"Pendlay row, SIDE, 720p. FlowTracker 10/10. Known row-arc velocity over-read (anchor_alpha mitigates). seed 200,690,270,270"
+20260601-ROW-2,video,raw/20260601-ROW-2.mp4,video_mp4,"Pendlay row, ANGLE, 720p. FlowTracker 10/10 (beats SmartBarbell 9). seed 300,660,260,250"
+20260601-ROW-3,video,raw/20260601-ROW-3.mp4,video_mp4,"Pendlay row, FRONT, 720p. FlowTracker 10/10. seed 415,615,120,150"
+20260529-DL-pending,video,raw/20260529-DL-pending.mp4,video_mp4,"Deadlift, bumper plates, front-quarter, 1080x1440. SET MAPPING PENDING (DL-1 vs DL-3) - awaiting user confirm; not yet seeded/in cv_eval board"

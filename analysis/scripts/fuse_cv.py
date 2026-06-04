@@ -91,9 +91,9 @@ def main():
     p.parse_args()
     h = 1.892
     clips = [
-        ("20260601-ROW-1", "side",  "dataset/raw/060126_pendlay1_side.mp4",  (200, 690, 270, 270)),
-        ("20260601-ROW-2", "angle", "dataset/raw/060126_pendlay2_angle.mp4", (300, 660, 260, 250)),
-        ("20260601-ROW-3", "front", "dataset/raw/060126_pendlay3_front.mp4", (415, 615, 120, 150)),
+        ("20260601-ROW-1", "side",  "dataset/raw/20260601-ROW-1.mp4", (200, 690, 270, 270)),
+        ("20260601-ROW-2", "angle", "dataset/raw/20260601-ROW-2.mp4", (300, 660, 260, 250)),
+        ("20260601-ROW-3", "front", "dataset/raw/20260601-ROW-3.mp4", (415, 615, 120, 150)),
     ]
     print(f"\nmeVBT (fused CV) vs commercial apps — mean concentric velocity (m/s), height {h} m\n")
     print(f"{'set / view':<22}{'Stance':>8}{'SmartB':>8}{'meVBT':>8}  {'conf':<7}{'spine':<22}")

@@ -134,7 +134,7 @@ python -m pytest analysis/tests/test_video_pipeline.py -q   # synthetic disc/tex
 # seed the plate from frame 0 (X,Y,W,H). --band X0,X1 bounds the scale detector's lane
 # (keeps it off far-background circles); --tracker defaults to flow. --auto-seed works
 # on clean clips. Swap --tracker plate for a textureless plate, --tracker csrt for region.
-python analysis/scripts/analyze_video.py dataset/raw/vcompress_1.mp4 \
+python analysis/scripts/analyze_video.py dataset/raw/20260528-IB-1.mp4 \
     --set-id 20260528-IB-1 --seed 323,163,316,316 --band 295,720 --append
 python dataset/tools/compare.py 20260528-IB-1      # mevbt_cv now sits beside SmartBarbell/Stance/Metric/WL
 ```
