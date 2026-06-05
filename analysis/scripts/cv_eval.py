@@ -63,6 +63,25 @@ CLIPS = {
                       {"flow": (600, 580, 200, 200)},
                       "deadlift ~355lb, bumper plates, front-quarter (CV+SmartBarbell agree 2 reps)", None,
                       {"angle": "diagonal", "plate": 45, "kind": "bumper"}),
+    # --- 2026-06-05 BN+DL, 135lb, low-res 440px web clips (Vitruve GT; SmartBarbell=video-CV competitor) ---
+    "20260605-BN-1": ("dataset/raw/20260605-BN-1.mov",
+                      {"flow": (150, 238, 105, 105)}, "bench 135lb set1, side(~diag per lifter), 440px - CV FAIL: flow locks static on low-texture plate", None,
+                      {"angle": "side", "plate": 45, "kind": "bumper"}),
+    "20260605-BN-2": ("dataset/raw/20260605-BN-2.mov",
+                      {"flow": (152, 248, 105, 105)}, "bench 135lb set2, side(~diag), 440px - CV FAIL: flow under-follows plate", None,
+                      {"angle": "side", "plate": 45, "kind": "bumper"}),
+    "20260605-BN-3": ("dataset/raw/20260605-BN-3.mov",
+                      {"flow": (148, 238, 105, 105)}, "bench 135lb set3 (11 reps), side(~diag), 440px - CV FAIL: plate untrackable at 440px", None,
+                      {"angle": "side", "plate": 45, "kind": "bumper"}),
+    "20260605-DL-1": ("dataset/raw/20260605-DL-1.mov",
+                      {"flow": (105, 790, 110, 110)}, "deadlift 135lb set1, front-quarter 440px - CV FAIL: under-follows (learning #11)", None,
+                      {"angle": "diagonal", "plate": 45, "kind": "bumper"}),
+    "20260605-DL-2": ("dataset/raw/20260605-DL-2.mov",
+                      {"flow": (98, 812, 114, 114)}, "deadlift 135lb set2, diagonal 440px - CV 10/10 count (beats SB=2); vel 2x scale-suspect", None,
+                      {"angle": "diagonal", "plate": 45, "kind": "bumper"}),
+    "20260605-DL-3": ("dataset/raw/20260605-DL-3.mov",
+                      {"flow": (118, 802, 114, 114)}, "deadlift 135lb set3, diagonal 440px - CV 10/10 count (beats SB=6); vel 2x scale-suspect", None,
+                      {"angle": "diagonal", "plate": 45, "kind": "bumper"}),
 }
 
 
