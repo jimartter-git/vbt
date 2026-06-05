@@ -25,7 +25,7 @@ Build `set_id = YYYYMMDD[session]-LIFT-N` e.g. `20260601-DL-2`.
 | **SmartBarbell** | "Barbell Tracking" title, green bounding box on plate, table `Rep / Ascent / Descent / Pause / Velocity / ROM / Shift`, Y-axis bar-path plot | screenshot |
 | **Metric** | green accents, "MEAN VELOCITY" pill, hexagons, rep table `M.vel / ROM / Ecc`; metric menu (time-to-peak, ecc power…) | screenshot |
 | **WL Analysis** | spreadsheet-like per-**frame** table (`Frame, Time, velocity`) or red velocity-time graph; "Weight (lbs)" header | **.txt export** |
-| **Vitruve** | (arriving) on-bar device app; per-rep mean/peak | CSV export |
+| **Vitruve** | on-bar device app; per-rep MV/MPV/peak/ROM (reference) | CSV export (1 row/rep) |
 
 ## Step 2 — transcribe (screenshot) or import (file)
 
@@ -83,8 +83,29 @@ count against the user's true count the first time.
   manual circle *placement*, not the diameter toggle. SmartBarbell's region-track
   handles non-round plates with no such step.
 
-**Vitruve** — once it arrives, prefer its CSV export; it becomes the reference
-vendor for calibration (`compare.py` auto-prefers it).
+**Vitruve** — the reference vendor for calibration (`compare.py` auto-prefers it).
+CSV export, **one row per rep** (no phantom rows; `# Rep.` is already 1-based and clean —
+use it directly as `true_rep`). First exports landed 2026-06-05 (`raw/20260605-*-VITRUVE.csv`).
+Column → our metric (units already canonical: m/s, m, kg, ms):
+
+| Vitruve column | → our field | notes |
+|---|---|---|
+| `Exercise` | lift | "Deadlift"/"Bench"… → squat/bench/deadlift |
+| `Workout Date` (DD/MM/YYYY) | date | reformat to `YYYYMMDD` for `set_id` |
+| `# Set` / `# Rep.` | set #, `true_rep` | rep is clean 1-based — the cross-vendor align key |
+| `Mean Velocity (m/s)` | `mean_velocity` | primary calibration target (MV) |
+| `Mean Propulsive Velocity (m/s)` | `mpv` | Vitruve's headline; keep both MV & MPV |
+| `Peak Velocity (m/s)` | `peak_velocity` | |
+| `ROM (Range of Motion) (m)` | `rom_m` | |
+| `Weight (kg)` | load | already kg; per-rep (confirm against the set load) |
+| `Time to Peak Velocity (ms)` | `time_to_peak_ms` | time-domain metric (robust on grind) |
+| `Repetition Duration (ms)` | `rep_duration_ms` | |
+| `Mean Power [MV] (W)`, `Peak Power (W)` | power | optional |
+
+Gotchas: one Vitruve CSV may hold **multiple sets** (split on `# Set`); `Type*` is
+`concentric` per rep; date is **DD/MM/YYYY** (don't transpose). A `…-VITRUVE.csv` pairs with
+the same-stem `.mov`(s) — link them under one `set_id` so the video `mevbt_cv` row compares
+directly against Vitruve ground truth.
 
 ## Step 3 — file & verify
 

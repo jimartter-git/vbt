@@ -23,7 +23,13 @@ and `docs/sources-and-fusion.md`.
   tests green).
 - **Active phase = data + calibration.** Building a personal multi-vendor
   measurement database (`dataset/`) to quantify cross-tool agreement, calibrate,
-  and seed the app's per-user prior. A Vitruve (ground truth) is arriving.
+  and seed the app's per-user prior.
+- **⚑ Vitruve (ground truth) has ARRIVED.** First exports uploaded 2026-06-05:
+  `dataset/raw/20260605-{BN,DL}-{1,2,3}.mov` + `…-{BN,DL}-VITRUVE.csv`. **NOT yet
+  ingested** into `sets.csv`/`rep_metrics.csv` — this is the natural first task for the
+  next session (prompt for per-set load/RPE/comparables, then import per the new Vitruve
+  recipe in `dataset/INGESTION.md`). These also give first video+Vitruve pairs for the
+  CV board's `--scale` calibration.
 
 ## Repo map
 
