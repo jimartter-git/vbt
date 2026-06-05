@@ -83,9 +83,9 @@ count against the user's true count the first time.
   manual circle *placement*, not the diameter toggle. SmartBarbell's region-track
   handles non-round plates with no such step.
 
-**Vitruve** — the reference vendor for calibration (`compare.py` auto-prefers it).
-CSV export, **one row per rep** (no phantom rows; `# Rep.` is already 1-based and clean —
-use it directly as `true_rep`). First exports landed 2026-06-05 (`raw/20260605-*-VITRUVE.csv`).
+**Vitruve** — the established reference vendor for calibration (the ground truth since
+2026-06-02; `compare.py` auto-prefers it). CSV export, **one row per rep** (no phantom rows;
+`# Rep.` is already 1-based and clean — use it directly as `true_rep`).
 Column → our metric (units already canonical: m/s, m, kg, ms):
 
 | Vitruve column | → our field | notes |

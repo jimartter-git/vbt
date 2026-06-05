@@ -23,13 +23,14 @@ and `docs/sources-and-fusion.md`.
   tests green).
 - **Active phase = data + calibration.** Building a personal multi-vendor
   measurement database (`dataset/`) to quantify cross-tool agreement, calibrate,
-  and seed the app's per-user prior.
-- **⚑ Vitruve (ground truth) has ARRIVED.** First exports uploaded 2026-06-05:
-  `dataset/raw/20260605-{BN,DL}-{1,2,3}.mov` + `…-{BN,DL}-VITRUVE.csv`. **NOT yet
-  ingested** into `sets.csv`/`rep_metrics.csv` — this is the natural first task for the
-  next session (prompt for per-set load/RPE/comparables, then import per the new Vitruve
-  recipe in `dataset/INGESTION.md`). These also give first video+Vitruve pairs for the
-  CV board's `--scale` calibration.
+  and seed the app's per-user prior. **Vitruve is the established ground-truth
+  reference** (since 2026-06-02; `compare.py` auto-prefers it — ~392 rep rows across
+  bench/squat/skull-crushers, etc.).
+- **⚑ Latest un-ingested data: 2026-06-05 BN + DL.** New web uploads
+  `dataset/raw/20260605-{BN,DL}-{1,2,3}.mov` + `…-{BN,DL}-VITRUVE.csv` are **NOT yet
+  ingested** into `sets.csv`/`rep_metrics.csv` — the natural next task (prompt for per-set
+  load/RPE/comparables, import per the Vitruve recipe in `dataset/INGESTION.md`). These
+  also give fresh video+Vitruve pairs to calibrate the CV board's `--scale`.
 
 ## Repo map
 
