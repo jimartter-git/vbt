@@ -93,6 +93,41 @@ velocity included) while rescuing the ones that previously defeated every tracke
 
 The validated absolute/default path is byte-for-byte unchanged behind every flag.
 
+## Generalized (automated) performance — honest status (2026-06-05)
+
+⚠ **The scoreboard above uses MANUAL seeds (a human tapping the plate in frame 0).**
+That is the with-a-human-in-the-loop number. The product won't always have that, so the
+real question is the **fully-automated** result. Run it with `cv_eval.py --auto` (flow uses
+`auto_seed_bbox`; pose is seed-free). On the 14-clip corpus today:
+
+| regime | how it runs | count result | velocity |
+|---|---|---|---|
+| **Manual seed** (Claude/human tap) | hand-placed bbox on the bar plate | **~13/14 within ±1**, beats SmartBarbell wherever compared | device-grade only on clean side-on high-res (IB-1); diagonal/low-res ~2× |
+| **Auto-seed flow** (`auto_seed_bbox`) | largest solid blob, no tap | **0/14 — broken** (grabs a static wall/rack/floor blob every time → `⚠ STATIC-SEED`) | n/a |
+| **Seed-free pose** (wrist) | MediaPipe, no tap | good on **standing, big-ROM** lifts (deadlifts **10/10/11**, angled/front rows ±1); **over-counts** supine/side-on/isolation (bench 20, incline 21, skull-crusher 32) | **deadlift velocities land within ~0.1 of Vitruve** (0.84/0.95/0.81 vs 0.96/0.96/0.82); unreliable elsewhere |
+
+**Verdict.** Today the system is robust **only with one human seed-tap** — which the planned
+app UX (tap-to-seed + adjust seed/rep boundaries) explicitly provides, so this is a viable
+near-term product. **Fully hands-off it is not robust yet:** the plate path has *no working
+auto-detector* (the whole "use the plate" pillar currently depends on the tap), and pose
+alone only carries standing big-ROM lifts. The pairwise design *does* degrade gracefully —
+deadlifts are already strong seed-free via pose+forearm — but the gaps are concrete:
+
+1. **`auto_seed_bbox` is a placeholder** → the one thing that would most improve generalized
+   performance is **roadmap #6 (a learned plate/bar-end detector)**. That single piece turns
+   the strong manual-seed numbers into automated ones.
+2. **Absolute velocity is not generally trusted yet** — only device-grade on clean side-on
+   high-res. Diagonal plates read ~2× because the circular Hough measures the elliptical rim's
+   minor axis (**roadmap #2: ellipse / user-confirmed diameter**). Velocity **loss** (relative,
+   the headline fatigue signal) survives the scale error and IS robust.
+3. **Pose is the seed-free safety net** but must stay gated to where it's valid (standing,
+   large wrist travel) — never supine/isolation. `fuse_cv.py`'s cross-method count check is
+   the right mechanism; it needs the auto-detector so flow can vote without a manual seed.
+
+Net: **counts are production-ready behind a one-tap UX; absolute velocity and zero-tap
+automation are not yet** — both have a named roadmap item (#6, #2) and the deadlift pose
+path already proves the seed-free direction works.
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.

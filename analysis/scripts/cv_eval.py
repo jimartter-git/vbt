@@ -121,6 +121,32 @@ def run(clip, tracker, seed, adaptive, occlusion=False, band=None, scale=None):
             meta.get("static_track_suspect", False))
 
 
+def _auto_board(sets):
+    """The 'no human in the loop' scoreboard: the automated paths only.
+
+    flow uses `auto_seed_bbox` (the placeholder auto-detector — largest solid blob),
+    pose is inherently seed-free. This measures the FULLY-AUTOMATED system, i.e. what a
+    user gets when the app can't lean on a hand-placed seed. Compare to the default board
+    (manual seeds) to see how much of today's accuracy is carried by the human tap."""
+    print("\nCV AUTO scoreboard — NO manual seed (flow=auto_seed_bbox, pose=seed-free)")
+    print("  vs ground truth. '⚠' = static mis-seed (auto-detector grabbed a static object).\n")
+    hdr = f"{'set':<16}{'GT':>4}{'flow_auto':>11}{'pose':>9}{'pose_mean':>11}  note"
+    print(hdr); print("-" * len(hdr))
+    for sid in sets:
+        clip = os.path.join(REPO, CLIPS[sid][0])
+        gtn, gtmean, _, _ = gt_counts(sid)
+        out = {}
+        for tr in ("flow", "pose"):
+            try:
+                n, mean, conf, suspect, static = run(clip, tr, None, False, False, None, None)
+                out[tr] = (f"{n}({n - gtn:+d})" + ("⚠" if static else ""), mean)
+            except Exception as e:
+                out[tr] = (f"ERR({type(e).__name__})", float("nan"))
+        pm = out["pose"][1]
+        pmstr = (f"{pm:.2f}" if pm == pm else "-") + (f" / {gtmean:.2f}gt" if gtmean == gtmean else "")
+        print(f"{sid:<16}{gtn:>4}{out['flow'][0]:>11}{out['pose'][0]:>9}{pmstr:>11}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--set", dest="only")
@@ -129,7 +155,15 @@ def main():
     ap.add_argument("--scale", action="store_true",
                     help="angle-aware px→m via each clip's plate+angle (ScaleSpec); "
                          "side=trusted, diagonal=anchored+lower conf, front=relative-only")
+    ap.add_argument("--auto", action="store_true",
+                    help="PRODUCTION-REALISTIC eval: ignore the manual seeds and run the "
+                         "automated paths only — flow with auto_seed_bbox + seed-free pose. "
+                         "This is 'how well does it work with NO human tapping the plate'.")
     args = ap.parse_args()
+
+    if args.auto:
+        _auto_board([args.only] if args.only else list(CLIPS))
+        return
 
     sets = [args.only] if args.only else list(CLIPS)
     print(f"\nCV scoreboard{' [adaptive gate]' if args.adaptive else ''}"
