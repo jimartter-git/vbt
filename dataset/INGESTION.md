@@ -53,6 +53,21 @@ rep number (and confirm with the user if ambiguous). `rep_index` blank +
 - **GOTCHA:** a trailing all-`0.00` row is a **phantom** (a dropped rep). Record it
   as `mean_velocity, value=0, flag=phantom, confidence=0`, with `true_rep` = the
   physical rep it failed to capture. Do NOT let it into stats.
+- **SmartBarbell is a VIDEO/CV app, not an on-bar device** — it analyzes an uploaded
+  clip by tracking the plate bounding-box (it's the CV competitor in `docs/cv-fusion.md`).
+  So its errors are *video* errors (scale/tracking), same family as our own CV: e.g. on
+  fast deadlifts it read ~0.26 m/s LOW every rep vs Vitruve (20260605-DL-1) and badly
+  undercounted (DL-2 2/10, DL-3 6/10), while on bench its bias was ~0.
+- **Rep-count prior:** the uploader has an optional **"Number of reps"** field. Supplying
+  it materially changes SB's segmentation (telling DL-3 "10" lifted it 6→8 reps). So an
+  SB rep **count is upload-dependent** — note whether the rep hint was given, and treat
+  hinted vs un-hinted as different measurements if you store both.
+- **Undercount (can't map which physical reps):** record the rows with `rep_index` =
+  SB's row number, **`true_rep` BLANK**, `flag=undercount` on every metric (the trailing
+  zero row still gets `flag=phantom`). Blank `true_rep` keeps them out of per-rep
+  cross-vendor alignment (they're count-only), not masquerading. Confirm the mapping with
+  the user before assigning `true_rep`; if unresolved, leave blank. (Precedents:
+  20260602-BN-3, 20260605-DL-2/DL-3.)
 
 **Metric** — per rep: `M.vel → mean_velocity`, `ROM → rom (cm)`, `Ecc → eccentric_time (s)`.
 Optional extra screen: `T.to peak → time_to_peak (s)`, `B.pause → pause_time (s)`,
