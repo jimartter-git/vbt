@@ -38,7 +38,7 @@ and `docs/sources-and-fusion.md`.
 | `docs/generalization.md` | generalizing CV to any lift: tracker families × scale strategies (one spine, swappable front-ends; pose/equipment-free path) |
 | `docs/cv-fusion.md` | the standalone video estimator as a best-in-class SmartBarbell competitor: what's built (adaptive gating, occlusion auto-fallback, scale confidence), the `cv_eval.py` scoreboard, and the robustness roadmap |
 | `dataset/` | the living multi-vendor measurement DB (+ `dataset/README.md`, `dataset/INGESTION.md`) |
-| `analysis/` | Python pipelines: `vbt_analysis/` (IMU ZUPT) + `vbt_video/` (our own CV velocity — PyAV+OpenCV, pluggable trackers, outputs vendor `mevbt_cv`) |
+| `analysis/` | Python pipelines: `vbt_analysis/` (IMU ZUPT) + `vbt_video/` (our own CV velocity — PyAV+OpenCV, pluggable trackers, `plates.py` plate+angle→scale, outputs vendor `mevbt_cv`). Board: `scripts/cv_eval.py` (`--scale` = angle-aware) |
 | `Watch/` `iOS/` `Packages/VBTCore/` | the Swift app + shared package |
 
 ## How to work here (conventions)
@@ -96,6 +96,25 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
 7. **Sourcing discipline:** `docs/vbt-reference.md` marks snippet-sourced vs
    full-text-verified vs unverified. Keep that honesty; verify before relying.
 8. First lift target = **deadlift** (wrist tracks bar; clean ZUPT anchors).
+9. **Capture conditions vary PER CLIP, by design.** The video corpus is a deliberate
+   robustness bench — the lifter switches camera angle, rep speed, distance, and plate
+   type *shot to shot* (e.g. the barbell rows were filmed side / diagonal / front as
+   ROW-1/2/3). **Never assume a lift-day is uniform.** Angle/plate are per-clip inputs,
+   not per-session constants. Confirmed per-clip metadata lives in `cv_eval.py` `CLIPS`.
+10. **The px→m scale is a deterministic function of (plate, camera angle), not a guess.**
+   `vbt_video/plates.py` `ScaleSpec` (wired via `VideoConfig.scale_spec`): real-world
+   diameter = the LARGEST plate's outer rim (stacking → smaller plates are concentric;
+   bumper ≈ 0.45 m ≥10 kg, iron is brand-dependent → lower confidence) × camera-angle
+   policy — **side** = valid/full conf, **diagonal** = valid but lower conf, **head-on**
+   = plate edge-on → invalid → fall back to anthro (body) scale, else flag relative-only.
+   Pixel diameter still comes from the seed; the user's in-app **confirm/adjust** of the
+   detected plate is that surface (more robust than any auto-detector). `cv_eval.py
+   --scale` runs the board angle-aware.
+11. **Angle alone cannot gate a trajectory correction.** Auto-enabling the FlowTracker rim
+   anchor for any "diagonal" clip helped the barbell-row arc (ROW-2 1.09→0.96) but SPLIT
+   the deadlift's 2 reps into 7 (front-quarter view). The anchor stays **opt-in**
+   (`flow_anchor_alpha`); `ScaleSpec` only *advises* (`needs_anchor` in meta). The fix is
+   per-clip human-in-the-loop, not a blanket rule — same principle as the manual editor.
 
 ## ⚑ Ingestion trigger — READ THIS
 

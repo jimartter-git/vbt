@@ -32,31 +32,33 @@ REPS_CSV = os.path.join(REPO, "dataset", "rep_metrics.csv")
 #            [optional] scale={"angle","plate","kind"} for the --scale (angle-aware) mode)
 # EVERY registered clip with a ground-truth count lives here — the complete board.
 # NOTE: angle/speed/framing vary PER CLIP (deliberately, to stress generalization) — never
-# assume a lift-day is uniform. The `scale` dict below is seeded from each clip's own note;
-# ⚑ CONFIRM the per-clip angle/plate/kind (see the "scale seeded from notes" report).
+# assume a lift-day is uniform. The `scale` dict is the lifter-confirmed per-clip metadata
+# (angle/plate/kind), confirmed 2026-06-05.
 CLIPS = {
     # --- device-grade / good clips (regression guards: must stay at GT) ---
     "20260528-IB-1": ("dataset/raw/20260528-IB-1.mp4",
                       {"flow": (323, 163, 316, 316)},
                       "incline bench 185lb - DEVICE-GRADE (rmse 0.033 vs Stance)", (295, 720),
-                      {"angle": "side", "plate": 45, "kind": "iron"}),
+                      {"angle": "side", "plate": 45, "kind": "iron"}),   # iron 45+25; rim=45
     "20260601-ROW-1": ("dataset/raw/20260601-ROW-1.mp4",
                        {"flow": (200, 690, 270, 270)}, "barbell row, side (good clip)", None,
-                       {"angle": "side", "plate": 45, "kind": "iron"}),
+                       {"angle": "side", "plate": 45, "kind": "bumper"}),
     "20260601-ROW-2": ("dataset/raw/20260601-ROW-2.mp4",
                        {"flow": (300, 660, 260, 250)}, "barbell row, angle (good clip)", None,
-                       {"angle": "diagonal", "plate": 45, "kind": "iron"}),
+                       {"angle": "diagonal", "plate": 45, "kind": "bumper"}),
     "20260601-ROW-3": ("dataset/raw/20260601-ROW-3.mp4",
                        {"flow": (415, 615, 120, 150)}, "barbell row, front (good clip)", None,
-                       {"angle": "front", "plate": 45, "kind": "iron"}),
+                       {"angle": "front", "plate": 45, "kind": "bumper"}),
     # --- hard clips ---
     "20260604-SQ-1": ("dataset/raw/20260604-SQ-1.mov",
-                      {"flow": (192, 72, 90, 90)}, "squat set1, mirror/rack, low-res", None),
+                      {"flow": (192, 72, 90, 90)}, "squat set1, mirror/rack, low-res", None,
+                      {"angle": "side", "plate": 45, "kind": "bumper"}),
     "20260604-SQ-3": ("dataset/raw/20260604-SQ-3.mov",
-                      {"flow": (165, 77, 110, 110)}, "squat set3, fast TnG (adversarial)", None),
+                      {"flow": (165, 77, 110, 110)}, "squat set3, fast TnG (adversarial)", None,
+                      {"angle": "side", "plate": 45, "kind": "bumper"}),
     "20260602-SC-1": ("dataset/raw/20260602-SC-1.mov",
                       {"flow": (110, 115, 55, 55), "pose": None},
-                      "DB press, hex DB end, side-on (flow on DB end >> pose)", None),
+                      "DB press, rubberized DB, diagonal (flow on DB end >> pose; pose-scaled)", None),
     "20240531-DL-1": ("dataset/raw/20240531-DL-1.mp4",
                       {"flow": (600, 580, 200, 200)},
                       "deadlift ~355lb, bumper plates, front-quarter (CV+SmartBarbell agree 2 reps)", None,

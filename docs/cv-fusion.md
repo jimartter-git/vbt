@@ -31,17 +31,21 @@ Good / device-grade clips (must not regress):
 
 | clip | scene | reps | ref | SmartBarbell | note |
 |---|---|---|---|---|---|
-| IB-1 | incline bench, well-filmed | **10** | 10 | 10 | mean 0.44 m/s, **rmse 0.033 vs Stance** — velocity device-grade, scale *not* flagged |
-| ROW-1/2/3 | barbell row, side/angle/front 720p | **10/10/10** | 10 | 10/9/10 | conf 1.00, occlusion never engages, scale not flagged |
+| IB-1 | incline bench, iron 45+25, **side** | **10** | 10 | 10 | mean 0.44 m/s, **rmse 0.033 vs Stance** — velocity device-grade, scale *not* flagged |
+| ROW-1/2/3 | barbell row, **bumper 45**, side/diagonal/front 720p | **10/10/10** | 10 | 10/9/10 | conf 1.00, occlusion never engages; front (ROW-3) → body-scale fallback under `--scale` |
 
 Hard clips (the robustness wins):
 
 | clip | scene | baseline | **now** | Vitruve | SmartBarbell |
 |---|---|---|---|---|---|
-| SQ-1 | mirror/rack, low-res | 8 | **10** | 10 | 5 |
-| SQ-3 | fast touch-and-go (adversarial) | 4 | **9** | 10 | 3 |
-| SC-1 | DB press, hex DB end, side-on | pose 32 | **10** | 11 | — |
-| DL-1 | deadlift, bumper, front-quarter | — | **2** | — | 2 (=) |
+| SQ-1 | squat, **bumper 45, side**, mirror/rack low-res | 8 | **10** | 10 | 5 |
+| SQ-3 | squat, **bumper 45, side**, fast touch-and-go (adversarial) | 4 | **9** | 10 | 3 |
+| SC-1 | DB press, **rubberized DB, diagonal** (pose-scaled) | pose 32 | **10** | 11 | — |
+| DL-1 | deadlift, **bumper 45, diagonal** (front-quarter) | — | **2** | — | 2 (=) |
+
+Capture conditions vary per clip by design (the lifter switches angle/speed/plate shot to
+shot) — these are the **lifter-confirmed** per-clip conditions, mirrored in `cv_eval.py`
+`CLIPS[*].scale` so `--scale` scales each clip on its own angle+plate.
 
 (DL-1 count matches SmartBarbell exactly; its velocity reads ~1.5× high — a
 *moderate* scale error that slips under the plausibility flag, the roadmap-#2 case.)
