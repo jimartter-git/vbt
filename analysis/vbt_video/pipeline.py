@@ -11,7 +11,7 @@ import numpy as np
 
 from .frames import FrameSource, PyAVDecoder
 from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, Tracker,
-                    auto_seed_bbox)
+                    auto_seed_bbox, auto_seed_motion)
 from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
 from .plates import ScaleSpec
 
@@ -178,7 +178,10 @@ class VideoVelocitySource:
         ignores `seed_bbox` (it needs no seed) — leave it None there."""
         src = source_or_path if isinstance(source_or_path, FrameSource) else PyAVDecoder(source_or_path)
         if seed_bbox is None and self.cfg.tracker != "pose":
-            seed_bbox = auto_seed_bbox(src.first().img)
+            # Zero-tap auto-seed: prefer the MOTION seeder (the circle that travels), which
+            # avoids locking onto a static rack/background plate; fall back to the static
+            # largest-blob seeder only if no moving circle is found. (cv-fusion roadmap #6.)
+            seed_bbox = auto_seed_motion(src) or auto_seed_bbox(src.first().img)
         track = self._tracker().track(src, seed_bbox)
         # Auto-fallback: a low-confidence flow track means lost lock — retry occlusion-robust
         # and keep whichever held better. Healthy clips skip this entirely (no regression).

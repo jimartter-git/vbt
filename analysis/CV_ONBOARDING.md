@@ -21,6 +21,12 @@ apt-get install -y libgles2 libegl1                 # headless GL for mediapipe 
 light deps — opencv + av + scipy — so the flow path is ready without manual steps; mediapipe
 is heavy and only needed for the pose/forearm path, so install it on demand.)
 
+> Auto-seed: calling `estimate(clip)` with **no seed** now runs `auto_seed_motion` — it picks
+> the circle whose **motion** (disc×column) is highest, i.e. the one that actually moves, not a
+> static rack plate. It gets ~9/14 of the corpus zero-tap (`cv_eval.py --auto`). It's a heuristic
+> bridge to the learned detector (roadmap #6), so for a NEW clip still verify (Step 2) — and if a
+> count looks wrong, a manual seed per below is the fix.
+
 ## Step 1 — find the WORKING plate, not a decoy  ⚠ THE #1 MISTAKE
 
 The FlowTracker follows whatever you seed. A gym frame is full of **same-coloured,
