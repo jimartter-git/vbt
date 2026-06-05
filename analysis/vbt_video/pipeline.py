@@ -200,6 +200,16 @@ class VideoVelocitySource:
             # trusted, don't report a confident absolute m/s — mark reps relative-only.
             for r in reps:
                 r["velocity_relative_only"] = True
+        # Self-guard against a MIS-SEED. A track that barely moves vertically yet reports
+        # HIGH confidence is almost always the seed sitting on a STATIC object (a rack-stored
+        # plate, a background circle) — NOT a "CV failure". For any real lift the bar travels
+        # well over a plate diameter, so a vertical span under ~0.3× the target size with
+        # healthy confidence (and few/no reps) means: re-seed onto the WORKING (moving) plate
+        # and re-run. (The 2026-06-05 bench lesson made programmatic — see
+        # analysis/CV_ONBOARDING.md.)
+        y_span_px = float(np.ptp(track.traj[:, 2])) if len(track.traj) else 0.0
+        static_track_suspect = bool(track.confidence >= 0.75 and track.target_px > 0
+                                    and y_span_px < 0.30 * track.target_px)
         meta = {
             "m_per_px": mpp,
             "target_px": track.target_px,
@@ -207,6 +217,8 @@ class VideoVelocitySource:
             "occlusion_used": used_occlusion,
             "scale_confidence": scale_conf,
             "scale_suspect": scale_suspect,
+            "y_span_px": round(y_span_px, 1),
+            "static_track_suspect": static_track_suspect,
             "n_frames": len(track.traj),
             "fps": round(src.fps, 2),
             "seed_bbox": tuple(int(v) for v in seed_bbox) if seed_bbox else None,

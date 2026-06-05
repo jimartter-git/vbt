@@ -45,7 +45,7 @@ and `docs/sources-and-fusion.md`.
 | `docs/generalization.md` | generalizing CV to any lift: tracker families × scale strategies (one spine, swappable front-ends; pose/equipment-free path) |
 | `docs/cv-fusion.md` | the standalone video estimator as a best-in-class SmartBarbell competitor: what's built (adaptive gating, occlusion auto-fallback, scale confidence), the `cv_eval.py` scoreboard, and the robustness roadmap |
 | `dataset/` | the living multi-vendor measurement DB (+ `dataset/README.md`, `dataset/INGESTION.md`) |
-| `analysis/` | Python pipelines: `vbt_analysis/` (IMU ZUPT) + `vbt_video/` (our own CV velocity — PyAV+OpenCV, pluggable trackers, `plates.py` plate+angle→scale, outputs vendor `mevbt_cv`). Board: `scripts/cv_eval.py` (`--scale` = angle-aware) |
+| `analysis/` | Python pipelines: `vbt_analysis/` (IMU ZUPT) + `vbt_video/` (our own CV velocity — PyAV+OpenCV, pluggable trackers, `plates.py` plate+angle→scale, outputs vendor `mevbt_cv`). Board: `scripts/cv_eval.py` (`--scale` = angle-aware). **Onboarding a new clip: `analysis/CV_ONBOARDING.md`** |
 | `Watch/` `iOS/` `Packages/VBTCore/` | the Swift app + shared package |
 
 ## How to work here (conventions)
@@ -122,6 +122,29 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    the deadlift's 2 reps into 7 (front-quarter view). The anchor stays **opt-in**
    (`flow_anchor_alpha`); `ScaleSpec` only *advises* (`needs_anchor` in meta). The fix is
    per-clip human-in-the-loop, not a blanket rule — same principle as the manual editor.
+12. **Seed the WORKING (moving) plate, and VERIFY it — a 0-rep result is a mis-seed, not a
+   CV failure.** A gym frame is full of static decoy circles (rack-STORED plates, a
+   neighbouring bar, mirror reflections). FlowTracker faithfully tracks whatever you seed,
+   so seeding a stored plate yields a flat trajectory → 0 reps **at confidence 1.0** — which
+   reads like "CV can't" but means "wrong target" (2026-06-05 bench: first seed sat on the
+   rack plates → 0 reps; reseeding the blue BAR plate → 10/10/11, beating SmartBarbell).
+   Disambiguate by motion+colour (the working bumper is a distinct colour; deadlift plate is
+   on the floor bar, bench/squat plate is at the hands — lower/more central than the stored
+   plates behind). **Always overlay the seed on a few frames and confirm the plate moves
+   through it before trusting any number.** This is now also a programmatic guard:
+   `meta["static_track_suspect"]` + a `⚠ STATIC-SEED` line on the `cv_eval.py` board. Full
+   runbook: `analysis/CV_ONBOARDING.md`. (Corollary: pose/forearm scale is great for STANDING
+   lifts but useless on SUPINE ones — forearm foreshortens, supine wrist jitters.)
+
+## ⚑ Video trigger — READ THIS
+
+**If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip
+to run through OUR CV (`vbt_video`) and score against ground truth.** Follow
+`analysis/CV_ONBOARDING.md` end-to-end: install CV deps (Step 0), **find the moving bar
+plate not a decoy + VERIFY the seed** (Steps 1–2, learning #12), run `cv_eval.py` and honour
+the sanity gates (Step 3), pick tracker/scale (Step 4), then register the clip + record
+findings (Step 5). If a `…-VITRUVE.csv`/vendor screenshot came with it, file those via the
+dataset ingestion trigger first so the board has a GT count to beat.
 
 ## ⚑ Ingestion trigger — READ THIS
 

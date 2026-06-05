@@ -117,7 +117,8 @@ def run(clip, tracker, seed, adaptive, occlusion=False, band=None, scale=None):
     reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed)
     mv = [r["mean_velocity"] for r in reps]
     return (len(reps), (sum(mv) / len(mv) if mv else float("nan")),
-            meta["track_confidence"], meta.get("scale_suspect", False))
+            meta["track_confidence"], meta.get("scale_suspect", False),
+            meta.get("static_track_suspect", False))
 
 
 def main():
@@ -144,16 +145,23 @@ def main():
         compstr = f"{comp[:5]}={compn}" if comp else "-"
         first = True
         for tracker, seed in trackers.items():
+            rownote = note if first else ""
             try:
-                n, mean, conf, suspect = run(clip, tracker, seed, args.adaptive,
-                                             args.occlusion, band, scale)
+                n, mean, conf, suspect, static = run(clip, tracker, seed, args.adaptive,
+                                                     args.occlusion, band, scale)
                 delta = f"{n}({n - gtn:+d})"
                 meanstr = (f"{mean:.2f}?" if suspect else f"{mean:.2f}")   # ? = scale flagged
+                # A barely-moving but confident track = seed on a STATIC object (rack/background
+                # plate), NOT a CV failure. Shout it so it's never silently read as "CV can't".
+                if static:
+                    rownote = ("⚠ STATIC-SEED: track barely moves — seed is likely on a "
+                               "rack-stored/background plate, NOT the working bar plate; "
+                               "re-seed & re-run (see analysis/CV_ONBOARDING.md). " + rownote)
             except Exception as e:
                 delta, meanstr, conf = f"ERR", "-", 0.0
-                note = note + f" [{type(e).__name__}: {e}]"
+                rownote = rownote + f" [{type(e).__name__}: {e}]"
             lead = f"{sid:<16}{gtn:>4}{compstr:>14}" if first else " " * 34
-            print(f"{lead}{tracker:>9}{delta:>8}{meanstr:>7}{conf:>7.2f}  {note if first else ''}")
+            print(f"{lead}{tracker:>9}{delta:>8}{meanstr:>7}{conf:>7.2f}  {rownote}")
             first = False
 
 
