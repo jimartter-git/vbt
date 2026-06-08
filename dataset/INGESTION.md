@@ -101,6 +101,11 @@ count against the user's true count the first time.
 **Vitruve** — the established reference vendor for calibration (the ground truth since
 2026-06-02; `compare.py` auto-prefers it). CSV export, **one row per rep** (no phantom rows;
 `# Rep.` is already 1-based and clean — use it directly as `true_rep`).
+**⚠ NOT reliable for ROWS** (verified 2026-06-08): on touch-and-go barbell rows Vitruve
+collapsed each set of 10 to ~1 "real rep". The cause is the TnG/bounce (no clear isometric
+or pause to delimit reps), NOT horizontal motion — row travel is mostly vertical with good
+ROM (~0.50 m). So Vitruve is ground truth for the VERTICAL barbell lifts (squat/bench/
+deadlift) only; for rows use **Stance** (on-bar, lift-agnostic) or video as the reference.
 Column → our metric (units already canonical: m/s, m, kg, ms):
 
 | Vitruve column | → our field | notes |

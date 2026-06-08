@@ -30,3 +30,7 @@ set_id,vendor,path,kind,notes
 20260605-DL-1,video,raw/20260605-DL-1.mov,video_mov,"Deadlift set 1, 135lb speed pulls. Vitruve 10 @ MV 0.66->1.00. CV pending (mind front-quarter ZUPT hazard, learning #11)."
 20260605-DL-2,video,raw/20260605-DL-2.mov,video_mov,"Deadlift set 2, 135lb. Vitruve 10 @ MV 0.75->0.85. CV pending."
 20260605-DL-3,video,raw/20260605-DL-3.mov,video_mov,"Deadlift set 3, 135lb. Vitruve 10 @ MV 0.75->0.80. CV pending."
+20260608-ROW-1,video,raw/060826_row1.mov,video_mov,"Barbell row (TnG) set1, 135lb, FRONT, 440px. GT 10. SmartBarbell 6/10. Our CV: flow 0 (dark iron plate, no flow texture); PlateTracker 7/10 (rel). Vitruve failed (~1)."
+20260608-ROW-2,video,raw/060826_row2.mov,video_mov,"Barbell row (TnG) set2, 135lb, FRONT, 440px. GT 10. SmartBarbell 6/10. Our CV flow 0 / pose ~11. Vitruve ~1."
+20260608-ROW-3,video,raw/060826_row3.mov,video_mov,"Barbell row (TnG) set3, 135lb, FRONT, 440px. GT 10. SmartBarbell 9/10 (best). Our CV flow 0 / pose 11. Vitruve ~1."
+20260608-ROW-4,video,raw/060826_row4.mov,video_mov,"Barbell row (TnG) set4, 135lb, DEAD-FRONT, 440px. GT 10. Defeats all video: SmartBarbell 2, Vitruve ~1, our CV 2/13. Needs side angle/Stance."
