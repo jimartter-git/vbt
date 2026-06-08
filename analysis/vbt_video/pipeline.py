@@ -11,7 +11,7 @@ import numpy as np
 
 from .frames import FrameSource, PyAVDecoder
 from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, Tracker,
-                    auto_seed_bbox)
+                    auto_seed_bbox, auto_seed_motion)
 from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
 from .plates import ScaleSpec
 
@@ -178,7 +178,10 @@ class VideoVelocitySource:
         ignores `seed_bbox` (it needs no seed) — leave it None there."""
         src = source_or_path if isinstance(source_or_path, FrameSource) else PyAVDecoder(source_or_path)
         if seed_bbox is None and self.cfg.tracker != "pose":
-            seed_bbox = auto_seed_bbox(src.first().img)
+            # Zero-tap auto-seed: prefer the MOTION seeder (the circle that travels), which
+            # avoids locking onto a static rack/background plate; fall back to the static
+            # largest-blob seeder only if no moving circle is found. (cv-fusion roadmap #6.)
+            seed_bbox = auto_seed_motion(src) or auto_seed_bbox(src.first().img)
         track = self._tracker().track(src, seed_bbox)
         # Auto-fallback: a low-confidence flow track means lost lock — retry occlusion-robust
         # and keep whichever held better. Healthy clips skip this entirely (no regression).
@@ -200,6 +203,16 @@ class VideoVelocitySource:
             # trusted, don't report a confident absolute m/s — mark reps relative-only.
             for r in reps:
                 r["velocity_relative_only"] = True
+        # Self-guard against a MIS-SEED. A track that barely moves vertically yet reports
+        # HIGH confidence is almost always the seed sitting on a STATIC object (a rack-stored
+        # plate, a background circle) — NOT a "CV failure". For any real lift the bar travels
+        # well over a plate diameter, so a vertical span under ~0.3× the target size with
+        # healthy confidence (and few/no reps) means: re-seed onto the WORKING (moving) plate
+        # and re-run. (The 2026-06-05 bench lesson made programmatic — see
+        # analysis/CV_ONBOARDING.md.)
+        y_span_px = float(np.ptp(track.traj[:, 2])) if len(track.traj) else 0.0
+        static_track_suspect = bool(track.confidence >= 0.75 and track.target_px > 0
+                                    and y_span_px < 0.30 * track.target_px)
         meta = {
             "m_per_px": mpp,
             "target_px": track.target_px,
@@ -207,6 +220,8 @@ class VideoVelocitySource:
             "occlusion_used": used_occlusion,
             "scale_confidence": scale_conf,
             "scale_suspect": scale_suspect,
+            "y_span_px": round(y_span_px, 1),
+            "static_track_suspect": static_track_suspect,
             "n_frames": len(track.traj),
             "fps": round(src.fps, 2),
             "seed_bbox": tuple(int(v) for v in seed_bbox) if seed_bbox else None,

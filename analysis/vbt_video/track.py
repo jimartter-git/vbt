@@ -629,6 +629,90 @@ class PoseTracker(Tracker):
         return Track(traj=traj, target_px=target_px, confidence=round(seen / n, 3))
 
 
+def auto_seed_motion(source, work_w: int = 256, stride: int = 2, min_hits: int = 6,
+                     min_r_frac: float = 0.04, max_r_frac: float = 0.30, param2: int = 26):
+    """Motion-aware auto-seed: pick the circle that MOVES, not the largest static blob.
+
+    The working plate is the one circle that travels vertically rep after rep; rack-stored
+    plates, a neighbouring bar, and mirror circles sit still. So: detect circles across the
+    clip (downscaled for speed), group them into vertical *lanes* (the bar holds an x-lane
+    while y oscillates), and choose the lane whose detections span the most vertical travel.
+    Anchor the seed at that lane's EARLIEST detection (near frame 0, where the tracker seeds).
+
+    Returns (x, y, w, h) in original pixels, or None if no clearly-moving circle is found
+    (caller falls back to the static `auto_seed_bbox`). This is the heuristic stand-in for
+    the learned detector (cv-fusion roadmap #6) — enough to make the zero-tap path sensible.
+    """
+    grays, sc = [], None
+    for i, f in enumerate(source):
+        if i % stride:
+            continue
+        sc = work_w / float(f.img.shape[1])
+        small = cv2.resize(f.img, (work_w, max(1, int(round(f.img.shape[0] * sc)))))
+        grays.append(cv2.cvtColor(small, cv2.COLOR_BGR2GRAY))
+    if sc is None or len(grays) < min_hits:
+        return None
+    H, W = grays[0].shape
+    # Temporal motion map: where did pixels change across the clip? The bar plate sweeps a
+    # vertical SWATH; rack-stored/background plates (even stacked vertically) sit still. Summing
+    # motion down each column gives a per-x "activity" profile that peaks at the working plate's
+    # lane — and is NOT fooled by a vertical stack of static plates (a static column stays dark).
+    M = np.zeros((H, W), np.float32)
+    for a, b in zip(grays, grays[1:]):
+        M += cv2.absdiff(a, b).astype(np.float32)
+    minR, maxR = max(6, int(min_r_frac * work_w)), int(max_r_frac * work_w)
+
+    # Candidate plate circles from the EARLY frames (near where the tracker will seed, frame 0).
+    early = grays[: max(3, len(grays) // 5)]
+    cands = []                                                # (frame_idx, x, y, r) in work px
+    for j, g in enumerate(early):
+        circ = cv2.HoughCircles(cv2.medianBlur(g, 5), cv2.HOUGH_GRADIENT, dp=1.2,
+                                minDist=int(1.4 * minR), param1=120, param2=param2,
+                                minRadius=minR, maxRadius=max(minR + 1, maxR))
+        if circ is not None:
+            for x, y, r in circ[0]:
+                cands.append((j, float(x), float(y), float(r)))
+    if not cands:
+        return None
+
+    # Two physically-meaningful motion signals for "the bar plate", combined by PRODUCT so a
+    # candidate must score on BOTH:
+    #   • disc   — motion INSIDE the circle: the plate sweeps through its own spot every rep
+    #              (high); a static plate sits in dead pixels (low) — even one stacked in the
+    #              same column. This is what a column/lane profile alone can't separate.
+    #   • column — motion down the circle's x-LANE: the plate's vertical swath is active; a
+    #              dead column means a spurious local flicker, not the bar.
+    # A static plate in a moving column (high column, dead disc) and a flicker in a quiet column
+    # (high disc, dead column) both fail the product; the bar plate is the one high on both.
+    col = M.sum(axis=0)
+    col = cv2.blur(col.reshape(1, -1), (max(3, int(0.03 * W) | 1), 1)).ravel()
+
+    def disc_motion(x, y, r):
+        x0, x1 = max(0, int(x - r)), min(W, int(x + r + 1))
+        y0, y1 = max(0, int(y - r)), min(H, int(y + r + 1))
+        return float(M[y0:y1, x0:x1].mean()) if (x1 > x0 and y1 > y0) else 0.0
+
+    def col_motion(x, r):
+        x0, x1 = max(0, int(x - r)), min(W, int(x + r + 1))
+        return float(col[x0:x1].mean()) if x1 > x0 else 0.0
+
+    def score(c):
+        return disc_motion(c[1], c[2], c[3]) * col_motion(c[1], c[3])
+
+    best = max(cands, key=score)
+    if score(best) <= 1e-6:
+        return None
+    # Stabilise the seed: aggregate the early detections in the winner's x-lane (Hough is noisy
+    # frame to frame). Median radius for a well-sized box; anchor y at the EARLIEST hit (≈ the
+    # plate's frame-0 position, where the tracker seeds its cloud).
+    lane = [c for c in cands if abs(c[1] - best[1]) < best[3]]
+    e0 = min(lane, key=lambda c: c[0])
+    x, y = e0[1], e0[2]
+    r = float(np.median([c[3] for c in lane]))
+    inv = 1.0 / sc                                            # work px → original px
+    return (int((x - r) * inv), int((y - r) * inv), int(2 * r * inv), int(2 * r * inv))
+
+
 def auto_seed_bbox(img, min_area_frac: float = 0.004) -> tuple:
     """Best-effort seed: the largest solid blob in the frame (the plate end).
 
