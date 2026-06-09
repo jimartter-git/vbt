@@ -188,7 +188,25 @@ The Python side exposes proposals + editable boundaries; the app makes them corr
    widen confidence.
 4. **Adaptive tracker selection.** Pick/weight trackers by *measured* scene
    conditions (square-on plate → plate; side-on isolation → pose; cluttered → flow)
-   instead of the static flow+pose ensemble.
+   instead of the static flow+pose ensemble. **Field finding (2026-06-08/09):**
+   FlowTracker fails on *low-texture* plates — a smooth **dark iron** plate (rows
+   060826; heavy bench 20260609 BN-2/3/4) gives flow no corners, so it tracks the
+   background and reports `static_track_suspect`. The **detector** family handles it
+   (PlateTracker got 7/10 on a row where flow got 0). So: when flow comes back
+   `static_track_suspect`, **auto-fall back to PlateTracker/CSRT** (gated like
+   `auto_occlusion`, so it can't regress textured-plate clips). Texture, not just
+   clutter, should drive tracker choice. (Bumpers = high texture/colour → flow is
+   fine; dark iron = detector.)
+7. **Bilateral plate tracking (track BOTH bar ends).** SmartBarbell tracks the plate on
+   *each* end of the bar when both are in frame (the red + green boxes) and uses one if
+   only one is visible — observed 2026-06-09. We should match and exceed this: track both
+   plate ends and **fuse** them. Wins: (a) redundancy — if one end clips the frame,
+   occludes, or loses texture, the other carries (directly addresses the 20260609-BN-1
+   "plates clipping the right edge" failure and SmartBarbell's own set-1 3/10); (b)
+   **averaging the two ends cancels bar tilt / asymmetric whip** and halves independent
+   tracker jitter → a cleaner trajectory and better rep segmentation; (c) a left-vs-right
+   *disagreement* is a free quality signal (bar tilt, or one end mis-tracked). Cheap to
+   prototype: run the existing tracker on two seeds and average the vertical signal.
 5. **Global (non-causal) trajectory optimisation.** We have the whole clip — smooth
    forward+backward, multi-hypothesis, and exploit **intra-set consistency** (reps
    share ROM/cadence/path; outliers are repairable) before committing reps.
