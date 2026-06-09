@@ -169,3 +169,21 @@ little or no context — assume it is a VBT measurement to add to `dataset/`.** 
 
 Never invent metadata — ask. Never compare across vendors on `rep_index`; align on
 `true_rep`. See `dataset/INGESTION.md` for the full step-by-step.
+
+## IMU Signal Processing Guidance
+
+When working with Apple Watch IMU data for velocity measurement:
+
+1. **Use `CMDeviceMotion`, not raw `CMAccelerometerData`.** Device motion provides gravity-corrected acceleration in the device's reference frame and an orientation quaternion (`CMAttitude`). Integrating raw accelerometer data without gravity subtraction and orientation correction produces drift that no downstream filter can fix.
+
+2. **Rotate acceleration into world frame before integration.** Use the `CMAttitude` quaternion to transform device-frame acceleration into a fixed world frame, then isolate the vertical (Z, gravity-aligned) component. Only after this rotation is integration to velocity meaningful.
+
+3. **Apply Zero Velocity Update (ZVU) between reps.** Naive integration of acceleration drifts unboundedly. Detect rep boundaries (top/bottom of lift = momentary zero velocity) and reset integrated velocity to zero at those points. This is the standard approach used by both the Achermann methodology and the Wojtek120 reference implementation.
+
+4. **Sample at 100 Hz.** Matches the Achermann validation methodology. Higher rates are not necessarily better — the Watch hardware sampling has its own characteristics, and we want to match the reference for comparability.
+
+5. **Calibrate per-device.** MEMS IMUs have per-unit offsets and scale factors. Implement a calibration step that captures stationary readings to estimate accelerometer bias before each session, or at least at app first-launch.
+
+6. **Validate against ground truth.** Target accuracy: r > 0.95, SEE < 0.07 m/s for mean concentric velocity against a linear position transducer or video reference. Anything worse than this means there's a bug in the pipeline, not a fundamental hardware limitation — Achermann demonstrated the Watch can hit r > 0.97.
+
+See `REFERENCES.md` for citations supporting all of the above.
