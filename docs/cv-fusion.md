@@ -128,6 +128,34 @@ plate stacked in a moving column still fails. Remaining gaps, each with a named 
 Net: **counts are production-ready behind a one-tap UX and ~9/14 fully hands-off; absolute
 velocity is the remaining gap** (#2). Re-run the honest number any time with `cv_eval.py --auto`.
 
+## Zero-tap rebuild — track-by-detection (2026-06-09)
+
+The old zero-tap path (flow + a single auto-seed) was **8.5 mean rep-count error** on the
+22-clip corpus (vs SmartBarbell **2.5**) and overfit — a 9/14 seeder that collapsed on fresh
+data (rows 0/0/0/2, heavy bench 10/0/0/0). Rebuilt as **track-by-detection**
+(`analysis/scripts/auto_detect_count.py`): per-frame multi-cue circle detection (grayscale +
+**Canny-edge** Hough, the edge pass exposing dark-iron rims flow can't track) → anisotropic
+track association → **oscillation-based** track selection → rep-band low-pass → tempo-invariant
+relative gate + relative-ROM floor.
+
+**Result: 8.5 → ~2.5 mean error = SmartBarbell PARITY**, and it now BEATS SB on SB's own
+failure modes (clutter/mirror/hex SQ-3 10 vs 3; fast TnG DL-2 7 vs 2; clipping 20260609-BN-1
+9 vs 3). **But it does NOT yet beat SB out-of-the-box**: SB is still more *reliable* per-clip
+(13/21 vs 9/22 within ±1). Our error profile is *complementary* to SB's — we win on the hard
+clips, SB wins on clean ones.
+
+**The wall (honest):** the one residual is **identifying the bar plate vs periodic decoys**
+(the lifter's head/torso bob, a mirror reflection, a stored rack plate in the same column) in
+cluttered scenes — all oscillate at the rep cadence. Benchmarked + rejected as insufficient
+(2026-06-09): periodicity-weighted selection, motion-model association, color-blob cue,
+bilateral averaging, twin-pair (rigid-bar) selection, detection-seeded flow, PCA consensus.
+All plateau at ~2.5. **Classical CV caps at parity here; clearly beating SB needs a LEARNED
+plate/bar-end detector (roadmap #6)** — SmartBarbell's actual edge. The oscillation tracker is
+the right *back-end*; it needs a learned *front-end* feeding it the true plate. (No ML libs in
+the dev env yet — torch/ultralytics/onnx absent; the learned detector is a scoped next phase:
+bootstrap plate labels from the corpus + the manual seeds, train a small detector, feed this
+tracker.)
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.
