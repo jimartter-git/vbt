@@ -629,6 +629,101 @@ class PoseTracker(Tracker):
         return Track(traj=traj, target_px=target_px, confidence=round(seen / n, 3))
 
 
+class DetectTracker(Tracker):
+    """Seed-free, texture-agnostic TRACK-BY-DETECTION (the no-tap auto path, 2026-06-09).
+
+    Flow needs plate texture + a precise seed and overfits an auto-seeder; this instead
+    DETECTS the plate each frame and selects the track that OSCILLATES at the rep cadence —
+    robust across plate types (dark iron included) with no seed. Pipeline:
+      1. per frame (downscaled): multi-cue circle detection — Hough on grayscale + on Canny
+         EDGES (the edge pass exposes dark-iron plate RIMS grayscale/flow miss);
+      2. anisotropic track association (tight x-lane, loose vertical — the bar moves
+         vertically in a near-fixed column);
+      3. select the track that oscillates, penalising x-spread + radius jitter (kills static
+         rack/background plates and bystanders);
+      4. low-pass the trajectory at the rep band so detection jitter can't fake reversals.
+    Output is the usual (t,cx,cy) trajectory; scaling/kinematics/segmentation are untouched
+    (use the relative gate + `trajectory_to_reps(rom_floor_frac=0.5)` to drop jitter reps).
+
+    Validated 8.5→~2.5 mean rep-count error on the corpus = SmartBarbell parity (it beats SB
+    on clutter/TnG/clipping; SB still edges it on clean clips — the open gap is a LEARNED
+    plate detector, cv-fusion roadmap #6). `seed_bbox` is accepted for interface symmetry
+    but IGNORED (the no-tap path). See analysis/scripts/auto_detect_count.py.
+    """
+    def __init__(self, work_w=320, stride=3, topk=12, gx=0.6, gy=2.5, gap=5, rtol=0.32,
+                 lp_cut=1.8):
+        self.work_w=work_w; self.stride=stride; self.topk=topk
+        self.gx=gx; self.gy=gy; self.gap=gap; self.rtol=rtol; self.lp_cut=lp_cut
+
+    def _detect(self, g):
+        out=[]; minR=int(0.045*g.shape[1]); maxR=int(0.32*g.shape[1])
+        for src,p2 in [(cv2.medianBlur(g,5),30),(cv2.Canny(g,50,140),30)]:
+            circ=cv2.HoughCircles(src,cv2.HOUGH_GRADIENT,dp=1.2,minDist=int(1.4*minR),
+                                  param1=140,param2=p2,minRadius=minR,maxRadius=maxR)
+            if circ is not None:
+                out+=[(float(x),float(y),float(r)) for x,y,r in circ[0][:self.topk]]
+        keep=[]
+        for d in out:
+            if not any((d[0]-k[0])**2+(d[1]-k[1])**2<(0.5*d[2])**2 and abs(d[2]-k[2])<0.3*d[2]
+                       for k in keep):
+                keep.append(d)
+        return keep
+
+    def track(self, source: FrameSource, seed_bbox=None) -> Track:
+        from scipy.signal import butter, filtfilt
+        from scipy.ndimage import median_filter
+        frames=[]; sc=None
+        for i,f in enumerate(source):
+            if i % self.stride: continue
+            img=f.img
+            if sc is None: sc=self.work_w/img.shape[1]
+            g=cv2.cvtColor(cv2.resize(img,(self.work_w,int(round(img.shape[0]*sc)))),
+                           cv2.COLOR_BGR2GRAY)
+            frames.append((f.t,[(x/sc,y/sc,r/sc) for (x,y,r) in self._detect(g)]))
+        n=len(frames)
+        if n==0: raise ValueError("no frames decoded")
+        # ---- anisotropic track association ----
+        tracks=[]
+        for fi,(t,dets) in enumerate(frames):
+            used=set()
+            for tr in tracks:
+                if fi-tr['lfi']>self.gap: continue
+                lx,ly,lr=tr['x'],tr['y'],tr['r']; best=None;bd=1e18
+                for j,(x,y,r) in enumerate(dets):
+                    if j in used or abs(x-lx)>self.gx*lr or abs(y-ly)>self.gy*lr or abs(r-lr)>self.rtol*lr:
+                        continue
+                    d=((x-lx)/self.gx)**2+((y-ly)/self.gy)**2
+                    if d<bd: bd=d;best=j
+                if best is not None:
+                    x,y,r=dets[best]; tr['pts'].append((fi,x,y,r))
+                    tr['x']=0.5*lx+0.5*x;tr['y']=y;tr['r']=0.7*lr+0.3*r;tr['lfi']=fi;used.add(best)
+            for j,(x,y,r) in enumerate(dets):
+                if j not in used: tracks.append({'pts':[(fi,x,y,r)],'x':x,'y':y,'r':r,'lfi':fi})
+        # ---- oscillation-based selection ----
+        ts=np.array([frames[i][0] for i in range(n)]); best=None;bs=-1.0
+        for tr in tracks:
+            if len(tr['pts'])<max(8,0.30*n): continue
+            fis=np.array([p[0] for p in tr['pts']],float)
+            ys=np.array([p[2] for p in tr['pts']],float); xs=np.array([p[1] for p in tr['pts']],float)
+            rad=float(np.median([p[3] for p in tr['pts']]))
+            yi=median_filter(np.interp(np.arange(n),fis,ys),5)
+            ystd=float(np.std(yi)); cover=len(tr['pts'])/n
+            rcv=np.std([p[3] for p in tr['pts']])/max(1e-6,rad)
+            xspread=float(np.std(xs))/max(1e-6,rad)
+            dv=np.sign(np.diff(yi)); dv=dv[dv!=0]; rev=int(np.sum(np.diff(dv)!=0)) if len(dv)>1 else 0
+            score=cover*ystd/((1+3*rcv)*(1+2*xspread))*(0.02 if rev<2 else 1.0)
+            if score>bs: bs=score;best=(np.interp(np.arange(n),fis,xs),yi,rad,cover)
+        if best is None:
+            return Track(traj=np.column_stack([ts,np.zeros(n),np.zeros(n)]),
+                         target_px=0.0,confidence=0.0)
+        xi,yi,rad,cover=best
+        # rep-band low-pass to kill detection-jitter reversals
+        dt=float(np.median(np.diff(ts))); fs=1.0/dt if dt>0 else 30.0
+        if fs>2*self.lp_cut and n>15:
+            b,a=butter(2,self.lp_cut/(fs/2),'low'); yi=filtfilt(b,a,yi)
+        return Track(traj=np.column_stack([ts,xi,yi]),target_px=2*rad,confidence=round(cover,3))
+
+
 def auto_seed_motion(source, work_w: int = 256, stride: int = 2, min_hits: int = 6,
                      min_r_frac: float = 0.04, max_r_frac: float = 0.30, param2: int = 26):
     """Motion-aware auto-seed: pick the circle that MOVES, not the largest static blob.

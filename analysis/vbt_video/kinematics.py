@@ -107,7 +107,7 @@ def _segment_concentric(t, v, pos, peak_min, rom_min, fs, rep_gate="absolute",
 
 
 def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
-                       rep_gate="absolute"):
+                       rep_gate="absolute", rom_floor_frac=0.0):
     """`track_traj` = N x 3 (t, cx, cy) px. Returns list of per-rep dicts.
     `rep_gate`: "absolute" (fixed ROM/peak, validated) or "relative" (adaptive,
     tempo-invariant — see `_segment_concentric`)."""
@@ -157,4 +157,12 @@ def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
         for r in out:
             if med > 0 and r["rom"] < 0.7 * med:
                 r["flag"] = "partial_rom"
+        # Optional relative-ROM floor: REJECT (don't just flag) reps whose ROM is well below
+        # the set median — high-frequency detection jitter (DetectTracker) makes tiny-ROM
+        # spurious reps; a real fatigued rep keeps most of its ROM. Scale-invariant. Default
+        # 0 = off (flow path unchanged); DetectTracker uses ~0.5.
+        if rom_floor_frac > 0 and med > 0:
+            out = [r for r in out if r["rom"] >= rom_floor_frac * med]
+            for i, r in enumerate(out, 1):
+                r["rep_index"] = i
     return out

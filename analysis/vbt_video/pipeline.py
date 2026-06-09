@@ -10,8 +10,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from .frames import FrameSource, PyAVDecoder
-from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, Tracker,
-                    auto_seed_bbox, auto_seed_motion)
+from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, DetectTracker,
+                    Tracker, auto_seed_bbox, auto_seed_motion)
 from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
 from .plates import ScaleSpec
 
@@ -64,6 +64,10 @@ class VideoConfig:
     #   anthro / relative-only), and the diagonal out-of-plane trajectory anchor. Pixel
     #   diameter still comes from the seed/detector (the user adjusts that surface in-app).
     scale_spec: ScaleSpec | None = None
+    # Relative-ROM floor for segmentation: reject reps whose ROM is < this fraction of the
+    # set median (kills high-frequency detection jitter). 0 = off (flow path unchanged);
+    # the seed-free "detect" tracker defaults it to 0.5 (jittery per-frame detection).
+    rom_floor_frac: float = 0.0
 
 
 # Which two landmarks bound each scale segment (their pixel distance = the metric ruler).
@@ -89,6 +93,8 @@ _TRACKERS = {
     "pose": lambda cfg: PoseTracker(landmark=cfg.landmark, side=cfg.side,
                                     scale_segment=_SEGMENT_LANDMARKS.get(cfg.segment,
                                                                          ("wrist", "elbow"))),
+    # Seed-free track-by-detection — the no-tap auto path (texture-agnostic; 8.5→~2.5 err).
+    "detect": lambda cfg: DetectTracker(),
 }
 
 
@@ -177,7 +183,7 @@ class VideoVelocitySource:
         around the target; if None, auto-seed from the first frame. The pose tracker
         ignores `seed_bbox` (it needs no seed) — leave it None there."""
         src = source_or_path if isinstance(source_or_path, FrameSource) else PyAVDecoder(source_or_path)
-        if seed_bbox is None and self.cfg.tracker != "pose":
+        if seed_bbox is None and self.cfg.tracker not in ("pose", "detect"):
             # Zero-tap auto-seed: prefer the MOTION seeder (the circle that travels), which
             # avoids locking onto a static rack/background plate; fall back to the static
             # largest-blob seeder only if no moving circle is found. (cv-fusion roadmap #6.)
@@ -195,7 +201,10 @@ class VideoVelocitySource:
             if alt.confidence > track.confidence:
                 track, used_occlusion = alt, True
         mpp, scale_meta = self._resolve_scale(src, track)
+        # the seed-free detect tracker has jittery per-frame centres -> default a ROM floor
+        rom_floor = self.cfg.rom_floor_frac or (0.5 if self.cfg.tracker == "detect" else 0.0)
         reps = trajectory_to_reps(track.traj, mpp, self.cfg.peak_min, self.cfg.rom_min,
+                                  rom_floor_frac=rom_floor,
                                   rep_gate=self.cfg.rep_gate)
         scale_conf, scale_suspect = self._scale_confidence(track, reps, scale_meta)
         if scale_suspect:

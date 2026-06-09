@@ -82,6 +82,16 @@ CLIPS = {
     "20260605-DL-3": ("dataset/raw/20260605-DL-3.mov",
                       {"flow": (160, 710, 180, 180)}, "deadlift 135lb set3, diagonal 440px - flow 10/10 (beats SB=6); pose@0.78 vs Vit 0.82", None,
                       {"angle": "diagonal", "plate": 45, "kind": "bumper"}),
+    # --- 2026-06-08 barbell rows (dark IRON, front) + 2026-06-09 heavy bench (dark iron) ---
+    # seed-free: use the shipped detect tracker (cv_eval --auto). manual seeds N/A (dark iron).
+    "20260608-ROW-1": ("dataset/raw/060826_row1.mov", {"detect": None}, "row TnG, front, dark iron", None),
+    "20260608-ROW-2": ("dataset/raw/060826_row2.mov", {"detect": None}, "row TnG, front, dark iron", None),
+    "20260608-ROW-3": ("dataset/raw/060826_row3.mov", {"detect": None}, "row TnG, front, dark iron", None),
+    "20260608-ROW-4": ("dataset/raw/060826_row4.mov", {"detect": None}, "row TnG, dead-front (hardest)", None),
+    "20260609-BN-1": ("dataset/raw/20260609-BN-1.mov", {"detect": None}, "bench 205lb, dark iron", None),
+    "20260609-BN-2": ("dataset/raw/20260609-BN-2.mov", {"detect": None}, "bench 195lb, dark iron", None),
+    "20260609-BN-3": ("dataset/raw/20260609-BN-3.mov", {"detect": None}, "bench 200lb, dark iron", None),
+    "20260609-BN-4": ("dataset/raw/20260609-BN-4.mov", {"detect": None}, "bench 205lb near-failure, dark iron", None),
 }
 
 
@@ -121,30 +131,56 @@ def run(clip, tracker, seed, adaptive, occlusion=False, band=None, scale=None):
             meta.get("static_track_suspect", False))
 
 
-def _auto_board(sets):
-    """The 'no human in the loop' scoreboard: the automated paths only.
+def _sb_count(sid):
+    """SmartBarbell's reported rep count from the DB = its non-phantom mean_velocity rows
+    (undercount-flagged reps ARE reps SB logged; phantom = a dropped rep)."""
+    reps = set()
+    for r in csv.DictReader(open(REPS_CSV)):
+        if (r["set_id"] == sid and r["vendor"] == "smartbarbell"
+                and r["metric"] == "mean_velocity" and (r["flag"] or "") != "phantom"):
+            reps.add(r["rep_index"])
+    return len(reps) if reps else None
 
-    flow uses `auto_seed_bbox` (the placeholder auto-detector — largest solid blob),
-    pose is inherently seed-free. This measures the FULLY-AUTOMATED system, i.e. what a
-    user gets when the app can't lean on a hand-placed seed. Compare to the default board
-    (manual seeds) to see how much of today's accuracy is carried by the human tap."""
-    print("\nCV AUTO scoreboard — NO manual seed (flow=auto_seed_bbox, pose=seed-free)")
-    print("  vs ground truth. '⚠' = static mis-seed (auto-detector grabbed a static object).\n")
-    hdr = f"{'set':<16}{'GT':>4}{'flow_auto':>11}{'pose':>9}{'pose_mean':>11}  note"
+
+def _true_gt(sid, fallback):
+    """True rep count from the lifter's logged set (sets.csv actual_reps) — the honest GT,
+    needed where the only vendor in the DB undercounts (e.g. rows: Vitruve fails, SB partial).
+    Falls back to the vendor-priority count."""
+    p = os.path.join(REPO, "dataset", "sets.csv")
+    try:
+        for r in csv.DictReader(open(p)):
+            if r["set_id"] == sid and r.get("actual_reps", "").strip():
+                return int(r["actual_reps"])
+    except Exception:
+        pass
+    return fallback
+
+
+def _auto_board(sets):
+    """The 'no human in the loop' scoreboard — the SHIPPED auto path (`tracker='detect'`,
+    seed-free track-by-detection) vs ground truth and SmartBarbell. This is the metric that
+    matters for the product: counts with NO tap. (The default board uses manual seeds = the
+    one-tap UX, which does better; see docs/cv-fusion.md.)"""
+    print("\nCV AUTO scoreboard — NO seed, shipped detect tracker — count(Δ vs GT) · vs SmartBarbell\n")
+    hdr = f"{'set':<16}{'GT':>4}{'SB':>5}{'DETECT':>9}{'|e|':>5}{'SB|e|':>6}"
     print(hdr); print("-" * len(hdr))
+    import numpy as _np
+    oe = []; se = []
     for sid in sets:
         clip = os.path.join(REPO, CLIPS[sid][0])
-        gtn, gtmean, _, _ = gt_counts(sid)
-        out = {}
-        for tr in ("flow", "pose"):
-            try:
-                n, mean, conf, suspect, static = run(clip, tr, None, False, False, None, None)
-                out[tr] = (f"{n}({n - gtn:+d})" + ("⚠" if static else ""), mean)
-            except Exception as e:
-                out[tr] = (f"ERR({type(e).__name__})", float("nan"))
-        pm = out["pose"][1]
-        pmstr = (f"{pm:.2f}" if pm == pm else "-") + (f" / {gtmean:.2f}gt" if gtmean == gtmean else "")
-        print(f"{sid:<16}{gtn:>4}{out['flow'][0]:>11}{out['pose'][0]:>9}{pmstr:>11}")
+        refn, _, _, _ = gt_counts(sid)
+        gt = _true_gt(sid, refn)
+        sbn = _sb_count(sid)
+        try:
+            n, mean, conf, suspect, static = run(clip, "detect", None, True, False, None, None)
+            cell = f"{n}({n - gt:+d})"; err = abs(n - gt)
+        except Exception as e:
+            cell = f"ERR({type(e).__name__})"; err = gt
+        oe.append(err)
+        sbe = abs(sbn - gt) if sbn is not None else None
+        if sbe is not None: se.append(sbe)
+        print(f"{sid:<16}{gt:>4}{('-' if sbn is None else sbn):>5}{cell:>9}{err:>5}{('-' if sbe is None else sbe):>6}")
+    print(f"\nDETECT mean|err| = {_np.mean(oe):.2f}   SmartBarbell = {_np.mean(se):.2f} (on its {len(se)} clips)")
 
 
 def main():
