@@ -83,7 +83,7 @@ CLIPS = {
                       {"flow": (160, 710, 180, 180)}, "deadlift 135lb set3, diagonal 440px - flow 10/10 (beats SB=6); pose@0.78 vs Vit 0.82", None,
                       {"angle": "diagonal", "plate": 45, "kind": "bumper"}),
     # --- 2026-06-08 barbell rows (dark IRON, front) + 2026-06-09 heavy bench (dark iron) ---
-    # seed-free: use the shipped detect tracker (cv_eval --auto). manual seeds N/A (dark iron).
+    # seed-free: use the shipped AUTO fusion (flow⊕detect) (cv_eval --auto). manual seeds N/A (dark iron).
     "20260608-ROW-1": ("dataset/raw/060826_row1.mov", {"detect": None}, "row TnG, front, dark iron", None),
     "20260608-ROW-2": ("dataset/raw/060826_row2.mov", {"detect": None}, "row TnG, front, dark iron", None),
     "20260608-ROW-3": ("dataset/raw/060826_row3.mov", {"detect": None}, "row TnG, front, dark iron", None),
@@ -161,7 +161,7 @@ def _auto_board(sets):
     seed-free track-by-detection) vs ground truth and SmartBarbell. This is the metric that
     matters for the product: counts with NO tap. (The default board uses manual seeds = the
     one-tap UX, which does better; see docs/cv-fusion.md.)"""
-    print("\nCV AUTO scoreboard — NO seed, shipped detect tracker — count(Δ vs GT) · vs SmartBarbell\n")
+    print("\nCV AUTO scoreboard — NO seed, shipped AUTO fusion (flow⊕detect) — count(Δ vs GT) · vs SmartBarbell\n")
     hdr = f"{'set':<16}{'GT':>4}{'SB':>5}{'DETECT':>9}{'|e|':>5}{'SB|e|':>6}"
     print(hdr); print("-" * len(hdr))
     import numpy as _np
@@ -172,7 +172,7 @@ def _auto_board(sets):
         gt = _true_gt(sid, refn)
         sbn = _sb_count(sid)
         try:
-            n, mean, conf, suspect, static = run(clip, "detect", None, True, False, None, None)
+            n, mean, conf, suspect, static = run(clip, "auto", None, True, False, None, None)
             cell = f"{n}({n - gt:+d})"; err = abs(n - gt)
         except Exception as e:
             cell = f"ERR({type(e).__name__})"; err = gt

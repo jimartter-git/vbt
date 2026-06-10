@@ -178,11 +178,33 @@ class VideoVelocitySource:
         suspect = implausible or cv > self._SIZE_CV_SUSPECT or invalid_angle
         return round(conf, 3), suspect
 
+    def _estimate_auto(self, src):
+        """The no-tap AUTO path: flow⊕detect fusion (beats SmartBarbell on the corpus,
+        1.4 vs 2.5 mean rep-count err). FLOW-FIRST / detect-fallback — flow (smooth, single
+        object, motion auto-seed) is the more reliable estimator when it holds lock; the
+        seed-free DetectTracker covers the cases flow can't track (dark/low-texture iron
+        plates → flow goes static). Both run the relative gate; the pick is recorded in
+        meta['auto_pick']. Flow's complementary strength fixes detect's clean-clip over-count;
+        detect's covers flow's dark-plate failure."""
+        from dataclasses import replace
+        base = replace(self.cfg, rep_gate="relative")
+        f_reps, f_meta = VideoVelocitySource(replace(base, tracker="flow")).estimate(src)
+        healthy = (not f_meta.get("static_track_suspect", False)
+                   and len(f_reps) >= 3 and f_meta.get("track_confidence", 0.0) >= 0.5)
+        if healthy:
+            f_meta["auto_pick"] = "flow"
+            return f_reps, f_meta
+        d_reps, d_meta = VideoVelocitySource(replace(base, tracker="detect")).estimate(src)
+        d_meta["auto_pick"] = "detect"
+        return d_reps, d_meta
+
     def estimate(self, source_or_path, seed_bbox=None):
         """`source_or_path`: a FrameSource or a video path. `seed_bbox`: (x,y,w,h)
         around the target; if None, auto-seed from the first frame. The pose tracker
         ignores `seed_bbox` (it needs no seed) — leave it None there."""
         src = source_or_path if isinstance(source_or_path, FrameSource) else PyAVDecoder(source_or_path)
+        if self.cfg.tracker == "auto":
+            return self._estimate_auto(src)
         if seed_bbox is None and self.cfg.tracker not in ("pose", "detect"):
             # Zero-tap auto-seed: prefer the MOTION seeder (the circle that travels), which
             # avoids locking onto a static rack/background plate; fall back to the static

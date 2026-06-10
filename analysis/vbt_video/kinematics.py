@@ -144,6 +144,7 @@ def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
         a0, a1 = int(active[0]), int(active[-1])
         out.append({
             "rep_index": i,
+            "t": round(float(tu[s]), 3),                            # rep start time (s)
             "mean_velocity": round(float(seg_v[a0:a1 + 1].mean()), 3),
             "peak_velocity": round(peak, 3),
             "rom": round(float(posu_s[e] - posu_s[s]) * 100, 1),   # cm

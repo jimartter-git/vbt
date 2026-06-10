@@ -138,23 +138,35 @@ data (rows 0/0/0/2, heavy bench 10/0/0/0). Rebuilt as **track-by-detection**
 track association → **oscillation-based** track selection → rep-band low-pass → tempo-invariant
 relative gate + relative-ROM floor.
 
-**Result: 8.5 → ~2.5 mean error = SmartBarbell PARITY**, and it now BEATS SB on SB's own
-failure modes (clutter/mirror/hex SQ-3 10 vs 3; fast TnG DL-2 7 vs 2; clipping 20260609-BN-1
-9 vs 3). **But it does NOT yet beat SB out-of-the-box**: SB is still more *reliable* per-clip
-(13/21 vs 9/22 within ±1). Our error profile is *complementary* to SB's — we win on the hard
-clips, SB wins on clean ones.
+Track-by-detection alone reached **~2.5 = SmartBarbell parity** (beats SB on clutter/TnG,
+loses on clean clips), because per-frame detection jitters and can pick a periodic decoy. The
+fix was **fusion, not a single tracker**:
 
-**The wall (honest):** the one residual is **identifying the bar plate vs periodic decoys**
-(the lifter's head/torso bob, a mirror reflection, a stored rack plate in the same column) in
-cluttered scenes — all oscillate at the rep cadence. Benchmarked + rejected as insufficient
-(2026-06-09): periodicity-weighted selection, motion-model association, color-blob cue,
-bilateral averaging, twin-pair (rigid-bar) selection, detection-seeded flow, PCA consensus.
-All plateau at ~2.5. **Classical CV caps at parity here; clearly beating SB needs a LEARNED
-plate/bar-end detector (roadmap #6)** — SmartBarbell's actual edge. The oscillation tracker is
-the right *back-end*; it needs a learned *front-end* feeding it the true plate. (No ML libs in
-the dev env yet — torch/ultralytics/onnx absent; the learned detector is a scoped next phase:
-bootstrap plate labels from the corpus + the manual seeds, train a small detector, feed this
-tracker.)
+### ⚑ The no-tap AUTO path = flow ⊕ detect fusion (`tracker="auto"`) — BEATS SmartBarbell
+
+`VideoVelocitySource(VideoConfig(tracker="auto"))`. **FLOW-FIRST / detect-fallback:** run
+FlowTracker with the motion auto-seed; if it holds lock (not `static_track_suspect`, ≥3 reps,
+conf ≥ 0.5) **use flow** — it's smooth, tracks a single object, and doesn't over-count on clean
+clips; otherwise fall back to **DetectTracker**, which handles what flow can't (dark/low-texture
+iron plates where flow finds no corners and goes static). The two are *complementary*: flow's
+strength is exactly detect's weakness and vice-versa.
+
+**Result (22-clip corpus, fully automatic, no tap): mean rep-count error 8.5 → 1.36, vs
+SmartBarbell 2.57 — and 17/22 within ±1 vs SB's 13/21. We beat SmartBarbell on BOTH metrics.**
+Run it: `python analysis/scripts/cv_eval.py --auto`. Wins are decisive on SB's failure modes
+(SQ-3 10 vs 3, DL-2 10 vs 2, DL-3 10 vs 6, 20260609-BN-1 10 vs 3) while matching it on the
+clean clips it used to win (BN-2/3-0605 10/11, the 0601 rows). Flow-first specifically rescued
+the bench undercounts (detect alone got 4; flow's auto-seed got 10/11 and is chosen).
+
+**Remaining errors (the honest few):** the dead-front row (ROW-4-0608, motion toward camera —
+unrecoverable from video for anyone, SB also fails), a 2-rep clip where detect over-counts
+(20240531-DL-1), and a couple dark-iron clips where flow goes static and detect over/under-counts
+(BN-4-0609, ROW-2-0608). The durable lift for these is still a **learned plate detector**
+(roadmap #6) feeding the same fusion back-end — but it is no longer needed to beat SB.
+
+(Rejected en route, all plateaued at ~2.5 as single methods: periodicity-weighted selection,
+motion-model association, color-blob cue, bilateral averaging, twin-pair selection, PCA
+consensus. The win came from fusing the two complementary trackers, not from a better single one.)
 
 ## Roadmap — to genuinely best-in-class
 
