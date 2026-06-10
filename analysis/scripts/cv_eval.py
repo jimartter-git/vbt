@@ -100,6 +100,26 @@ CLIPS = {
 _REF_PRIORITY = ["vitruve", "stance", "smartbarbell", "metric"]
 
 
+# Lift priority for backtest scoring. We must get the MAIN barbell lifts (squat / bench /
+# deadlift) right FIRST — that's the product's core. Rows + RDLs matter, but less; isolation /
+# accessory work (skull crushers, DB press) matters least. Full fusion (watch + video + human
+# editor) will eventually handle everything, but the CV backtest weights the mean error toward
+# the lifts that matter most, so a regression on squat costs more than one on a skull crusher.
+# Weights are deliberately gentle ("affect scoring a bit") and easy to tune.
+_LIFT_TIER = {                 # set_id lift-code -> (tier, weight)
+    "SQ": ("main", 1.0), "BN": ("main", 1.0), "IB": ("main", 1.0), "DL": ("main", 1.0),
+    "ROW": ("secondary", 0.5), "RDL": ("secondary", 0.5),
+    "SC": ("accessory", 0.25),
+}
+
+
+def lift_weight(set_id):
+    """(tier, weight) for a set_id like '20260604-SQ-1' — middle token is the lift code.
+    RDL is matched before DL because it's its own token. Unknown lifts default to secondary."""
+    code = set_id.split("-")[1] if "-" in set_id else ""
+    return _LIFT_TIER.get(code, ("secondary", 0.5))
+
+
 def gt_counts(set_id):
     """(ref_count, ref_mean, competitor_label, competitor_count) from the DB — falls back
     to the best on-bar app when there's no Vitruve row (e.g. the row clips)."""
@@ -162,25 +182,31 @@ def _auto_board(sets):
     matters for the product: counts with NO tap. (The default board uses manual seeds = the
     one-tap UX, which does better; see docs/cv-fusion.md.)"""
     print("\nCV AUTO scoreboard — NO seed, shipped AUTO fusion (flow⊕detect) — count(Δ vs GT) · vs SmartBarbell\n")
-    hdr = f"{'set':<16}{'GT':>4}{'SB':>5}{'DETECT':>9}{'|e|':>5}{'SB|e|':>6}"
+    hdr = f"{'set':<16}{'tier':>10}{'GT':>4}{'SB':>5}{'DETECT':>9}{'|e|':>5}{'SB|e|':>6}"
     print(hdr); print("-" * len(hdr))
     import numpy as _np
-    oe = []; se = []
+    oe = []; se = []                 # lists of (err, weight)
     for sid in sets:
         clip = os.path.join(REPO, CLIPS[sid][0])
         refn, _, _, _ = gt_counts(sid)
         gt = _true_gt(sid, refn)
         sbn = _sb_count(sid)
+        tier, w = lift_weight(sid)
         try:
             n, mean, conf, suspect, static = run(clip, "auto", None, True, False, None, None)
             cell = f"{n}({n - gt:+d})"; err = abs(n - gt)
         except Exception as e:
             cell = f"ERR({type(e).__name__})"; err = gt
-        oe.append(err)
+        oe.append((err, w))
         sbe = abs(sbn - gt) if sbn is not None else None
-        if sbe is not None: se.append(sbe)
-        print(f"{sid:<16}{gt:>4}{('-' if sbn is None else sbn):>5}{cell:>9}{err:>5}{('-' if sbe is None else sbe):>6}")
-    print(f"\nDETECT mean|err| = {_np.mean(oe):.2f}   SmartBarbell = {_np.mean(se):.2f} (on its {len(se)} clips)")
+        if sbe is not None: se.append((sbe, w))
+        print(f"{sid:<16}{tier:>10}{gt:>4}{('-' if sbn is None else sbn):>5}{cell:>9}"
+              f"{err:>5}{('-' if sbe is None else sbe):>6}")
+    def _u(p): return _np.mean([e for e, _ in p]) if p else float("nan")
+    def _w(p): return (sum(e * w for e, w in p) / sum(w for _, w in p)) if p else float("nan")
+    print(f"\nUNWEIGHTED mean|err|  = OURS {_u(oe):.2f}   SmartBarbell {_u(se):.2f} (on its {len(se)} clips)")
+    print(f"LIFT-WEIGHTED mean|err| = OURS {_w(oe):.2f}   SmartBarbell {_w(se):.2f}   "
+          f"(main=1.0 / secondary[row,RDL]=0.5 / accessory[SC]=0.25 — see lift_weight())")
 
 
 def main():

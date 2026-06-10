@@ -187,6 +187,18 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    bumpers were a one-off travel gym; Westwood=bumpers, Equinox=bumpers or iron hex are the
    regulars) — keep the method gym-agnostic.
 
+15. **Lift priority — get the MAIN lifts right first; weight the backtest accordingly.** Product
+   priority: **squat / bench / deadlift = main (must nail)** > **rows / RDLs = secondary** >
+   **isolation / accessories (skull crushers, DB press) = least**. Full fusion (watch + video +
+   human editor) will eventually handle everything, but when scoring CV approaches the main lifts
+   matter most — a squat regression costs more than a skull-crusher one. Encoded in
+   `cv_eval.py::lift_weight()` (main=1.0 / secondary=0.5 / accessory=0.25, gentle + tunable);
+   `--auto` now prints BOTH **unweighted** (continuity) and **lift-weighted** mean|err|. On the
+   2026-06-10 board it slightly *widens* our lead (ours 0.55→**0.48** weighted; SB 2.57→2.54) —
+   our residual errors cluster in the down-weighted rows while SB's big misses are on the main
+   lifts (SQ/DL). When judging a new CV change, prefer the **lift-weighted** number; never trade a
+   main-lift regression for an accessory gain.
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip

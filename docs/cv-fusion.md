@@ -201,9 +201,16 @@ Vitruve under-counts, no Stance, SB partial → the lifter's logged count is GT)
 
 | | SmartBarbell | (A) Auto, no tap | (B) One-tap, best seed |
 |---|---|---|---|
-| **Mean abs error** | **2.57** | **0.55** | **0.36** |
+| **Mean abs error** (unweighted) | **2.57** | **0.55** | **0.36** |
+| **Mean abs error** (lift-weighted) | 2.54 | **0.48** | — |
 | Exact (Δ=0) | 7 / 21 | 13 / 22 | 16 / 22 |
 | Within ±1 | 13 / 21 | 19 / 22 | 20 / 22 |
+
+**Lift-priority weighting** (learning #15): the backtest weights main lifts (squat/bench/deadlift
+=1.0) over rows/RDLs (=0.5) over accessories (skull crushers/DB =0.25) — `cv_eval.py::lift_weight()`,
+shown as a second summary line under `--auto`. It *widens* our lead (ours 0.55→0.48; SB 2.57→2.54):
+our residual errors cluster in the down-weighted rows, SB's big misses are on the main lifts. **Judge
+new CV changes on the lift-weighted number; never trade a main-lift regression for an accessory gain.**
 
 - **Both our paths crush SB** (0.55 / 0.36 vs 2.57). SB's catastrophic misses are the deadlifts
   and dark-iron rows (DL-2 2/10, ROW-4 1/10, BN-1-0609 3/10); it's competitive only on clean clips.
@@ -355,6 +362,10 @@ The Python side exposes proposals + editable boundaries; the app makes them corr
 ## Validation discipline
 
 - Extend `CLIPS` in `cv_eval.py` for every new clip with a ground-truth count.
+- **Score by lift priority** (learning #15). Main lifts (squat/bench/deadlift) must be right
+  first; rows/RDLs matter less; accessories (skull crushers, DB) least. `--auto` reports both an
+  unweighted and a **lift-weighted** mean|err| (`lift_weight()`: 1.0 / 0.5 / 0.25). Judge changes
+  on the weighted number — **never trade a main-lift regression for an accessory gain.**
 - Each robustness change must **not regress** the healthy clips (SQ-1) while
   improving the hard ones — the auto-fallback pattern is the template: opt-in or
   auto-engaged, never a global default that taxes the easy case.
