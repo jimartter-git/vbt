@@ -817,6 +817,60 @@ PLATE_COLORS = {
 }
 
 
+def seed_candidates(source, topk=5, work_w=256, stride=2, min_r_frac=0.04, max_r_frac=0.30):
+    """Return up to `topk` candidate plate seed-bboxes (x,y,w,h, original px), ranked by motion
+    (disc×column), each SIZED to its rim ELLIPSE (not the small Hough hub — a too-small seed
+    makes flow over-count). The no-tap auto path runs flow on each and keeps the one that holds
+    lock with a plausible rep count: candidate-generation + flow-VERIFICATION. This localises
+    the plate in clutter (mirror/hex/multiple plates) where a single auto-seed picks a decoy —
+    classical, no gym config, generalising. (2026-06-10: fixes Equinox squat/RDL no-tap.)"""
+    grays, early, sc = [], [], None
+    for i, f in enumerate(source):
+        if i % stride:
+            continue
+        if sc is None:
+            sc = work_w / f.img.shape[1]
+        small = cv2.resize(f.img, (work_w, max(1, int(round(f.img.shape[0] * sc)))))
+        grays.append(cv2.cvtColor(small, cv2.COLOR_BGR2GRAY))
+        if len(early) < 12:
+            early.append(f.img)            # a few original frames for ellipse sizing
+    if sc is None or len(grays) < 6:
+        return []
+    H, W = grays[0].shape
+    M = np.zeros((H, W), np.float32)
+    for a, b in zip(grays, grays[1:]):
+        M += cv2.absdiff(a, b).astype(np.float32)
+    col = cv2.blur(M.sum(0).reshape(1, -1), (max(3, int(0.03 * W) | 1), 1)).ravel()
+    minR, maxR = max(6, int(min_r_frac * work_w)), int(max_r_frac * work_w)
+    cands = {}
+    for g in grays[: max(3, len(grays) // 5)]:
+        circ = cv2.HoughCircles(cv2.medianBlur(g, 5), cv2.HOUGH_GRADIENT, 1.2, int(1.4 * minR),
+                                param1=120, param2=26, minRadius=minR, maxRadius=maxR)
+        if circ is None:
+            continue
+        for x, y, r in circ[0]:
+            x0, x1 = max(0, int(x - r)), min(W, int(x + r + 1))
+            y0, y1 = max(0, int(y - r)), min(H, int(y + r + 1))
+            disc = M[y0:y1, x0:x1].mean() if (x1 > x0 and y1 > y0) else 0.0
+            score = disc * (col[x0:x1].mean() if x1 > x0 else 0.0)
+            key = (round(x / 20), round(y / 20))
+            if key not in cands or score > cands[key][0]:
+                cands[key] = (score, x, y, r)
+    inv = 1.0 / sc
+    out = []
+    for _, x, y, r in sorted(cands.values(), reverse=True)[:topk]:
+        ox, oy, orr = x * inv, y * inv, r * inv
+        # size to the rim ellipse (fall back to 2.2× the hub radius — the hub is ~half the rim)
+        em = None
+        for img in early[:4]:
+            em = _ellipse_radius(img, ox, oy, orr)
+            if em is not None:
+                break
+        rad = em if em is not None else 1.1 * orr
+        out.append((int(ox - rad), int(oy - rad), int(2 * rad), int(2 * rad)))
+    return out
+
+
 def auto_seed_motion(source, work_w: int = 256, stride: int = 2, min_hits: int = 6,
                      min_r_frac: float = 0.04, max_r_frac: float = 0.30, param2: int = 26):
     """Motion-aware auto-seed: pick the circle that MOVES, not the largest static blob.

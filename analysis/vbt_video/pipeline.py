@@ -11,7 +11,8 @@ import numpy as np
 
 from .frames import FrameSource, PyAVDecoder
 from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, DetectTracker,
-                    ColorPlateTracker, PLATE_COLORS, Tracker, auto_seed_bbox, auto_seed_motion)
+                    ColorPlateTracker, PLATE_COLORS, Tracker, auto_seed_bbox, auto_seed_motion,
+                    seed_candidates)
 from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
 from .plates import ScaleSpec
 
@@ -196,6 +197,7 @@ class VideoVelocitySource:
         meta['auto_pick']. Flow's complementary strength fixes detect's clean-clip over-count;
         detect's covers flow's dark-plate failure."""
         from dataclasses import replace
+        import numpy as _np
         base = replace(self.cfg, rep_gate="relative", ellipse_scale=True)
         # PROFILE-FIRST when this gym's plate colour is known (reliable detect+size -> the
         # most accurate VELOCITY; beats SB absolute on coloured plates). Then flow, then detect.
@@ -204,19 +206,35 @@ class VideoVelocitySource:
             if p_meta.get("track_confidence", 0.0) >= 0.6 and len(p_reps) >= 3:
                 p_meta["auto_pick"] = "profile"; p_meta["velocity_reliable"] = True
                 return p_reps, p_meta
-        f_reps, f_meta = VideoVelocitySource(replace(base, tracker="flow")).estimate(src)
-        healthy = (not f_meta.get("static_track_suspect", False)
-                   and len(f_reps) >= 3 and f_meta.get("track_confidence", 0.0) >= 0.5)
-        if healthy:
+
+        def _regularity(reps):
+            if len(reps) < 3:
+                return 0.0
+            t = _np.array([r.get("t", 0.0) for r in reps]); d = _np.diff(t); d = d[d > 0]
+            return 1.0 / (1.0 + _np.std(d) / d.mean()) if (len(d) > 1 and d.mean() > 0) else 0.0
+
+        # CANDIDATE-GENERATION + FLOW-VERIFICATION: the motion seeder proposes several plate
+        # candidates (ellipse-sized); run flow on each and KEEP the one that holds lock with a
+        # plausible rep count + regular cadence. This localises the plate in clutter (mirror/
+        # hex/multiple plates) where a single auto-seed picks a decoy — and flow gives the
+        # smooth trajectory for velocity. Score = confidence × cadence-regularity.
+        best = None
+        for seed in seed_candidates(src):
+            fr, fm = VideoVelocitySource(replace(base, tracker="flow")).estimate(src, seed_bbox=seed)
+            if fm.get("static_track_suspect", False) or not (3 <= len(fr) <= 18):
+                continue
+            score = fm.get("track_confidence", 0.0) * _regularity(fr)
+            if best is None or score > best[0]:
+                best = (score, fr, fm)
+        if best is not None:
+            _, f_reps, f_meta = best
             f_meta["auto_pick"] = "flow"
-            f_meta["velocity_reliable"] = True   # flow holds lock -> velocity SHAPE/loss trusted
-            return f_reps, f_meta                #   (absolute still gated by scale_suspect per-rep)
+            f_meta["velocity_reliable"] = True
+            return f_reps, f_meta
+        # No candidate held lock (dark/low-texture iron, hex, etc.) -> DetectTracker for the
+        # COUNT, abstaining on absolute velocity (jittery per-frame centres; honest-velocity rule).
         d_reps, d_meta = VideoVelocitySource(replace(base, tracker="detect")).estimate(src)
         d_meta["auto_pick"] = "detect"
-        # DetectTracker's per-frame centres are jittery — fine for COUNTING, NOT for velocity.
-        # Abstain on absolute velocity here (honest-velocity rule): report count, mark reps
-        # relative-only. Trustworthy velocity comes from the flow pick (validated: flow-pick
-        # velocity-loss beats SmartBarbell; detect-pick velocity does not).
         for r in d_reps:
             r["velocity_relative_only"] = True
         d_meta["velocity_reliable"] = False
