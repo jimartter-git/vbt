@@ -68,6 +68,8 @@ class VideoConfig:
     # set median (kills high-frequency detection jitter). 0 = off (flow path unchanged);
     # the seed-free "detect" tracker defaults it to 0.5 (jittery per-frame detection).
     rom_floor_frac: float = 0.0
+    # measure plate diameter as the ellipse MAJOR axis (fix diagonal-plate 2x velocity, roadmap #2)
+    ellipse_scale: bool = False
 
 
 # Which two landmarks bound each scale segment (their pixel distance = the metric ruler).
@@ -89,7 +91,8 @@ _TRACKERS = {
     "plate": lambda cfg: PlateTracker(band=cfg.band),
     "flow": lambda cfg: FlowTracker(band=cfg.band, anchor_alpha=_flow_anchor(cfg),
                                     occlusion_robust=cfg.occlusion_robust,
-                                    robust_scale=cfg.robust_scale),
+                                    robust_scale=cfg.robust_scale,
+                                    ellipse_scale=cfg.ellipse_scale),
     "pose": lambda cfg: PoseTracker(landmark=cfg.landmark, side=cfg.side,
                                     scale_segment=_SEGMENT_LANDMARKS.get(cfg.segment,
                                                                          ("wrist", "elbow"))),
@@ -187,7 +190,7 @@ class VideoVelocitySource:
         meta['auto_pick']. Flow's complementary strength fixes detect's clean-clip over-count;
         detect's covers flow's dark-plate failure."""
         from dataclasses import replace
-        base = replace(self.cfg, rep_gate="relative")
+        base = replace(self.cfg, rep_gate="relative", ellipse_scale=True)
         f_reps, f_meta = VideoVelocitySource(replace(base, tracker="flow")).estimate(src)
         healthy = (not f_meta.get("static_track_suspect", False)
                    and len(f_reps) >= 3 and f_meta.get("track_confidence", 0.0) >= 0.5)

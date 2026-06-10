@@ -219,6 +219,34 @@ def _detect_plate(img, x0b, x1b, r0, near=None, minR=None, maxR=None, param2=Non
     return min(cand, key=lambda q: (q[0] - nx) ** 2 + (q[1] - ny) ** 2)
 
 
+def _ellipse_radius(img, cx, cy, r):
+    """The plate's true diameter = the rim ELLIPSE major axis (a diagonally-viewed circle
+    projects to an ellipse; the circular Hough fits an in-between radius → under-measures →
+    inflated velocity). Fit an ellipse to the rim edges in an ROI around the detected circle;
+    return (major_axis / 2) when it's plate-sized and concentric, else None (caller keeps the
+    Hough radius). Side-on (true circle) → major ≈ diameter → no-op. roadmap #2."""
+    H, W = img.shape[:2]
+    x0, x1 = int(max(0, cx - 1.5 * r)), int(min(W, cx + 1.5 * r))
+    y0, y1 = int(max(0, cy - 1.5 * r)), int(min(H, cy + 1.5 * r))
+    if x1 - x0 < 8 or y1 - y0 < 8:
+        return None
+    g = cv2.Canny(cv2.medianBlur(cv2.cvtColor(img[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY), 3), 40, 120)
+    cnts, _ = cv2.findContours(g, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    best = None
+    for c in cnts:
+        if len(c) < 15:
+            continue
+        (ex, ey), (a1, a2), _ = cv2.fitEllipse(c)
+        big, small = max(a1, a2), min(a1, a2)
+        ecx, ecy = x0 + ex, y0 + ey
+        # plate-sized, roughly concentric with the detection, not a sliver
+        if (1.1 * r < big < 3.2 * r and small > 0.45 * big
+                and (ecx - cx) ** 2 + (ecy - cy) ** 2 < (0.7 * r) ** 2):
+            if best is None or big > best:
+                best = big
+    return best / 2.0 if best is not None else None
+
+
 class FlowTracker(Tracker):
     """Temporal optical-flow tracker — the blur-proof, never-drops-a-rep default.
 
@@ -281,7 +309,10 @@ class FlowTracker(Tracker):
                  lat_cull=1.4, anchor_alpha=0.0, anchor_every=3,
                  occlusion_robust=False, coast_frames=4, coast_decay=0.8, min_lost=3,
                  robust_scale=False, cal_frames=24, cal_stride=2, cal_lane_frac=0.18,
-                 cal_min_r=8, cal_max_frac=0.25, cal_param2=28, cal_min_hits=4):
+                 cal_min_r=8, cal_max_frac=0.25, cal_param2=28, cal_min_hits=4,
+                 ellipse_scale=False):
+        self.ellipse_scale = ellipse_scale    # measure plate diameter as the ellipse MAJOR axis
+        #   (fixes diagonal-plate under-measurement / 2x velocity); side-on = no-op. roadmap #2.
         self.robust_scale = robust_scale      # EXPERIMENTAL seed-independent scale (default off)
         self.cal_frames = cal_frames          # how many early frames to scan
         self.cal_stride = cal_stride          # scan every Nth frame
@@ -427,7 +458,16 @@ class FlowTracker(Tracker):
                 if (n % cadence) == 0:                           # SCALE sample (+ optional anchor)
                     d = _detect_plate(f.img, x0b, x1b, rmed, near=(cx, cy))
                     if d is not None and (d[0] - cx) ** 2 + (d[1] - cy) ** 2 < (1.2 * rmed) ** 2:
-                        radii.append(d[2])
+                        # SCALE: the circular Hough under-measures a DIAGONAL plate (it fits an
+                        # in-between radius of the ellipse). The true plate diameter is the
+                        # ellipse MAJOR axis → use it when `ellipse_scale` (roadmap #2). Falls
+                        # back to the Hough radius if no clean ellipse. Side-on (circle) → no-op.
+                        rr = d[2]
+                        if self.ellipse_scale:
+                            em = _ellipse_radius(f.img, d[0], d[1], d[2])
+                            if em is not None:
+                                rr = em
+                        radii.append(rr)
                         # slow position correction toward the rim centre (see __init__).
                         if self.anchor_alpha > 0.0 and abs(d[2] - rmed) / max(rmed, 1.0) < 0.20:
                             cx += self.anchor_alpha * (d[0] - cx)
