@@ -197,6 +197,13 @@ class VideoVelocitySource:
         detect's covers flow's dark-plate failure."""
         from dataclasses import replace
         base = replace(self.cfg, rep_gate="relative", ellipse_scale=True)
+        # PROFILE-FIRST when this gym's plate colour is known (reliable detect+size -> the
+        # most accurate VELOCITY; beats SB absolute on coloured plates). Then flow, then detect.
+        if self.cfg.plate_color is not None:
+            p_reps, p_meta = VideoVelocitySource(replace(base, tracker="profile")).estimate(src)
+            if p_meta.get("track_confidence", 0.0) >= 0.6 and len(p_reps) >= 3:
+                p_meta["auto_pick"] = "profile"; p_meta["velocity_reliable"] = True
+                return p_reps, p_meta
         f_reps, f_meta = VideoVelocitySource(replace(base, tracker="flow")).estimate(src)
         healthy = (not f_meta.get("static_track_suspect", False)
                    and len(f_reps) >= 3 and f_meta.get("track_confidence", 0.0) >= 0.5)
