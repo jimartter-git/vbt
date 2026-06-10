@@ -21,14 +21,14 @@ Why these seams matter (the anti-redesign guarantee):
 """
 from .frames import Frame, FrameSource, ArrayFrameSource, PyAVDecoder
 from .track import (Tracker, CSRTTracker, PlateTracker, FlowTracker, PoseTracker,
-                    DetectTracker, auto_seed_bbox, auto_seed_motion)
+                    DetectTracker, ColorPlateTracker, PLATE_COLORS, auto_seed_bbox, auto_seed_motion)
 from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
 from .pipeline import VideoConfig, VideoVelocitySource
 
 __all__ = [
     "Frame", "FrameSource", "ArrayFrameSource", "PyAVDecoder",
     "Tracker", "CSRTTracker", "PlateTracker", "FlowTracker", "PoseTracker", "DetectTracker",
-    "auto_seed_bbox", "auto_seed_motion",
+    "DetectTracker", "ColorPlateTracker", "PLATE_COLORS", "auto_seed_bbox", "auto_seed_motion",
     "PlateDiameterScaler", "AnthropometricScaler", "trajectory_to_reps",
     "VideoConfig", "VideoVelocitySource",
 ]

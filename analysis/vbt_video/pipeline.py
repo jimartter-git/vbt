@@ -11,7 +11,7 @@ import numpy as np
 
 from .frames import FrameSource, PyAVDecoder
 from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, DetectTracker,
-                    Tracker, auto_seed_bbox, auto_seed_motion)
+                    ColorPlateTracker, PLATE_COLORS, Tracker, auto_seed_bbox, auto_seed_motion)
 from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
 from .plates import ScaleSpec
 
@@ -70,6 +70,9 @@ class VideoConfig:
     rom_floor_frac: float = 0.0
     # measure plate diameter as the ellipse MAJOR axis (fix diagonal-plate 2x velocity, roadmap #2)
     ellipse_scale: bool = False
+    # learned/profile tracker (tracker='profile'): the working bumper colour for this gym/session
+    # ('blue'/'red'/'green'/'yellow' or an (hsv_lo,hsv_hi) tuple). Reliable colour detect+size.
+    plate_color: object = None
 
 
 # Which two landmarks bound each scale segment (their pixel distance = the metric ruler).
@@ -98,6 +101,9 @@ _TRACKERS = {
                                                                          ("wrist", "elbow"))),
     # Seed-free track-by-detection — the no-tap auto path (texture-agnostic; 8.5→~2.5 err).
     "detect": lambda cfg: DetectTracker(),
+    # Profile tracker — per-gym plate colour -> reliable detect+size (beats SB abs-velocity).
+    "profile": lambda cfg: ColorPlateTracker(*(PLATE_COLORS[cfg.plate_color]
+                                              if isinstance(cfg.plate_color, str) else cfg.plate_color)),
 }
 
 
@@ -216,7 +222,7 @@ class VideoVelocitySource:
         src = source_or_path if isinstance(source_or_path, FrameSource) else PyAVDecoder(source_or_path)
         if self.cfg.tracker == "auto":
             return self._estimate_auto(src)
-        if seed_bbox is None and self.cfg.tracker not in ("pose", "detect"):
+        if seed_bbox is None and self.cfg.tracker not in ("pose", "detect", "profile"):
             # Zero-tap auto-seed: prefer the MOTION seeder (the circle that travels), which
             # avoids locking onto a static rack/background plate; fall back to the static
             # largest-blob seeder only if no moving circle is found. (cv-fusion roadmap #6.)

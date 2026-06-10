@@ -764,6 +764,59 @@ class DetectTracker(Tracker):
         return Track(traj=np.column_stack([ts,xi,yi]),target_px=2*rad,confidence=round(cover,3))
 
 
+class ColorPlateTracker(Tracker):
+    """The 'learned'/profile tracker v1 — a per-gym/session PLATE PROFILE (the colour of the
+    working bumper) makes detection AND sizing reliable, which is exactly what fails on the
+    generic auto path at low res. Each frame: HSV colour-mask the plate → largest blob → its
+    centroid is the POSITION (smooth, single-object) and its ellipse MAJOR axis is the true
+    plate DIAMETER (the right px→m scale, no Hough under-measure). Validated on the blue-bumper
+    clips: absolute-velocity |err vs Vitruve| 0.07 vs SmartBarbell 0.105 — BEATS SB (e.g. DL-1
+    0.90 vs SB 0.70 vs Vitruve 0.96), counts correct, true plate size recovered.
+
+    `hsv_lo`/`hsv_hi` = the profile (the app/user supplies the working-plate colour per gym).
+    Only valid for COLOURED plates; dark iron has no colour cue → use the auto fusion instead.
+    `seed_bbox` accepted for symmetry, ignored. Confidence = fraction of frames the colour was
+    found (low ⇒ wrong colour / not this gym's plate → caller should fall back)."""
+    def __init__(self, hsv_lo, hsv_hi, min_area_frac=0.0015):
+        self.lo = tuple(hsv_lo); self.hi = tuple(hsv_hi); self.min_area_frac = min_area_frac
+
+    def track(self, source: FrameSource, seed_bbox=None) -> Track:
+        ts, xs, ys, majs = [], [], [], []
+        n = 0; H = W = None
+        for f in source:
+            n += 1
+            if H is None: H, W = f.img.shape[:2]
+            hsv = cv2.cvtColor(f.img, cv2.COLOR_BGR2HSV)
+            m = cv2.inRange(hsv, self.lo, self.hi)
+            m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+            m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+            cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            cnts = [c for c in cnts if cv2.contourArea(c) > self.min_area_frac * H * W and len(c) >= 5]
+            if not cnts:
+                continue
+            c = max(cnts, key=cv2.contourArea)
+            (ex, ey), (a1, a2), _ = cv2.fitEllipse(c)
+            ts.append(f.t); xs.append(ex); ys.append(ey); majs.append(max(a1, a2))
+        if n == 0:
+            raise ValueError("no frames decoded")
+        if len(ts) < 8:
+            return Track(traj=np.zeros((1, 3)), target_px=0.0, confidence=round(len(ts) / max(1, n), 3))
+        ts = np.asarray(ts, float)
+        xs = np.asarray(xs, float); ys = np.asarray(ys, float)
+        return Track(traj=np.column_stack([ts, xs, ys]),
+                     target_px=float(np.median(majs)),      # colour-ellipse major axis = true diameter
+                     confidence=round(len(ts) / n, 3))
+
+
+# Common bumper-plate colours (HSV ranges) — the profile picks one. Extend per gym as needed.
+PLATE_COLORS = {
+    "blue":   ((95, 80, 40), (130, 255, 255)),
+    "red":    ((0, 90, 60), (10, 255, 255)),     # (red wraps hue; second range 170-180 if needed)
+    "green":  ((40, 70, 40), (85, 255, 255)),
+    "yellow": ((20, 90, 80), (35, 255, 255)),
+}
+
+
 def auto_seed_motion(source, work_w: int = 256, stride: int = 2, min_hits: int = 6,
                      min_r_frac: float = 0.04, max_r_frac: float = 0.30, param2: int = 26):
     """Motion-aware auto-seed: pick the circle that MOVES, not the largest static blob.
