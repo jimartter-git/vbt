@@ -42,3 +42,7 @@ set_id,vendor,path,kind,notes
 20260609-BN-2,video,raw/20260609-BN-2.mov,video_mov,"Bench 195lb set2. Was misfiled at repo root (moved). SmartBarbell 10/10. CV pending."
 20260609-BN-3,video,raw/20260609-BN-3.mov,video_mov,"Bench 200lb set3. SmartBarbell 10/10. CV pending."
 20260609-BN-4,video,raw/20260609-BN-4.mov,video_mov,"Bench 205lb set4 (near-failure). SmartBarbell 9/10 (missed last rep). CV pending."
+20260610-SQ-1,video,raw/061026-SQ1.mov,video_mov,"Squat 225lb set1, Equinox hex, side/front, 60fps. GT10. our auto 10/10, SB 10. Vitruve crashed (set-avg 0.63 only)."
+20260610-SQ-4,video,raw/061026-SQ4.mov,video_mov,"Squat 225lb last set, Equinox hex. GT10. our auto 10/10, SB 10. Vit set-avg 0.52."
+20260610-RDL-1,video,raw/061026-RDL1.mov,video_mov,"RDL 225lb set1, Equinox. GT8. our auto 7 (beats SB 1). Vit set-avg 0.49."
+20260610-RDL-2,video,raw/061026-RDL2.mov,video_mov,"RDL 225lb set2, Equinox. GT8. our auto 8 (beats SB 4). Vit set-avg 0.57."

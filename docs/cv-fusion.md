@@ -144,19 +144,21 @@ fix was **fusion, not a single tracker**:
 
 ### ⚑ The no-tap AUTO path = flow ⊕ detect fusion (`tracker="auto"`) — BEATS SmartBarbell
 
-`VideoVelocitySource(VideoConfig(tracker="auto"))`. **FLOW-FIRST / detect-fallback:** run
-FlowTracker with the motion auto-seed; if it holds lock (not `static_track_suspect`, ≥3 reps,
-conf ≥ 0.5) **use flow** — it's smooth, tracks a single object, and doesn't over-count on clean
-clips; otherwise fall back to **DetectTracker**, which handles what flow can't (dark/low-texture
-iron plates where flow finds no corners and goes static). The two are *complementary*: flow's
-strength is exactly detect's weakness and vice-versa.
+`VideoVelocitySource(VideoConfig(tracker="auto"))`. **Candidate-generation + flow-VERIFICATION:**
+the real blocker was plate *localisation* in clutter (mirror / hex / multiple plates) — a single
+auto-seed picks a decoy, flow goes static, detect over-counts. So `seed_candidates()` proposes the
+top-K moving circles (each sized to its rim **ellipse**, since a too-small hub seed makes flow
+over-count), flow runs on each, and we **keep the candidate where flow holds lock** with a
+plausible count (3–18) + regular cadence. If none holds (dark/low-texture iron) → DetectTracker
+for the COUNT. Detect-style robustness for *finding*, flow's smoothness for *tracking*.
 
-**Result (22-clip corpus, fully automatic, no tap): mean rep-count error 8.5 → 1.36, vs
-SmartBarbell 2.57 — and 17/22 within ±1 vs SB's 13/21. We beat SmartBarbell on BOTH metrics.**
-Run it: `python analysis/scripts/cv_eval.py --auto`. Wins are decisive on SB's failure modes
-(SQ-3 10 vs 3, DL-2 10 vs 2, DL-3 10 vs 6, 20260609-BN-1 10 vs 3) while matching it on the
-clean clips it used to win (BN-2/3-0605 10/11, the 0601 rows). Flow-first specifically rescued
-the bench undercounts (detect alone got 4; flow's auto-seed got 10/11 and is chosen).
+**Result (22-clip corpus, fully automatic, no tap, no gym config): mean rep-count error
+8.5 → 1.36 → 0.55, vs SmartBarbell 2.57 — and 19/22 within ±1 vs SB's 13/21. Beats SB on both.**
+Run it: `python analysis/scripts/cv_eval.py --auto`. It **generalises** (Equinox hex+mirror,
+Westwood bumpers, a travel gym, side/front/behind angles, 30–60fps) and *improved the old corpus*
+too (DL-1-2024 8→3, SC-1 9→11), fixed the Equinox squats (19/35→10/10), and beats SB on the RDLs
+it failed (7 vs 1, 8 vs 4). The fix is method, not a gym/colour profile — single-method/profile
+ideas (periodicity/motion-model/color/bilateral/twin-pair/PCA) all plateaued at ~2.5.
 
 **Remaining errors (the honest few):** the dead-front row (ROW-4-0608, motion toward camera —
 unrecoverable from video for anyone, SB also fails), a 2-rep clip where detect over-counts

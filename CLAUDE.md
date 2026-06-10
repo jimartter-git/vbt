@@ -135,19 +135,21 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    `meta["static_track_suspect"]` + a `⚠ STATIC-SEED` line on the `cv_eval.py` board. Full
    runbook: `analysis/CV_ONBOARDING.md`. (Corollary: pose/forearm scale is great for STANDING
    lifts but useless on SUPINE ones — forearm foreshortens, supine wrist jitters.)
-13. **The no-tap AUTO path beats SmartBarbell, and the win was FUSION not a better single
-   tracker** (2026-06-10). `VideoConfig(tracker="auto")` = **flow ⊕ detect, flow-first /
-   detect-fallback**: run FlowTracker (motion auto-seed); if it holds lock use it (smooth,
-   single-object, no clean-clip over-count); else fall back to `DetectTracker` (seed-free
-   track-by-detection: multi-cue gray+edge Hough → oscillation track selection → rep-band
-   low-pass → relative gate + ROM floor) which handles dark/low-texture iron plates flow
-   can't. **Fully automatic, no seed: mean rep-count err 8.5 → 1.36 vs SmartBarbell 2.57;
-   17/22 within ±1 vs SB 13/21 — beats SB on both.** The two trackers are complementary
-   (flow's strength = detect's weakness); every *single*-method idea (periodicity/motion-
-   model/color/bilateral/twin-pair/PCA selection) plateaued at ~2.5 = mere parity. Board:
-   `python analysis/scripts/cv_eval.py --auto`. Still-open hard cases (dead-front, a 2-rep
-   clip, a couple dark-iron) want the learned detector (roadmap #6) — no longer needed to
-   beat SB. ONE-TAP path (seed given → flow) is even better (~13/14). **VELOCITY also beats SB
+13. **The no-tap AUTO path BEATS SmartBarbell on counts, and the win is CANDIDATE-GENERATION +
+   FLOW-VERIFICATION** (2026-06-10). `VideoConfig(tracker="auto")`: `seed_candidates()` proposes
+   the top-K MOVING circles (each sized to its rim ELLIPSE — a too-small hub seed makes flow
+   over-count), then `_estimate_auto` runs FlowTracker on each and KEEPS the one that holds lock
+   with a plausible count (3–18) + most regular cadence; if none holds (dark/low-texture iron,
+   hex) it falls back to `DetectTracker` (seed-free track-by-detection) for the COUNT. The
+   blocker all along was plate LOCALISATION in clutter (mirror/hex/multiple plates) — a single
+   auto-seed picks a decoy; generate several + let flow VERIFY which one is the plate.
+   **Fully automatic, no seed, no gym config: mean rep-count err 8.5 → 1.36 → 0.55 vs
+   SmartBarbell 2.57; 19/22 within ±1 vs SB 13/21.** Generalises (Equinox hex+mirror, Westwood
+   bumpers, travel gym, all angles/fps) — the fix is METHOD, not a gym/colour profile (every
+   single-method/profile idea — periodicity/motion-model/color/bilateral/twin-pair/PCA —
+   plateaued at ~2.5). Board: `python analysis/scripts/cv_eval.py --auto`. Profile-first if
+   `plate_color` set; `ColorPlateTracker` is a fallback, not the strategy. ONE-TAP (seed→flow)
+   also excellent. **VELOCITY also beats SB
    on the fatigue signal:** velocity-LOSS |err vs Vitruve| 5.7pp (ours) vs 9.4pp (SB) on the
    clips where the fusion reports a reliable velocity — it ABSTAINS (count-only, `velocity_
    reliable=False`) on detect-fallback (dark-plate) clips rather than report a confident-wrong
