@@ -168,6 +168,21 @@ unrecoverable from video for anyone, SB also fails), a 2-rep clip where detect o
 motion-model association, color-blob cue, bilateral averaging, twin-pair selection, PCA
 consensus. The win came from fusing the two complementary trackers, not from a better single one.)
 
+### Velocity — also beats SmartBarbell (on the fatigue signal), honestly
+
+Absolute velocity is **scale-limited at low res** (440px diagonal plates read ~2× — the
+circular-Hough-vs-ellipse issue, roadmap #2; device-grade only on HD: IB-1 720p rmse 0.033).
+But the product signal is velocity **LOSS**, which is **scale-invariant**. The fusion reports a
+*reliable* velocity only when it picks **flow** (smooth trajectory); on a detect fallback (dark
+plate) it **abstains** — count-only, reps flagged `velocity_relative_only`, `meta["velocity_
+reliable"]=False` — rather than report a confident-wrong number (detect's jittery per-frame
+centres ruin per-rep velocity). On the clips where we report (`vel_eval.py`):
+
+**velocity-LOSS |err vs Vitruve| = 5.7 pp (OURS) vs 9.4 pp (SmartBarbell)** — we beat SB on the
+fatigue signal too (e.g. DL-1 loss 6.9 vs SB 18.6 vs Vitruve 8.8; BN-1-0609 38.3 vs 34.8 vs
+41.8), and abstain on the 3 dark-iron clips instead of guessing. Absolute m/s stays flagged
+scale-suspect at 440px until roadmap #2 (ellipse / confirmed-diameter scale) or HD clips.
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.

@@ -193,9 +193,17 @@ class VideoVelocitySource:
                    and len(f_reps) >= 3 and f_meta.get("track_confidence", 0.0) >= 0.5)
         if healthy:
             f_meta["auto_pick"] = "flow"
-            return f_reps, f_meta
+            f_meta["velocity_reliable"] = True   # flow holds lock -> velocity SHAPE/loss trusted
+            return f_reps, f_meta                #   (absolute still gated by scale_suspect per-rep)
         d_reps, d_meta = VideoVelocitySource(replace(base, tracker="detect")).estimate(src)
         d_meta["auto_pick"] = "detect"
+        # DetectTracker's per-frame centres are jittery — fine for COUNTING, NOT for velocity.
+        # Abstain on absolute velocity here (honest-velocity rule): report count, mark reps
+        # relative-only. Trustworthy velocity comes from the flow pick (validated: flow-pick
+        # velocity-loss beats SmartBarbell; detect-pick velocity does not).
+        for r in d_reps:
+            r["velocity_relative_only"] = True
+        d_meta["velocity_reliable"] = False
         return d_reps, d_meta
 
     def estimate(self, source_or_path, seed_bbox=None):

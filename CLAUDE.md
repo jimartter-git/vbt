@@ -147,8 +147,13 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    model/color/bilateral/twin-pair/PCA selection) plateaued at ~2.5 = mere parity. Board:
    `python analysis/scripts/cv_eval.py --auto`. Still-open hard cases (dead-front, a 2-rep
    clip, a couple dark-iron) want the learned detector (roadmap #6) — no longer needed to
-   beat SB. ONE-TAP path (seed given → flow) is even better (~13/14). Velocities remain
-   scale-suspect at 440px (roadmap #2) — counts are the win.
+   beat SB. ONE-TAP path (seed given → flow) is even better (~13/14). **VELOCITY also beats SB
+   on the fatigue signal:** velocity-LOSS |err vs Vitruve| 5.7pp (ours) vs 9.4pp (SB) on the
+   clips where the fusion reports a reliable velocity — it ABSTAINS (count-only, `velocity_
+   reliable=False`) on detect-fallback (dark-plate) clips rather than report a confident-wrong
+   number (detect velocity is jittery; flow velocity is trusted). Absolute m/s stays scale-
+   suspect at 440px (roadmap #2 ellipse scale / HD clips); velocity-LOSS is scale-invariant and
+   is the win. Benchmarks: `cv_eval.py --auto` (counts), `vel_eval.py` (velocity-loss).
 
 ## ⚑ Video trigger — READ THIS
 
