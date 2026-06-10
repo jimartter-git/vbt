@@ -26,11 +26,16 @@ and `docs/sources-and-fusion.md`.
   and seed the app's per-user prior. **Vitruve is the established ground-truth
   reference** (since 2026-06-02; `compare.py` auto-prefers it — ~392 rep rows across
   bench/squat/skull-crushers, etc.).
-- **⚑ Latest un-ingested data: 2026-06-05 BN + DL.** New web uploads
-  `dataset/raw/20260605-{BN,DL}-{1,2,3}.mov` + `…-{BN,DL}-VITRUVE.csv` are **NOT yet
-  ingested** into `sets.csv`/`rep_metrics.csv` — the natural next task (prompt for per-set
-  load/RPE/comparables, import per the Vitruve recipe in `dataset/INGESTION.md`). These
-  also give fresh video+Vitruve pairs to calibrate the CV board's `--scale`.
+- **⚑ Data ingested through 2026-06-10** (no known backlog): 06-05 BN/DL, 06-08 rows,
+  06-09 bench, 06-10 squats/RDLs all in `sets.csv`/`rep_metrics.csv`. (06-10 filed as set-level
+  Vitruve averages — the app crashed before per-rep export.) Next upload → follow the ingestion
+  + video triggers below.
+- **⚑ CV milestone (2026-06-10): out-of-the-box BEATS SmartBarbell on reps and on velocity-loss;
+  loses on absolute m/s.** Full current scoreboard (reps · velocity · velocity-loss · one-tap
+  vs auto, with the numbers and the honest weak spots) lives in **`docs/cv-fusion.md` →
+  "Full scoreboard snapshot (2026-06-10)"**. Headlines: auto/no-tap reps **0.55** vs SB **2.57**;
+  velocity-loss **6.2pp** vs SB **9.0pp** (common clips); absolute velocity SB wins (~0.07). See
+  learning #14 for what to do next.
 
 ## Repo map
 
@@ -156,6 +161,30 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    number (detect velocity is jittery; flow velocity is trusted). Absolute m/s stays scale-
    suspect at 440px (roadmap #2 ellipse scale / HD clips); velocity-LOSS is scale-invariant and
    is the win. Benchmarks: `cv_eval.py --auto` (counts), `vel_eval.py` (velocity-loss).
+
+14. **Where the goal stands + the highest-leverage next fix (2026-06-10).** Verified, full corpus,
+   no per-clip cheating (auto passes only the clip path — `seed=None`, no gym/plate/angle/color
+   hint; GT/SB are scoring-only). Full tables: `docs/cv-fusion.md` → "Full scoreboard snapshot
+   (2026-06-10)". (a) **Reps: WON** — auto/no-tap **0.55** vs SB **2.57** (one-tap/best-seed 0.36).
+   (b) **Velocity-LOSS (the fatigue signal = the product thesis): WON** apples-to-apples **6.2pp**
+   vs SB **9.0pp** on the 11 common clips; SB's tell is *flattening the fatigue curve* (SQ-3:
+   Vitruve 30%, SB 2.4%, us 26%). (c) **Absolute m/s: OPEN — SB wins** (~0.07; ours ~2× on
+   fast/diagonal-bumper low-res, but **velocity/angle-dependent** — slow heavy 06-09 benches scale
+   EXACTLY, BN-3 0.33=0.33). **ONE-TAP vs AUTO:** the tap only helps by fixing auto's *over-counts*
+   on clean clips; on dark iron a real manual-seed search reproduced auto on 6/7 (candidate-gen
+   already finds the seed a human would tap); and on the dead-front row a naive tap *hurts* (the
+   big disc is a rack decoy, working plates are edge-on → detect/auto is best — re-confirms #12).
+   **⚑ Highest-leverage fix = the near-failure over-count.** The clips we over-count (BN-2/BN-4
+   0609 → 11/12) are the SAME clips whose velocity-loss is wrong — one phantom rep at the grindy
+   lockout corrupts the loss formula. It's a *segmentation* problem (lifter racks/drifts at
+   near-failure lockout), needs no torch/HD, and tightens BOTH counts and loss on the heaviest
+   sets. **Options for absolute m/s** (all gated/declined): HD clips (user declined — apples-to-
+   apples on low-fi is the standard), or a **learned plate-sizer** for consistent rim measurement
+   (**no torch/sklearn in this container** → not buildable here now; classical Hough auto-sizing
+   already proven unsafe to default-on, roadmap #2). Don't re-run the rejected single-method seed
+   ideas (#13). The user wants GENERALIZATION, not gym/plate-color overfitting (06-05 colored
+   bumpers were a one-off travel gym; Westwood=bumpers, Equinox=bumpers or iron hex are the
+   regulars) — keep the method gym-agnostic.
 
 ## ⚑ Video trigger — READ THIS
 

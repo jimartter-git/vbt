@@ -185,6 +185,88 @@ fatigue signal too (e.g. DL-1 loss 6.9 vs SB 18.6 vs Vitruve 8.8; BN-1-0609 38.3
 41.8), and abstain on the 3 dark-iron clips instead of guessing. Absolute m/s stays flagged
 scale-suspect at 440px until roadmap #2 (ellipse / confirmed-diameter scale) or HD clips.
 
+> ⚑ **Superseded by the full 2026-06-10 snapshot below** — the 06-09 dark-iron benches were
+> added to the velocity board and (a) auto now picks **flow** on them (no longer abstains), and
+> (b) two of them (BN-2/BN-4 0609) carry the near-failure over-count, which drags the all-clips
+> loss number up. Apples-to-apples it's still a clear win; see the snapshot for the honest split.
+
+## Full scoreboard snapshot (2026-06-10) — reps · velocity · velocity-loss · one-tap vs auto
+
+The complete, current state of the three product metrics. Regenerate any time:
+`cv_eval.py --auto` (reps, no tap), `cv_eval.py --adaptive` (reps, one-tap seeded), `vel_eval.py`
+(velocity-loss). GT priority = Vitruve → Stance → logged `actual_reps` (the touch-and-go rows:
+Vitruve under-counts, no Stance, SB partial → the lifter's logged count is GT).
+
+### (1) Reps — GT vs SmartBarbell vs (A) auto/no-tap vs (B) one-tap/best-seed
+
+| | SmartBarbell | (A) Auto, no tap | (B) One-tap, best seed |
+|---|---|---|---|
+| **Mean abs error** | **2.57** | **0.55** | **0.36** |
+| Exact (Δ=0) | 7 / 21 | 13 / 22 | 16 / 22 |
+| Within ±1 | 13 / 21 | 19 / 22 | 20 / 22 |
+
+- **Both our paths crush SB** (0.55 / 0.36 vs 2.57). SB's catastrophic misses are the deadlifts
+  and dark-iron rows (DL-2 2/10, ROW-4 1/10, BN-1-0609 3/10); it's competitive only on clean clips.
+- **One-tap buys ~0.2 rep over auto**, entirely by fixing auto's *over-counts* on clean clips
+  (ROW-2/3 0601 11/12→10, DL-3 0605 11→10, DL-1-2024 3→2) — a seed pins the right plate so flow
+  can't latch a second moving circle. That's the value of the UX tap.
+- **It is NOT strictly better.** SC-1 is the honest counter-example: auto nailed 11, one-tap read
+  10. Seeds can occasionally pick a slightly worse track.
+- **Dark-iron (06-08/06-09): one-tap ≈ auto.** A real manual-seed search (flow on the top plate
+  candidates) reproduced the auto count on **6 of 7** clips — auto's candidate-generation already
+  finds the seed a human would tap. The tap adds nothing here.
+- **ROW-4 (dead-front) — the one clip where a naive tap HURTS.** The working plates are edge-on
+  (thin ellipses, untrackable as discs) and the obvious big black disc is a **rack-stored decoy**
+  (verified: tapping it → 0 reps / `static_track_suspect`). Detect-by-detection (auto's 8) is
+  genuinely the best available; there is no good disc to seed. This re-confirms learning #12.
+
+### (2) Velocity + velocity-loss — auto, on the 13 Vitruve-velocity clips
+
+| Set | reps GT→ours | Vit m/s | SB m/s | our m/s | Vit loss% | SB loss% | our loss% |
+|---|---|---|---|---|---|---|---|
+| SQ-1 0604 | 10→10 | 0.80 | 0.72 | 1.84 | 7.5 | 1.2 | 6.5 |
+| SQ-3 0604 (fast TnG) | 10→10 | 0.79 | 0.80 | 1.72 | 30.1 | 2.4 | 26.1 |
+| SC-1 0602 (DB press) | 11→11 | 0.38 | — | 0.93 | 26.7 | — | 65.2 ✗ |
+| BN-1 0605 | 10→10 | 0.54 | 0.54 | 1.36 | 4.1 | 14.6 | 7.8 |
+| BN-2 0605 | 10→10 | 0.65 | 0.63 | 1.26 | 20.7 | 17.3 | 16.8 |
+| BN-3 0605 | 11→11 | 0.76 | 0.79 | 1.05 | 22.7 | 12.4 | 15.7 |
+| DL-1 0605 | 10→10 | 0.96 | 0.70 | 2.43 | 8.8 | 18.6 | 3.5 |
+| DL-2 0605 | 10→10 | 0.96 | 0.85 | 1.26 | 15.4 | — | 19.5 |
+| DL-3 0605 | 10→11 | 0.82 | 0.68 | 2.73 | 5.7 | 4.3 | 7.6 |
+| BN-1 0609 | 10→10 | 0.37 | 0.19 | 0.43 | 41.8 | 34.8 | 44.8 |
+| BN-2 0609 | 10→11 | 0.41 | 0.38 | 0.71 | 26.5 | 24.4 | 43.0 ✗ |
+| BN-3 0609 | 10→10 | 0.33 | 0.32 | **0.33** | 32.5 | 30.3 | 31.9 |
+| BN-4 0609 (near-fail) | 10→12 | 0.30 | 0.29 | 0.41 | 44.6 | 26.5 | 23.4 ✗ |
+
+**Velocity-loss |err vs Vitruve|:** apples-to-apples on the **11 common clips** (both report a
+loss) = **OURS 6.2 pp vs SB 9.0 pp** — we win. All-13 (incl. the two clips SB can't report) =
+8.5 pp. SB's signature failure is **flattening the fatigue curve** (SQ-3: Vitruve 30%, SB 2.4%,
+us 26%) — which is the whole VBT thesis.
+
+**Absolute velocity (m/s): SB still wins** (SB mean abs err ≈ **0.07** vs Vitruve; ours dominated
+by low-res scale inflation, e.g. DL-3 2.73 vs 0.82). BUT the scale error is **velocity/angle-
+dependent, not uniform**: the slow heavy 06-09 benches scale *beautifully* (BN-3 exact 0.33=0.33,
+BN-1 0.43 vs 0.37) while fast diagonal-bumper clips read ~2×. This is the roadmap-#2 case.
+
+### (3) The two honest weak spots — same root cause, highest-leverage fix
+- **SC-1 (DB press):** worst loss miss (65% vs 27%) — single-dumbbell tracking on a non-barbell
+  lift, outside the core barbell wheelhouse.
+- **Near-failure over-count = velocity-loss corruption.** The clips we over-count (BN-2/BN-4 0609
+  → 11/12 vs 10) are the *same* clips whose loss is wrong (43%/23% vs 26%/45%): a phantom extra
+  "rep" at the grindy end corrupts the "mean of last 2" in the loss formula. **The count error and
+  the loss error are one bug — near-failure terminal-rep ambiguity** (exactly the "terminal reps
+  are hardest" learning). **Fixing the near-failure over-count tightens BOTH counts and loss on the
+  heaviest sets — the single highest-leverage CV improvement available right now** (doesn't need
+  torch/HD; it's a segmentation problem: the lifter racks/drifts at lockout on a near-failure rep).
+
+### Where this leaves the goal ("out-of-the-box better than SmartBarbell")
+- **Reps: WON** (0.55 vs 2.57), fully automatic, generalizes across gyms/angles/plates/fps.
+- **Velocity-loss (the fatigue signal / product thesis): WON** apples-to-apples (6.2 vs 9.0 pp).
+- **Absolute velocity (m/s): OPEN** — SB wins; gated on either HD clips (user declined) or a
+  learned plate-sizer for consistent rim measurement (**no torch in this container** → not
+  buildable here today; classical Hough auto-sizing already proven unsafe to default-on, see
+  roadmap #2). Velocity-loss being scale-invariant is why we win the signal that matters anyway.
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.
