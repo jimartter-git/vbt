@@ -246,9 +246,11 @@ new CV changes on the lift-weighted number; never trade a main-lift regression f
 | BN-4 0609 (near-fail) | 10→12 | 0.30 | 0.29 | 0.41 | 44.6 | 26.5 | 23.4 ✗ |
 
 **Velocity-loss |err vs Vitruve|:** apples-to-apples on the **11 common clips** (both report a
-loss) = **OURS 6.2 pp vs SB 9.0 pp** — we win. All-13 (incl. the two clips SB can't report) =
-8.5 pp. SB's signature failure is **flattening the fatigue curve** (SQ-3: Vitruve 30%, SB 2.4%,
-us 26%) — which is the whole VBT thesis.
+loss) = **OURS 6.2 pp vs SB 9.0 pp** — we win (all 11 are main lifts, so lift-weighting doesn't
+change it). All-13 (incl. the two clips SB can't report) = 8.5 pp unweighted, **6.7 pp
+lift-weighted** (the accessory SC-1, our worst loss miss, is down-weighted ×0.25 per learning #15).
+SB's signature failure is **flattening the fatigue curve** (SQ-3: Vitruve 30%, SB 2.4%, us 26%) —
+which is the whole VBT thesis. `vel_eval.py` prints both unweighted and lift-weighted.
 
 **Absolute velocity (m/s): SB still wins** (SB mean abs err ≈ **0.07** vs Vitruve; ours dominated
 by low-res scale inflation, e.g. DL-3 2.73 vs 0.82). BUT the scale error is **velocity/angle-

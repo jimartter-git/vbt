@@ -12,7 +12,9 @@ a confident-wrong velocity. This scores loss-error on the clips where we DO repo
 import sys, os, csv
 import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.dirname(__file__))
 from vbt_video import VideoConfig, VideoVelocitySource  # noqa: E402
+from cv_eval import lift_weight  # noqa: E402  (lift-priority weights: main=1.0/secondary=0.5/accessory=0.25)
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RM = os.path.join(REPO, "dataset", "rep_metrics.csv")
@@ -40,25 +42,38 @@ def loss(v):   # best rep -> mean of last 2 (robust to single-rep noise), %
 
 
 def main():
-    print(f"{'clip':<15}{'pick':>8}{'rel':>5}{'Vit_loss':>9}{'SB_loss':>8}{'OUR_loss':>9}")
-    our_le, sb_le = [], []
+    print(f"{'clip':<15}{'tier':>10}{'pick':>8}{'rel':>5}{'Vit_loss':>9}{'SB_loss':>8}{'OUR_loss':>9}")
+    rows = []                                     # (our_err, sb_err_or_nan, weight) on reliable clips
     for sid, path in GT_CLIPS.items():
         vit = vmv(sid, "vitruve")
         if len(vit) < 3:
             continue
         sbv = vmv(sid, "smartbarbell")
+        tier, w = lift_weight(sid)
         reps, meta = VideoVelocitySource(VideoConfig(tracker="auto")).estimate(os.path.join(REPO, path))
         our = [r["mean_velocity"] for r in reps]
         rel = bool(meta.get("velocity_reliable", False))
         vl, sl, ol = loss(vit), loss(sbv), loss(our)
         if rel and ol == ol:                      # we only report (and are scored) when reliable
-            our_le.append(abs(ol - vl))
-            if sl == sl:
-                sb_le.append(abs(sl - vl))        # compare on the SAME clips we report
-        print(f"{sid:<15}{meta.get('auto_pick','?'):>8}{('Y' if rel else '-'):>5}"
+            rows.append((abs(ol - vl), abs(sl - vl) if sl == sl else float("nan"), w))
+        print(f"{sid:<15}{tier:>10}{meta.get('auto_pick','?'):>8}{('Y' if rel else '-'):>5}"
               f"{vl:>9.1f}{(sl if sl == sl else float('nan')):>8.1f}{(ol if ol == ol else float('nan')):>9.1f}")
-    print(f"\nVelocity-LOSS |err vs Vitruve| on the {len(our_le)} clips we report a reliable velocity:")
-    print(f"  OURS {np.mean(our_le):.1f}pp   SmartBarbell {np.mean(sb_le):.1f}pp")
+
+    def _u(vals):                                 # unweighted mean
+        vals = [v for v in vals if v == v]
+        return np.mean(vals) if vals else float("nan")
+    def _w(pairs):                                # lift-weighted mean of (err, weight), nan-safe
+        pairs = [(e, w) for e, w in pairs if e == e]
+        return (sum(e * w for e, w in pairs) / sum(w for _, w in pairs)) if pairs else float("nan")
+
+    our_all = [(e, w) for e, _, w in rows]
+    common = [(oe, se, w) for oe, se, w in rows if se == se]   # clips where BOTH report a loss
+    print(f"\nVelocity-LOSS |err vs Vitruve| (pp):")
+    print(f"  all {len(our_all)} clips we report — OURS unweighted {_u([e for e,_ in our_all]):.1f}"
+          f"  lift-weighted {_w(our_all):.1f}")
+    print(f"  apples-to-apples on {len(common)} clips both report —"
+          f" OURS {_u([oe for oe,_,_ in common]):.1f} ({_w([(oe,w) for oe,_,w in common]):.1f} wtd)"
+          f"  vs  SB {_u([se for _,se,_ in common]):.1f} ({_w([(se,w) for _,se,w in common]):.1f} wtd)")
 
 
 if __name__ == "__main__":
