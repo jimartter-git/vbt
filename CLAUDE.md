@@ -42,6 +42,7 @@ and `docs/sources-and-fusion.md`.
 | Path | What |
 |---|---|
 | `README.md` | build/run instructions (XcodeGen, Python) |
+| `REFERENCES.md` | tiered research leads: Achermann 2023 (Apple Watch VBT validation), **Wojtek120 open-source IMU VBT** (Madgwick+ZVU), Core Motion, Madgwick AHRS, Renner 2024 benchmarks |
 | `docs/architecture.md` | system design, the `VelocitySource` abstraction, ZUPT |
 | `docs/sources-and-fusion.md` | the north-star: AirPods/video/BLE fusion, learned prior, graceful degradation, manual editor |
 | `docs/data-schema.md` | the raw IMU + derived-metric contract |
@@ -219,3 +220,14 @@ little or no context — assume it is a VBT measurement to add to `dataset/`.** 
 
 Never invent metadata — ask. Never compare across vendors on `rep_index`; align on
 `true_rep`. See `dataset/INGESTION.md` for the full step-by-step.
+
+## IMU Signal Processing Guidance
+
+When working with Apple Watch IMU data for velocity measurement (see `REFERENCES.md` for citations):
+
+1. **Use `CMDeviceMotion`, not raw `CMAccelerometerData`.** Device motion provides gravity-corrected acceleration in the device's reference frame and an orientation quaternion (`CMAttitude`). Integrating raw accelerometer data without gravity subtraction and orientation correction produces drift that no downstream filter can fix.
+2. **Rotate acceleration into world frame before integration.** Use the `CMAttitude` quaternion to transform device-frame acceleration into a fixed world frame, then isolate the vertical (Z, gravity-aligned) component. Only after this rotation is integration to velocity meaningful.
+3. **Apply Zero Velocity Update (ZVU) between reps.** Naive integration of acceleration drifts unboundedly. Detect rep boundaries (top/bottom of lift = momentary zero velocity) and reset integrated velocity to zero at those points. Standard in both the Achermann methodology and the Wojtek120 open-source reference.
+4. **Sample at 100 Hz.** Matches the Achermann validation methodology; higher rates aren't necessarily better — match the reference for comparability.
+5. **Calibrate per-device.** MEMS IMUs have per-unit offsets and scale factors. Capture stationary readings to estimate accelerometer bias before each session (or at first-launch).
+6. **Validate against ground truth.** Target: r > 0.95, SEE < 0.07 m/s for mean concentric velocity vs an LPT or video reference. Worse than this means a pipeline bug, not a hardware limit — Achermann hit r > 0.97.
