@@ -23,11 +23,12 @@ OUT_HTML = os.path.join(HERE, "meVBT-onepager.html")
 OUT_PDF = os.path.join(HERE, "meVBT-onepager.pdf")
 
 # ---------------------------------------------------------------- prep
-# Hero moments (clip, registered cv_eval seed, frame timestamp, base crop):
-#   DL: 20240531-DL-1 mid-pull of rep 2  | SQ: 061026-SQ1 bottom of rep 5
-#   BN: 20260609-BN-4 terminal grind rep | crops remove letterbox/vendor UI
+# Page-1 hero = a real lifter photo (docs/onepager/assets/hero-deadlift.jpg,
+# heavier bar, watch + AirPod + plate + decoys all visible). Overlays on it are
+# schematic sensor anatomy — the REAL tracker-output figures live on page 2:
+#   SQ: 061026-SQ1 bottom of rep 5 | BN: 20260609-BN-4 terminal grind rep
+# (clip, registered cv_eval seed, frame timestamp, base crop):
 HEROES = {
-    "DL": ("dataset/raw/20240531-DL-1.mp4", (600, 580, 200, 200), 12.05, None),
     "SQ": ("dataset/raw/061026-SQ1.mov",   (190, 305, 80, 80),  14.15, (0, 96, 440, 940)),
     "BN": ("dataset/raw/20260609-BN-4.mov", (10, 300, 96, 96),  28.30, (0, 96, 440, 800)),
 }
@@ -76,15 +77,19 @@ if not os.path.exists(os.path.join(WORK, "tracks.json")):
 def b64(path):
     return base64.b64encode(open(path, "rb").read()).decode()
 
-def crop_b64(src, box, q=85):
-    from PIL import Image
+def crop_b64(src, box, q=85, enhance=False):
+    from PIL import Image, ImageEnhance
     im = Image.open(src)
     im = im.crop(box)
+    if enhance:
+        im = ImageEnhance.Color(im).enhance(1.06)
+        im = ImageEnhance.Contrast(im).enhance(1.03)
     p = os.path.join(WORK, "_tmp_crop.jpg")
     im.save(p, quality=q, optimize=True)
     return b64(p), im.size
 
-IMG_DL = b64(f"{WORK}/DL_hero_final.jpg")                      # 1080x1440
+IMG_DL, DL_SIZE = crop_b64(os.path.join(HERE, "assets/hero-deadlift.jpg"),
+                           (0, 230, 1320, 1990), enhance=True)               # 1320x1760
 IMG_SQ, SQ_SIZE = crop_b64(f"{WORK}/SQ_hero_final.jpg", (0, 180, 440, 600))   # 440x420
 IMG_BN, BN_SIZE = crop_b64(f"{WORK}/BN_hero_final.jpg", (0, 90, 440, 470))    # 440x380
 
@@ -98,12 +103,27 @@ def svg_path(track_key, t0, t1, x_override=None, y_off=0.0, step=2):
         d.append(("M" if i == 0 else "L") + f"{x:.0f},{y - y_off:.0f}")
     return " ".join(d)
 
-# DL: the clean full pull (rep 2), full-res coords
-DL_PATH = svg_path("DL", 9.4, 12.45)
+# DL hero is a photo (no track); SQ/BN paths are real tracker output
 # SQ: full 10-rep vertical history at the plate x, page-2 crop offset (96+180)
 SQ_PATH = svg_path("SQ", 1.2, 32.5, x_override=350, y_off=96 + 180, step=3)
 # BN: full set history, crop offset (96+90)
 BN_PATH = svg_path("BN", 1.0, 30.2, x_override=58, y_off=96 + 90, step=3)
+
+# Pre-rotated plate-rim ellipse for the hero overlay (weasyprint cannot handle
+# svg transform=rotate without corrupting the whole overlay's scale).
+import math
+
+def rotated_ellipse_d(cx, cy, rx, ry, deg, n=72):
+    a = math.radians(deg)
+    pts = []
+    for i in range(n + 1):
+        t = 2 * math.pi * i / n
+        x, y = rx * math.cos(t), ry * math.sin(t)
+        pts.append((cx + x * math.cos(a) - y * math.sin(a),
+                    cy + x * math.sin(a) + y * math.cos(a)))
+    return "M" + " L".join(f"{x:.0f},{y:.0f}" for x, y in pts) + " Z"
+
+ELLIPSE_D = rotated_ellipse_d(390, 1298, 232, 345, 10)
 
 # ---------------------------------------------------------------- chart (BN-4 fatigue)
 VIT = [0.37, 0.36, 0.34, 0.33, 0.28, 0.31, 0.28, 0.29, 0.24, 0.17]
@@ -184,7 +204,7 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
 .chip {{ display: inline-block; border-radius: 20px; padding: 2px 8px; font-size: 7.6px; font-weight: 700; }}
 
 /* ---------- page 1 ---------- */
-.masthead {{ background: #0B0F19; color: #fff; padding: .40in .55in .62in; position: relative; }}
+.masthead {{ background: #0B0F19; color: #fff; padding: .34in .55in .52in; position: relative; }}
 .masthead .brandrow {{ display: flex; align-items: center; justify-content: space-between; }}
 .wordmark {{ display: flex; align-items: center; gap: 11px; }}
 .wordmark .wm {{ font-family: "Inter Display", Inter, sans-serif; font-size: 25px; font-weight: 800;
@@ -192,24 +212,24 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
 .wordmark .wm .me {{ font-weight: 400; color: #8A93A6; }}
 .brief-tag {{ font-size: 7.6px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
               color: #A5B4FC; border: 1px solid #2D3650; border-radius: 20px; padding: 5px 12px; }}
-.headline {{ font-family: "Inter Display", Inter, sans-serif; font-size: 28.5px; font-weight: 800;
-             letter-spacing: -.025em; line-height: 1.12; margin-top: 22px; }}
+.headline {{ font-family: "Inter Display", Inter, sans-serif; font-size: 27px; font-weight: 800;
+             letter-spacing: -.025em; line-height: 1.12; margin-top: 14px; }}
 .headline .grad {{ color: #818CF8; }}
-.subline {{ font-size: 11.5px; color: #B7Bfd2; margin-top: 10px; max-width: 6.4in; line-height: 1.5; }}
+.subline {{ font-size: 11px; color: #B7BFD2; margin-top: 7px; max-width: 6.4in; line-height: 1.48; }}
 .subline b {{ color: #fff; font-weight: 600; }}
 .statband {{ display: flex; gap: 10px; margin: -0.38in .55in 0; position: relative; }}
 .stat {{ flex: 1; background: #fff; border: 1px solid #E7E9F0; border-radius: 10px;
-         padding: 10px 12px 9px; box-shadow: 0 6px 18px rgba(11,15,25,.10); }}
+         padding: 8px 12px 8px; box-shadow: 0 6px 18px rgba(11,15,25,.10); }}
 .stat .big {{ font-family: "Inter Display", Inter, sans-serif; font-size: 23px; font-weight: 800;
               color: #4F46E5; letter-spacing: -.02em; line-height: 1; }}
 .stat .big small {{ font-size: 11px; font-weight: 700; color: #98A0AD; }}
 .stat .lbl {{ font-size: 7.5px; color: #5C6470; margin-top: 4px; line-height: 1.35; }}
 .stat .lbl b {{ color: #0B0F19; }}
-.p1body {{ padding: .22in .55in 0; }}
-.p1grid {{ display: flex; gap: 16px; margin-top: 10px; }}
-.heroFig {{ width: 4.32in; position: relative; border-radius: 11px; overflow: hidden;
+.p1body {{ padding: .15in .55in 0; }}
+.p1grid {{ display: flex; gap: 16px; margin-top: 7px; }}
+.heroFig {{ width: 3.9in; height: 5.2in; position: relative; border-radius: 11px; overflow: hidden;
             box-shadow: 0 2px 14px rgba(11,15,25,.16); }}
-.heroFig img {{ width: 100%; display: block; }}
+.heroFig img {{ width: 100%; height: 100%; display: block; }}
 .heroFig svg.ov {{ position: absolute; left: 0; top: 0; width: 100%; height: 100%; }}
 .figcap {{ font-size: 7.8px; color: #5C6470; margin-top: 6px; line-height: 1.45; }}
 .figcap b {{ color: #0B0F19; }}
@@ -328,65 +348,69 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
   <div class="p1body">
     <div class="eyebrow"><span class="ln"></span> 01 · The signal, on one real frame</div>
     <div class="p1grid">
-      <div style="width:4.32in">
+      <div style="width:3.9in">
         <div class="heroFig">
           <img src="data:image/jpeg;base64,{IMG_DL}">
-          <svg class="ov" viewBox="0 0 1080 1440" font-family="Inter, sans-serif">
-            <!-- bar path -->
-            <path d="{DL_PATH}" fill="none" stroke="#A5B4FC" stroke-width="14" opacity=".35" stroke-linecap="round"/>
-            <path d="{DL_PATH}" fill="none" stroke="#6366F1" stroke-width="5" stroke-linecap="round"/>
-            <!-- ZUPT + lockout markers -->
-            <circle cx="707" cy="800" r="13" fill="#F59E0B" stroke="#fff" stroke-width="4"/>
-            <circle cx="712" cy="390" r="11" fill="#6366F1" stroke="#fff" stroke-width="4"/>
-            <!-- plate rim ellipse (foreshortened face of the outer plate) -->
-            <ellipse cx="927" cy="530" rx="66" ry="145" fill="none" stroke="#FFFFFF" stroke-width="9" opacity=".55"/>
-            <ellipse cx="927" cy="530" rx="66" ry="145" fill="none" stroke="#6366F1" stroke-width="4.5"/>
-            <!-- decoy -->
-            <circle cx="636" cy="1158" r="112" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="14 9" opacity=".9"/>
-            <line x1="566" y1="1088" x2="706" y2="1228" stroke="#fff" stroke-width="4" opacity=".9"/>
-            <!-- callout: plate -->
+          <svg class="ov" width="3.9in" height="5.2in" viewBox="0 0 1320 1760" font-family="Inter, sans-serif">
+            <!-- schematic bar path: hub rises ~vertically; ZUPT anchor at the turnaround -->
+            <defs><marker id="pathArr" markerWidth="10" markerHeight="10" refX="5" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#6366F1"/></marker></defs>
+            <line x1="500" y1="1390" x2="538" y2="1080" stroke="#A5B4FC" stroke-width="14" opacity=".30" stroke-linecap="round"/>
+            <line x1="500" y1="1390" x2="535" y2="1100" stroke="#6366F1" stroke-width="5" stroke-dasharray="16 11" marker-end="url(#pathArr)"/>
+            <circle cx="498" cy="1450" r="15" fill="#F59E0B" stroke="#fff" stroke-width="5"/>
+            <!-- plate rim ellipse (tilted face of the front plate; pre-rotated path:
+                 weasyprint mis-renders svg transform=rotate, so the points are baked) -->
+            <path d="{ELLIPSE_D}" fill="none" stroke="#FFFFFF" stroke-width="10" opacity=".55"/>
+            <path d="{ELLIPSE_D}" fill="none" stroke="#6366F1" stroke-width="5"/>
+            <!-- decoys: rack-stored plates, left -->
+            <circle cx="80" cy="160" r="58" fill="none" stroke="#fff" stroke-width="4.5" stroke-dasharray="15 10" opacity=".95"/>
+            <circle cx="85" cy="370" r="60" fill="none" stroke="#fff" stroke-width="4.5" stroke-dasharray="15 10" opacity=".95"/>
+            <!-- corner badge -->
+            <rect x="16" y="16" width="500" height="46" rx="23" fill="#0B0F19" opacity=".82"/>
+            <text x="42" y="48" font-size="25" font-weight="700" fill="#A5B4FC">ONE FRAME — EVERY SENSOR WE FUSE</text>
+            <!-- callout: airpods (worn here) -->
             <g>
-              <rect x="56" y="430" width="332" height="64" rx="10" fill="#0B0F19" opacity=".82"/>
-              <text x="74" y="456" font-size="24" font-weight="700" fill="#fff">Working plate — found, sized</text>
-              <text x="74" y="481" font-size="19" fill="#B7BFD2">rim ellipse, major axis Ø450&#8201;mm = the px&#8594;m ruler</text>
-              <line x1="388" y1="462" x2="858" y2="505" stroke="#fff" stroke-width="3" opacity=".75"/>
-            </g>
-            <!-- callout: ZUPT -->
-            <g>
-              <rect x="240" y="880" width="380" height="64" rx="10" fill="#0B0F19" opacity=".82"/>
-              <text x="258" y="906" font-size="24" font-weight="700" fill="#FBBF24">v = 0 at the turnaround</text>
-              <text x="258" y="931" font-size="19" fill="#B7BFD2">ZUPT resets IMU drift every single rep</text>
-              <line x1="620" y1="900" x2="694" y2="816" stroke="#F59E0B" stroke-width="3"/>
+              <rect x="720" y="48" width="396" height="84" rx="12" fill="#0B0F19" opacity=".82"/>
+              <text x="742" y="82" font-size="28" font-weight="700" fill="#fff">AirPods IMU — in the ear</text>
+              <text x="742" y="114" font-size="22" fill="#B7BFD2">head kinematics + HR · roadmap</text>
+              <line x1="800" y1="132" x2="764" y2="232" stroke="#fff" stroke-width="3.5" opacity=".8"/>
+              <circle cx="757" cy="248" r="16" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
             </g>
             <!-- callout: watch -->
             <g>
-              <rect x="56" y="568" width="330" height="64" rx="10" fill="#0B0F19" opacity=".82"/>
-              <text x="74" y="594" font-size="24" font-weight="700" fill="#fff">Apple Watch IMU · 100&#8201;Hz</text>
-              <text x="74" y="619" font-size="19" fill="#B7BFD2">on the left wrist — it rides the bar on the big pulls</text>
-              <line x1="386" y1="600" x2="582" y2="537" stroke="#fff" stroke-width="3" opacity=".75"/>
-              <circle cx="590" cy="532" r="14" fill="none" stroke="#fff" stroke-width="3.5" opacity=".9"/>
+              <rect x="880" y="752" width="416" height="84" rx="12" fill="#0B0F19" opacity=".82"/>
+              <text x="902" y="786" font-size="28" font-weight="700" fill="#fff">Apple Watch IMU · 100&#8201;Hz</text>
+              <text x="902" y="818" font-size="22" fill="#B7BFD2">the bar-side wrist — always there</text>
+              <line x1="880" y1="794" x2="642" y2="826" stroke="#fff" stroke-width="3.5" opacity=".8"/>
+              <circle cx="615" cy="832" r="22" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
             </g>
-            <!-- callout: decoy -->
+            <!-- callout: bar path / ZUPT -->
             <g>
-              <rect x="60" y="1262" width="430" height="40" rx="10" fill="#0B0F19" opacity=".82"/>
-              <text x="78" y="1289" font-size="22" font-weight="700" fill="#fff">Static decoy plate — rejected <tspan fill="#8A93A6" font-weight="400">(no motion)</tspan></text>
-              <line x1="490" y1="1282" x2="540" y2="1230" stroke="#fff" stroke-width="3" opacity=".75"/>
+              <rect x="700" y="1040" width="600" height="84" rx="12" fill="#0B0F19" opacity=".82"/>
+              <text x="722" y="1074" font-size="28" font-weight="700" fill="#FBBF24">v = 0 at every turnaround</text>
+              <text x="722" y="1106" font-size="22" fill="#B7BFD2">ZUPT kills IMU drift, rep by rep — one integration each</text>
+              <line x1="700" y1="1082" x2="562" y2="1092" stroke="#F59E0B" stroke-width="3.5" opacity=".9"/>
             </g>
-            <!-- velocity chip -->
+            <!-- callout: plate -->
             <g>
-              <rect x="796" y="710" width="222" height="92" rx="10" fill="#4F46E5"/>
-              <text x="818" y="748" font-size="30" font-weight="800" fill="#fff">0.66 m/s</text>
-              <text x="818" y="776" font-size="18" fill="#DDE0FC">mean concentric · 68&#8201;cm ROM</text>
+              <rect x="800" y="1430" width="496" height="84" rx="12" fill="#0B0F19" opacity=".82"/>
+              <text x="822" y="1464" font-size="28" font-weight="700" fill="#fff">Working plate — the metric ruler</text>
+              <text x="822" y="1496" font-size="22" fill="#B7BFD2">Ø450&#8201;mm rim sets the px&#8594;m scale</text>
+              <line x1="800" y1="1472" x2="628" y2="1340" stroke="#fff" stroke-width="3.5" opacity=".8"/>
             </g>
-            <!-- corner badge -->
-            <rect x="14" y="14" width="370" height="38" rx="19" fill="#0B0F19" opacity=".82"/>
-            <text x="36" y="40" font-size="21" font-weight="700" fill="#A5B4FC">REAL OUTPUT — our tracker, this clip</text>
+            <!-- callout: decoys -->
+            <g>
+              <rect x="40" y="540" width="450" height="78" rx="12" fill="#0B0F19" opacity=".82"/>
+              <text x="62" y="572" font-size="26" font-weight="700" fill="#fff">Stored plates = decoys</text>
+              <text x="62" y="602" font-size="21" fill="#B7BFD2">no motion &#8594; rejected by flow-verification</text>
+              <line x1="160" y1="540" x2="105" y2="438" stroke="#fff" stroke-width="3.5" opacity=".8"/>
+            </g>
           </svg>
         </div>
-        <div class="figcap"><b>Deadlift 355&#8201;lb — every overlay is the pipeline's actual output on this clip.</b>
-          The tracker finds the moving plate (and rejects the static one on the floor), sizes it for metric scale,
-          and integrates a drift-free bar path. The watch sees the same rep from the wrist — two independent
-          sensors, one truth.</div>
+        <div class="figcap"><b>Every signal we fuse, in one real frame.</b> The watch rides the bar-side wrist; the
+          AirPods add a second IMU; the plate's Ø450&#8201;mm rim hands video its metric scale; the stored plates behind
+          are the decoys the tracker must reject. Overlays here are the sensor anatomy — p.&#8201;2 shows the
+          tracker's raw output.</div>
       </div>
       <div class="rail">
         <div class="eyebrow" style="margin-bottom:1px"><span class="ln"></span> What each sensor knows</div>
