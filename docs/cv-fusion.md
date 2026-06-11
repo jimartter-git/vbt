@@ -490,6 +490,46 @@ vs 0.41→0.33) — a correct hub-centred box on a 45 iron plate is a good ruler
   the end-to-end proof it reaches human-grade, and the gate/guards handle the racking
   tail (BN-4's track follows the plate into the rack; the gate drops those moves).
 
+## Signal fusion — the tier ABOVE selection (design, 2026-06-11, lifter-directed)
+
+Everything scored so far tracks ONE target; "fusion" in the auto path means *selection*
+(candidate-gen + verification picks a single winner). That was correct, and the record
+explains why: until the tracks were human-grade, the dominant error was CATEGORICAL —
+wrong-object identity (decoy/body-lock). Categorical errors don't average out; they
+poison blends. **Selection resolves identity; only then is there anything worth fusing.**
+
+With verified-on-target tracks (learning #18), the residual errors are exactly
+fusion-shaped — independent and complementary across signals we already have:
+
+| residual error | fixing signal pair | mechanism |
+|---|---|---|
+| bar tilt / whip | the TWO bar-end plates | errors anti-correlated → averaging cancels |
+| perspective scale through ROM (BN-3-0605, the OPEN absolute m/s) | plate ruler × forearm ruler × known 2.2 m bar length | complementary failure modes + a geometric constraint |
+| per-rep occlusion (RDL-2's post-clipped bottoms) | plate track × body/wrist track | patch ONLY the flagged frame-span from the healthy signal |
+| boundary ties (RDL-1's 8th rep) | any second independent witness (eventually the watch — highest-rate arbitrates) | consensus breaks the coin-flip |
+
+**Architecture: per-PRIMITIVE, per-REP repair — never set-level votes.** Every signal
+emits the `VelocitySource` shape (boundaries, velocity, ROM) + per-rep/per-metric
+confidence and failure flags; fusion operates at the primitive × rep granularity (count
+from boundary consensus; each rep's velocity from the most trustworthy ruler FOR THAT
+REP; flagged spans patched). Venn framing: union for coverage, intersection for trust.
+
+**Non-negotiable guardrails (each one is a paid-for lesson):**
+1. Identity before blending — every signal, INCLUDING the human tap and any body track,
+   enters as a candidate through verification scoring, never an override (#17).
+2. Abstention propagates — a rep-level suspect signal contributes zero to that rep, not
+   "a little" (the honest-velocity rule, applied per rep).
+3. Disagreement beyond tolerance is INFORMATION → flag for the manual editor (the
+   active-learning flywheel; L/R plate disagreement is the same signal generalized).
+
+This CV-internal fusion (two plates × forearm × body, one shared camera clock) is the
+cheapest proving ground for the grand multi-source fusion (watch/AirPods/BLE/prior/human)
+— same algebra, more clocks. Validation order, by what the velocity board can measure:
+(1) bilateral plates (tilt-cancel + bar-length perspective scale → absolute m/s);
+(2) per-rep ruler arbitration (plate vs forearm — the "forearm fixes one rep" case);
+(3) occlusion patching; (4) boundary consensus. Counts are saturated (0.07 weighted) —
+judge all of this on the VELOCITY board.
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.
