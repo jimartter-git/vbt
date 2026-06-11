@@ -338,9 +338,9 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
             <!-- ZUPT + lockout markers -->
             <circle cx="707" cy="800" r="13" fill="#F59E0B" stroke="#fff" stroke-width="4"/>
             <circle cx="712" cy="390" r="11" fill="#6366F1" stroke="#fff" stroke-width="4"/>
-            <!-- plate ring -->
-            <circle cx="730" cy="520" r="142" fill="none" stroke="#FFFFFF" stroke-width="9" opacity=".55"/>
-            <circle cx="730" cy="520" r="142" fill="none" stroke="#6366F1" stroke-width="4.5"/>
+            <!-- plate rim ellipse (foreshortened face of the outer plate) -->
+            <ellipse cx="927" cy="530" rx="66" ry="145" fill="none" stroke="#FFFFFF" stroke-width="9" opacity=".55"/>
+            <ellipse cx="927" cy="530" rx="66" ry="145" fill="none" stroke="#6366F1" stroke-width="4.5"/>
             <!-- decoy -->
             <circle cx="636" cy="1158" r="112" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="14 9" opacity=".9"/>
             <line x1="566" y1="1088" x2="706" y2="1228" stroke="#fff" stroke-width="4" opacity=".9"/>
@@ -348,8 +348,8 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
             <g>
               <rect x="56" y="430" width="332" height="64" rx="10" fill="#0B0F19" opacity=".82"/>
               <text x="74" y="456" font-size="24" font-weight="700" fill="#fff">Working plate — found, sized</text>
-              <text x="74" y="481" font-size="19" fill="#B7BFD2">Ø450&#8201;mm rim = the px&#8594;m ruler</text>
-              <line x1="388" y1="462" x2="586" y2="500" stroke="#fff" stroke-width="3" opacity=".75"/>
+              <text x="74" y="481" font-size="19" fill="#B7BFD2">rim ellipse, major axis Ø450&#8201;mm = the px&#8594;m ruler</text>
+              <line x1="388" y1="462" x2="858" y2="505" stroke="#fff" stroke-width="3" opacity=".75"/>
             </g>
             <!-- callout: ZUPT -->
             <g>
@@ -362,14 +362,9 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
             <g>
               <rect x="56" y="568" width="330" height="64" rx="10" fill="#0B0F19" opacity=".82"/>
               <text x="74" y="594" font-size="24" font-weight="700" fill="#fff">Apple Watch IMU · 100&#8201;Hz</text>
-              <text x="74" y="619" font-size="19" fill="#B7BFD2">wrist rides the bar on the big pulls</text>
-              <line x1="386" y1="600" x2="498" y2="492" stroke="#fff" stroke-width="3" opacity=".75"/>
-            </g>
-            <!-- callout: airpods -->
-            <g>
-              <rect x="430" y="60" width="300" height="40" rx="10" fill="#0B0F19" opacity=".82"/>
-              <text x="448" y="87" font-size="22" font-weight="700" fill="#fff">AirPods IMU <tspan fill="#8A93A6" font-weight="400">· roadmap</tspan></text>
-              <line x1="430" y1="80" x2="392" y2="92" stroke="#fff" stroke-width="3" opacity=".75"/>
+              <text x="74" y="619" font-size="19" fill="#B7BFD2">on the left wrist — it rides the bar on the big pulls</text>
+              <line x1="386" y1="600" x2="582" y2="537" stroke="#fff" stroke-width="3" opacity=".75"/>
+              <circle cx="590" cy="532" r="14" fill="none" stroke="#fff" stroke-width="3.5" opacity=".9"/>
             </g>
             <!-- callout: decoy -->
             <g>
@@ -379,9 +374,9 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
             </g>
             <!-- velocity chip -->
             <g>
-              <rect x="800" y="640" width="222" height="92" rx="10" fill="#4F46E5"/>
-              <text x="822" y="678" font-size="30" font-weight="800" fill="#fff">0.66 m/s</text>
-              <text x="822" y="706" font-size="18" fill="#DDE0FC">mean concentric · 68&#8201;cm ROM</text>
+              <rect x="796" y="710" width="222" height="92" rx="10" fill="#4F46E5"/>
+              <text x="818" y="748" font-size="30" font-weight="800" fill="#fff">0.66 m/s</text>
+              <text x="818" y="776" font-size="18" fill="#DDE0FC">mean concentric · 68&#8201;cm ROM</text>
             </g>
             <!-- corner badge -->
             <rect x="14" y="14" width="370" height="38" rx="19" fill="#0B0F19" opacity=".82"/>
