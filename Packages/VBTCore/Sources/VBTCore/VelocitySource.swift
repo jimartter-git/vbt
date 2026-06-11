@@ -82,9 +82,18 @@ public struct SetSummary: Codable, Equatable, Sendable {
         self.reps = reps
         self.sourceID = sourceID
 
+        // THE canonical velocity-loss definition — keep in lock-step with
+        // `analysis/vbt_analysis/metrics.py` (velocity_loss_pct) and docs/data-schema.md:
+        // loss = (best − terminal) / best, where terminal = mean of the LAST
+        // min(2, n−1) reps. Never best→min (a mid-set slow rep must not inflate
+        // loss past the set's end); a 2-rep terminal window absorbs single
+        // terminal-rep noise (the least reliably measured rep in the set).
+        // Sets with fewer than 3 reps are too short to score → 0.
         let mvs = reps.map(\.meanConcentricVelocity)
-        if let best = mvs.max(), best > 0, let worst = mvs.min() {
-            self.velocityLossPct = (best - worst) / best * 100.0
+        if mvs.count >= 3, let best = mvs.max(), best > 0 {
+            let k = min(2, mvs.count - 1)
+            let terminal = mvs.suffix(k).reduce(0, +) / Double(k)
+            self.velocityLossPct = (best - terminal) / best * 100.0
         } else {
             self.velocityLossPct = 0
         }

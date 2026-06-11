@@ -14,6 +14,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.dirname(__file__))
 from vbt_video import VideoConfig, VideoVelocitySource  # noqa: E402
+from vbt_analysis.metrics import velocity_loss_pct  # noqa: E402  (THE canonical loss)
 from cv_eval import lift_weight  # noqa: E402  (lift-priority weights: main=1.0/secondary=0.5/accessory=0.25)
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,8 +38,11 @@ def vmv(sid, vendor):
     return [float(r["value"]) for r in rs]
 
 
-def loss(v):   # best rep -> mean of last 2 (robust to single-rep noise), %
-    return (max(v) - np.mean(v[-2:])) / max(v) * 100 if len(v) >= 3 else float("nan")
+def loss(v, flags=None):
+    """The ONE canonical velocity loss (vbt_analysis.metrics): best rep → terminal
+    window (mean of last 2). Same number the dataset compare and (mirrored) the Swift
+    SetSummary produce — loss is comparable across every tool now."""
+    return velocity_loss_pct(v, flags=flags)
 
 
 def main():
@@ -53,7 +57,8 @@ def main():
         reps, meta = VideoVelocitySource(VideoConfig(tracker="auto")).estimate(os.path.join(REPO, path))
         our = [r["mean_velocity"] for r in reps]
         rel = bool(meta.get("velocity_reliable", False))
-        vl, sl, ol = loss(vit), loss(sbv), loss(our)
+        vl, sl = loss(vit), loss(sbv)
+        ol = loss(our, flags=[r.get("flag") for r in reps])
         if rel and ol == ol:                      # we only report (and are scored) when reliable
             rows.append((abs(ol - vl), abs(sl - vl) if sl == sl else float("nan"), w))
         print(f"{sid:<15}{tier:>10}{meta.get('auto_pick','?'):>8}{('Y' if rel else '-'):>5}"

@@ -72,6 +72,9 @@ RepMetrics {
 
 SetSummary {
   reps:            [RepMetrics]
-  velocityLossPct: Double     // (first-rep MV − last/min MV) / first-rep MV
+  velocityLossPct: Double     // CANONICAL loss: (best MV − terminal MV) / best MV,
+                              // terminal = mean of the last min(2, n−1) reps; 0 when
+                              // n < 3. One definition everywhere — keep in lock-step
+                              // with analysis/vbt_analysis/metrics.py
 }
 ```

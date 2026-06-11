@@ -99,13 +99,12 @@ def rep_metrics(t: np.ndarray, v: np.ndarray, anchors) -> list[RepMetrics]:
 
 
 def velocity_loss_pct(reps: list[RepMetrics]) -> float:
-    """Intra-set velocity loss: drop from the best rep to the worst, as a
-    fraction of the best. The validated proximity-to-failure / fatigue proxy.
+    """Intra-set velocity loss — the validated proximity-to-failure / fatigue proxy.
+
+    Delegates to the project's ONE canonical definition (`vbt_analysis.metrics`):
+    best rep → terminal window, never best→min (a mid-set slow rep must not
+    inflate loss past the set's end). Returns 0.0 for sets too short to score.
     """
-    if not reps:
-        return 0.0
-    mvs = [r.mean_concentric_velocity for r in reps]
-    best = max(mvs)
-    if best <= 0:
-        return 0.0
-    return (best - min(mvs)) / best * 100.0
+    from .metrics import velocity_loss_pct as _canonical
+    vl = _canonical([r.mean_concentric_velocity for r in reps])
+    return 0.0 if vl != vl else vl

@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 
 DATASET = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(DATASET), "analysis"))
+from vbt_analysis.metrics import velocity_loss_pct  # noqa: E402
 
 # Preference order for the "ground truth" reference when --ref not given.
 REF_PREFERENCE = ["vitruve", "stance", "metric", "smartbarbell", "wl_analysis"]
@@ -26,13 +28,11 @@ def load():
 
 
 def velocity_loss(series: pd.Series) -> float:
-    """Velocity loss = drop from the best rep to the **last** (terminal) rep — the
-    proximity-to-failure proxy (matches Vitruve's 'Drop' and the common-window calc).
-    NOT best→min: a mid-set slow rep shouldn't inflate the loss past the terminal rep."""
+    """THE canonical velocity loss (vbt_analysis.metrics): best rep → terminal
+    window. NOT best→min: a mid-set slow rep shouldn't inflate the loss past the
+    set's end. (Flags were already filtered out of the pivot table upstream.)"""
     s = series.dropna().sort_index()
-    if len(s) < 2 or s.max() <= 0:
-        return float("nan")
-    return (s.max() - s.iloc[-1]) / s.max() * 100.0
+    return velocity_loss_pct(s.tolist())
 
 
 def main() -> int:
@@ -88,9 +88,10 @@ def main() -> int:
             print(f"  unaligned: {v} reported {len(g)} reps{tag}, true_rep unresolved "
                   f"(mean {g.value.mean():.3f}) — excluded from alignment")
 
-    # Per-vendor summary. VL is best-referenced and labels WHICH rep it runs to,
+    # Per-vendor summary. VL is best-referenced and labels WHICH reps it runs to,
     # so a 7-rep vendor's loss is never silently equated with an 8-rep vendor's.
-    print("\nPer-vendor summary (VL = best rep -> that vendor's last rep):")
+    print("\nPer-vendor summary (VL = canonical loss, best rep -> that vendor's "
+          "terminal window; see vbt_analysis.metrics):")
     summary = []
     for v in table.columns:
         col = table[v].dropna()
@@ -104,13 +105,13 @@ def main() -> int:
     if len(table.columns) > 1:
         common = sorted(set.intersection(*[set(table[v].dropna().index) for v in table.columns]))
         if len(common) >= 2:
-            lo, hi = common[0], common[-1]
-            print(f"\nCommon-window VL (best -> rep {hi}, using reps {common} present for all vendors):")
+            k = max(1, min(2, len(common) - 1))      # the canonical terminal window
+            print(f"\nCommon-window VL (best → mean of reps {common[-k:]}, over reps "
+                  f"{common} present for all vendors):")
             cw = []
             for v in table.columns:
                 col = table[v].loc[common]
-                best = col.max()
-                vl = (best - col.loc[hi]) / best * 100 if best > 0 else float("nan")
+                vl = velocity_loss_pct(col.tolist())
                 cw.append((v, round(vl, 1)))
             print(pd.DataFrame(cw, columns=["vendor", "VL%"]).set_index("vendor").to_string())
 

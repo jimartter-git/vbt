@@ -61,8 +61,22 @@ final class SetSummaryTests: XCTestCase {
             )
         }
         let summary = SetSummary(reps: reps)
-        XCTAssertEqual(summary.velocityLossPct, 25.0, accuracy: 0.001) // (0.8-0.6)/0.8
+        // Canonical loss (keep in lock-step with analysis/vbt_analysis/metrics.py):
+        // best → mean of the last min(2, n−1) reps = (0.80 − (0.72+0.60)/2) / 0.80
+        XCTAssertEqual(summary.velocityLossPct, 17.5, accuracy: 0.001)
         XCTAssertEqual(summary.confidence, 1.0, accuracy: 0.001)       // default per-rep conf
+    }
+
+    func testVelocityLossTooShortToScore() {
+        // Fewer than 3 reps is too short for a meaningful loss → 0 (canonical floor).
+        let reps = [0.80, 0.60].enumerated().map { i, mv in
+            RepMetrics(
+                repIndex: i, startTime: 0, turnaroundTime: 0, endTime: 0,
+                meanConcentricVelocity: mv, peakConcentricVelocity: mv * 1.5,
+                rangeOfMotion: 0.5
+            )
+        }
+        XCTAssertEqual(SetSummary(reps: reps).velocityLossPct, 0.0, accuracy: 0.001)
     }
 
     func testSetConfidenceAveragesRepConfidence() {
