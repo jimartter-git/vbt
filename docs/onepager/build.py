@@ -123,7 +123,7 @@ def rotated_ellipse_d(cx, cy, rx, ry, deg, n=72):
                     cy + x * math.sin(a) + y * math.cos(a)))
     return "M" + " L".join(f"{x:.0f},{y:.0f}" for x, y in pts) + " Z"
 
-ELLIPSE_D = rotated_ellipse_d(390, 1298, 232, 345, 10)
+ELLIPSE_D = rotated_ellipse_d(520, 1230, 238, 290, 12)
 
 # ---------------------------------------------------------------- chart (BN-4 fatigue)
 VIT = [0.37, 0.36, 0.34, 0.33, 0.28, 0.31, 0.28, 0.29, 0.24, 0.17]
@@ -363,8 +363,8 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
             <path d="{ELLIPSE_D}" fill="none" stroke="#FFFFFF" stroke-width="10" opacity=".55"/>
             <path d="{ELLIPSE_D}" fill="none" stroke="#6366F1" stroke-width="5"/>
             <!-- decoys: rack-stored plates, left -->
-            <circle cx="80" cy="160" r="58" fill="none" stroke="#fff" stroke-width="4.5" stroke-dasharray="15 10" opacity=".95"/>
-            <circle cx="85" cy="370" r="60" fill="none" stroke="#fff" stroke-width="4.5" stroke-dasharray="15 10" opacity=".95"/>
+            <circle cx="123" cy="197" r="58" fill="none" stroke="#fff" stroke-width="4.5" stroke-dasharray="15 10" opacity=".95"/>
+            <circle cx="144" cy="353" r="60" fill="none" stroke="#fff" stroke-width="4.5" stroke-dasharray="15 10" opacity=".95"/>
             <!-- corner badge -->
             <rect x="16" y="16" width="500" height="46" rx="23" fill="#0B0F19" opacity=".82"/>
             <text x="42" y="48" font-size="25" font-weight="700" fill="#A5B4FC">ONE FRAME — EVERY SENSOR WE FUSE</text>
@@ -373,16 +373,16 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
               <rect x="720" y="48" width="396" height="84" rx="12" fill="#0B0F19" opacity=".82"/>
               <text x="742" y="82" font-size="28" font-weight="700" fill="#fff">AirPods IMU — in the ear</text>
               <text x="742" y="114" font-size="22" fill="#B7BFD2">head kinematics + HR · roadmap</text>
-              <line x1="800" y1="132" x2="764" y2="232" stroke="#fff" stroke-width="3.5" opacity=".8"/>
-              <circle cx="757" cy="248" r="16" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
+              <line x1="800" y1="132" x2="762" y2="258" stroke="#fff" stroke-width="3.5" opacity=".8"/>
+              <circle cx="764" cy="277" r="16" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
             </g>
             <!-- callout: watch -->
             <g>
               <rect x="880" y="752" width="416" height="84" rx="12" fill="#0B0F19" opacity=".82"/>
               <text x="902" y="786" font-size="28" font-weight="700" fill="#fff">Apple Watch IMU · 100&#8201;Hz</text>
               <text x="902" y="818" font-size="22" fill="#B7BFD2">the bar-side wrist — always there</text>
-              <line x1="880" y1="794" x2="642" y2="826" stroke="#fff" stroke-width="3.5" opacity=".8"/>
-              <circle cx="615" cy="832" r="22" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
+              <line x1="880" y1="794" x2="684" y2="799" stroke="#fff" stroke-width="3.5" opacity=".8"/>
+              <circle cx="660" cy="799" r="22" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
             </g>
             <!-- callout: bar path / ZUPT -->
             <g>
@@ -403,7 +403,7 @@ body {{ font-family: Inter, "Inter Display", -apple-system, "Segoe UI", Roboto, 
               <rect x="40" y="540" width="450" height="78" rx="12" fill="#0B0F19" opacity=".82"/>
               <text x="62" y="572" font-size="26" font-weight="700" fill="#fff">Stored plates = decoys</text>
               <text x="62" y="602" font-size="21" fill="#B7BFD2">no motion &#8594; rejected by flow-verification</text>
-              <line x1="160" y1="540" x2="105" y2="438" stroke="#fff" stroke-width="3.5" opacity=".8"/>
+              <line x1="170" y1="540" x2="148" y2="420" stroke="#fff" stroke-width="3.5" opacity=".8"/>
             </g>
           </svg>
         </div>
