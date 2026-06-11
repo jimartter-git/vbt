@@ -57,8 +57,10 @@ CLIPS = {
                       {"flow": (165, 77, 110, 110)}, "squat set3, fast TnG (adversarial)", None,
                       {"angle": "side", "plate": 45, "kind": "bumper"}),
     "20260602-SC-1": ("dataset/raw/20260602-SC-1.mov",
-                      {"flow": (110, 115, 55, 55), "pose": None},
-                      "DB press, rubberized DB, diagonal (flow on DB end >> pose; pose-scaled)", None),
+                      {"flow": (152, 172, 84, 84, 19.4), "pose": None},
+                      "DB press - ANY-FRAME tap on the DB head at a sharp late lockout: 11/11 "
+                      "(track verified end-to-end; a frame-0 seed drifts off the DB late-set "
+                      "and reads 10 + corrupt loss). --gate to reproduce.", None),
     "20240531-DL-1": ("dataset/raw/20240531-DL-1.mp4",
                       {"flow": (600, 580, 200, 200)},
                       "deadlift ~355lb, bumper plates, front-quarter (CV+SmartBarbell agree 2 reps)", None,
@@ -88,37 +90,45 @@ CLIPS = {
     # includes the plausibility gate).
     "20260608-ROW-1": ("dataset/raw/060826_row1.mov", {"flow": (90, 352, 85, 85), "detect": None},
                        "row TnG, front, dark iron - LLM-tap 10/10 (1 tap, --gate)", None),
-    "20260608-ROW-2": ("dataset/raw/060826_row2.mov", {"flow": (104, 382, 103, 103), "detect": None},
-                       "row TnG, front, dark iron - LLM-tap 9/10 (--gate)", None),
+    "20260608-ROW-2": ("dataset/raw/060826_row2.mov", {"flow": (105, 480, 80, 80, 9.6), "detect": None},
+                       "row TnG, front, dark iron - ANY-FRAME tap, tight box on the plate HUB at "
+                       "the bottom hang: 10/10 verified (--gate). Frame-0 taps go static (dark "
+                       "iron has no flow texture at rest); the big upper-left disc is a STORED "
+                       "plate the working plate sweeps in front of.", None),
     "20260608-ROW-3": ("dataset/raw/060826_row3.mov", {"flow": (85, 335, 110, 110), "detect": None},
                        "row TnG, front, dark iron - LLM-tap 10/10 (--gate)", None),
     "20260608-ROW-4": ("dataset/raw/060826_row4.mov", {"detect": None},
                        "row TnG, dead-front (hardest) - UNTAPPABLE: working plates edge-on, "
                        "big disc = rack decoy (verified again 2026-06-11); auto is best", None),
-    "20260609-BN-1": ("dataset/raw/20260609-BN-1.mov", {"flow": (18, 382, 95, 95), "detect": None},
-                      "bench 205lb, dark iron - LLM-tap 9/10 (3 attempts, --gate); auto 10/10 better", None),
-    "20260609-BN-2": ("dataset/raw/20260609-BN-2.mov", {"flow": (31, 382, 88, 88), "detect": None},
-                      "bench 195lb, dark iron - LLM-tap 10/10 (1 tap, --gate)", None),
+    "20260609-BN-1": ("dataset/raw/20260609-BN-1.mov", {"flow": (28, 285, 100, 100, 15.0), "detect": None},
+                      "bench 205lb, dark iron - ANY-FRAME tap at a sharp lockout: 10/10 verified, "
+                      "ROM steady ~30cm, MV 0.43->0.24 vs Vitruve 0.49->0.26 (near device-grade "
+                      "on dark iron!). Frame-0 tap read 9. --gate.", None),
+    "20260609-BN-2": ("dataset/raw/20260609-BN-2.mov", {"flow": (52, 345, 95, 95, 12.5), "detect": None},
+                      "bench 195lb, dark iron - ANY-FRAME tap: 10/10 verified, MV 0.44->0.32 vs "
+                      "Vitruve 0.41->0.33, loss err 1.2pp (frame-0 tap: 7.8pp). --gate.", None),
     "20260609-BN-3": ("dataset/raw/20260609-BN-3.mov", {"flow": (66, 402, 76, 76), "detect": None},
                       "bench 200lb, dark iron - LLM-tap 10/10 (1 tap, --gate)", None),
-    "20260609-BN-4": ("dataset/raw/20260609-BN-4.mov", {"flow": (10, 300, 96, 96), "detect": None},
-                      "bench 205lb near-failure, dark iron - LLM-tap 10/10 count (3 attempts, --gate) "
-                      "BUT its velocity-loss is wrong (7 vs Vit 45%) - auto's verified candidate is the "
-                      "better TRACK; count-equal != velocity-equal", None),
+    "20260609-BN-4": ("dataset/raw/20260609-BN-4.mov", {"flow": (33, 277, 105, 105, 14.0), "detect": None},
+                      "bench 205lb near-failure, dark iron - ANY-FRAME tap: 10/10 verified, the "
+                      "grind curve intact (MV 0.28->0.12 vs Vitruve 0.30->0.17, loss err 1.8pp; "
+                      "the frame-0 tap counted 10 but read loss 7% vs 45%). Track follows the "
+                      "plate INTO the rack; the plausibility gate drops the racking moves. --gate.", None),
     # --- 2026-06-10 Equinox squats + RDLs (hex iron, mirror; Vitruve crashed -> GT = lifter
     # count in sets.csv actual_reps; SB counts in set notes only, not per-rep rows) ---
     "20260610-SQ-1": ("dataset/raw/061026-SQ1.mov", {"flow": (190, 305, 80, 80)},
                       "squat 225lb set1, Equinox hex+mirror 60fps - LLM-tap 10/10 (1 tap); auto 10/10", None),
     "20260610-SQ-4": ("dataset/raw/061026-SQ4.mov", {"flow": (95, 320, 90, 90)},
                       "squat 225lb set4, Equinox hex - LLM-tap 10/10 (1 tap); auto 10/10", None),
-    "20260610-RDL-1": ("dataset/raw/061026-RDL1.mov", {"detect": None},
-                       "RDL 225lb set1 - NO VALID TAP (4 attempts): plate occluded by the rack "
-                       "post; taps land on the LIFTER and track the hip hinge - a body-lock "
-                       "passes the static guard AND counts at rep cadence (lifter-caught, "
-                       "2026-06-11). Use auto (7/8).", None),
-    "20260610-RDL-2": ("dataset/raw/061026-RDL2.mov", {"detect": None},
-                       "RDL 225lb set2 - same body-track trap as RDL-1 (the '8/8 tap' was the "
-                       "lifter's hips, not the plate). Use auto (8/8).", None),
+    "20260610-RDL-1": ("dataset/raw/061026-RDL1.mov", {"flow": (265, 510, 130, 130, 11.0)},
+                       "RDL 225lb set1 - ANY-FRAME tap on the plate at a rep BOTTOM (frame-0 is "
+                       "untappable: plate fused with the lifter + post; frame-0 taps body-lock, "
+                       "lifter-caught). 7/8 with a VERIFIED dead-on plate track - the 8th is "
+                       "segmentation (auto agrees at 7). --gate.", None),
+    "20260610-RDL-2": ("dataset/raw/061026-RDL2.mov", {"flow": (278, 503, 125, 125, 9.0)},
+                       "RDL 225lb set2 - ANY-FRAME tap at the standing pause: 8/8 verified "
+                       "(post-occlusion clips ROM on the 2 deepest reps). Frame-0 = body-lock "
+                       "trap, see RDL-1. --gate.", None),
 }
 
 
@@ -169,10 +179,13 @@ def run(clip, tracker, seed, adaptive, occlusion=False, band=None, scale=None, g
     spec = None
     if scale and tracker != "pose":      # plate scale is N/A for the pose/seed-free path
         spec = ScaleSpec(top_plate=scale["plate"], kind=scale["kind"], angle=scale["angle"])
+    seed_time = None
+    if seed is not None and len(seed) == 5:      # (x,y,w,h,t) = tap-on-ANY-frame seed
+        seed, seed_time = tuple(seed[:4]), float(seed[4])
     cfg = VideoConfig(tracker=tracker, rep_gate=("relative" if adaptive else "absolute"),
                       occlusion_robust=(occlusion and tracker == "flow"), band=band,
                       scale_spec=spec, plausibility_gate=gate)
-    reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed)
+    reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed, seed_time=seed_time)
     mv = [r["mean_velocity"] for r in reps]
     return (len(reps), (sum(mv) / len(mv) if mv else float("nan")),
             meta["track_confidence"], meta.get("scale_suspect", False),

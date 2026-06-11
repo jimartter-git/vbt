@@ -242,6 +242,24 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    corners); ROW-4 untappable (#12). Corpus now 26 clips (06-10 Equinox registered); valid tap
    seeds in `cv_eval.py` CLIPS (RDL taps removed — body-tracks), reproduce with `--gate`.
 
+18. **Tap-on-ANY-frame made the one-tap path HUMAN-GRADE (2026-06-11): reps 0.12/0.07 (24/26
+   exact, every tappable clip exact), velocity-loss 2.4pp vs Vitruve — beats auto (0.31/0.24,
+   6.0pp) and SB (2.57, 9.0pp) decisively, with every track VISUALLY verified riding the plate.**
+   The frame-0 constraint was the real enemy, not tap judgment: `seed_time` + `track.
+   ReplaySource`/`track_bidirectional` seed at the plate's clearest frame and track BOTH ways
+   (drift halves; the RDL body-fusion and dark-iron at-rest texturelessness dissolve). CLIPS
+   seeds may be `(x,y,w,h,t)`; reproduce with `--gate`; the loop is tooling:
+   `analysis/scripts/tap_workbench.py` (motion heatmap → scrub → zoom → tap → tracked-overlay
+   verify). Validated tap rules: seed at a SHARP PAUSE (mid-rep blur = bad corners); tight box
+   on the textured HUB excluding background (background corners outvote a textureless plate —
+   rim box static, hub box 10/10 on ROW-2-0608); mid-set seeds beat early ones; overlay
+   verification is non-negotiable (every failure mode is visible there and nowhere else).
+   Dark-iron any-frame taps read near device-grade ABSOLUTE m/s (BN-1-0609 0.43→0.24 vs Vitruve
+   0.49→0.26). Honest floors that remain: RDL-1 7/8 (segmentation, dead-on track, auto agrees),
+   ROW-4 dead-front (edge-on sliver, untrackable for every tool), BN-3-0605 loss 11.5pp
+   (diagonal-bumper perspective scale varies through the ROM — physics). Product UX = scrub →
+   tap → watch the box track → accept/re-tap.
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip

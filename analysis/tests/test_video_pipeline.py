@@ -495,6 +495,47 @@ def test_plausibility_gate_is_trailing_only():
     assert len(apply_plausibility(reps)) == 6       # kept — gate only strips the tail
 
 
+def test_anyframe_tap_tracks_both_directions():
+    # Tap-on-ANY-frame: seed mid-clip (where the disc is at that moment) and recover
+    # the WHOLE set — reps before and after the seed. This is the human-grade tap:
+    # the user taps the plate at its clearest moment, not wherever frame 0 happens to be.
+    frames = _textured_frames()
+    t_seed = N_REPS * T / 2.0                       # mid-clip
+    pos = -A * np.cos(2 * np.pi * t_seed / T)       # disc position AT the seed time
+    cy = int(round(H / 2.0 - pos / MPP))
+    seed = (W // 2 - R, cy - R, 2 * R, 2 * R)
+    reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow")).estimate(
+        ArrayFrameSource(frames, FPS), seed_bbox=seed, seed_time=t_seed)
+    assert meta["seed_time"] is not None
+    assert meta["track_confidence"] > 0.9           # both legs held lock
+    _assert_reps(reps)                              # full count, both halves measured right
+    # and the stitched trajectory must span (essentially) the WHOLE clip, both sides
+    # of the seed — i.e. reps exist before t_seed, not just after it.
+    assert min(r["t"] for r in reps) < t_seed - T / 2
+    assert max(r["t_end"] for r in reps) > t_seed + T / 2
+
+
+def test_anyframe_tap_at_time_zero_matches_forward_path():
+    # seed_time at/before the first frame degrades to the plain forward track.
+    frames = _textured_frames()
+    reps_fw, _ = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow")).estimate(
+        ArrayFrameSource(frames, FPS), seed_bbox=_seed())
+    reps_t0, _ = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow")).estimate(
+        ArrayFrameSource(frames, FPS), seed_bbox=_seed(), seed_time=0.0)
+    assert len(reps_t0) == len(reps_fw)
+
+
+def test_replay_source_windows_and_reversal():
+    from vbt_video import ReplaySource
+    src = ReplaySource(ArrayFrameSource(_frames()[:30], FPS))
+    ts = [f.t for f in src]
+    assert len(ts) == 30 and all(b > a for a, b in zip(ts, ts[1:]))
+    back = list(src.window(None, ts[10], reverse=True))
+    assert len(back) == 11
+    assert back[0].t == 0.0                          # remapped: starts at the seed frame
+    assert all(b.t > a.t for a, b in zip(back, back[1:]))   # still increasing
+
+
 def test_plausibility_gate_abstains_on_incoherent_positions():
     # When start positions are all over the place relative to ROM (a jittery /
     # resonating track — dark-iron rows), set statistics mean nothing: the gate

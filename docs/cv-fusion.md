@@ -441,6 +441,55 @@ tap-only, including the invalid taps: 0.27/0.18 with two body-sourced counts —
    late-set DRIFT off the dumbbell (~t=20s), which also explains its corrupted loss
    (51% vs 27%): drift, not segmentation, is SC-1's real problem.
 
+### ⚑ HUMAN-GRADE ACHIEVED — tap-on-any-frame (2026-06-11, same day, after the audit)
+
+The audit's failures all traced to one constraint and one missing loop, so both were built:
+
+1. **`seed_time` / tap-on-ANY-frame** (`track.ReplaySource` + `track_bidirectional`, wired
+   through `VideoVelocitySource.estimate(seed_bbox, seed_time)`; CLIPS seeds may now be
+   `(x,y,w,h,t)`): seed the tracker at the frame where the plate is CLEAREST, track forward
+   AND backward, stitch. Dissolves the frame-0 constraint (the RDL body-fusion, the
+   dark-iron at-rest texturelessness) and **halves drift** (it accumulates outward from the
+   seed — the SC-1 fix).
+2. **The human tap loop, as tooling** (`analysis/scripts/tap_workbench.py`): motion
+   heatmaps (SEE what moves), frame scrubbing (seed at a SHARP pause), zoomed placement,
+   and an instant tracked-overlay strip after every tap that MUST be visually verified.
+
+**Final one-tap board (registered seeds, `--gate`, all tracks visually verified riding
+the plate):**
+
+| | SmartBarbell | Auto | tap, frame-0 era | **tap, any-frame** |
+|---|---|---|---|---|
+| reps mean\|err\| (unweighted) | 2.57 | 0.31 | 0.23 | **0.12** |
+| reps mean\|err\| (lift-weighted) | 2.54 | 0.24 | 0.16 | **0.07** |
+| exact / within ±1 (of 26) | 7 / 13 (21) | 19 / 24 | 21 / 25 | **24 / 25** |
+| velocity-loss \|err\| (13 Vitruve clips) | — | 6.0pp | 7.7pp | **2.4pp** |
+
+Every tappable clip is EXACT. The only residuals: RDL-1 −1 (a verified dead-on plate
+track still reads 7 — the 8th rep is segmentation; auto agrees) and dead-front ROW-4 −2
+(auto fallback; the plate is an edge-on sliver with per-rep scale change — 2 reps on a
+direct sliver tap; untrackable for every tool). Velocity-loss 2.4pp ≈ the level of
+SB-vs-Vitruve agreement on SB's BEST clips; 11/13 within 3.7pp, SQ-3 (adversarial TnG)
+at 0.3pp; the one outlier is BN-3-0605 (11.5pp) where diagonal-bumper perspective scale
+varies through the ROM — physics, not tracking. Dark-iron any-frame taps read near
+device-grade ABSOLUTE m/s (BN-1-0609 0.43→0.24 vs Vitruve 0.49→0.26; BN-2-0609 0.44→0.32
+vs 0.41→0.33) — a correct hub-centred box on a 45 iron plate is a good ruler even at 440px.
+
+**The validated tap lessons (encode in the product UI):**
+- **Seed at a sharp PAUSE** (lockout / standing / rep bottom) — mid-rep motion blur gives
+  flow bad corners (SC-1 blurred-lockout tap collapsed to 15 jitter reps; the sharp one
+  is perfect).
+- **Tight box on the textured HUB, excluding background** — on dark iron a rim-sized box
+  admits static background corners that outvote the textureless plate (ROW-2-0608: rim
+  box static, hub box 10/10 verified).
+- **Mid/late-set seeds beat early seeds** when drift is the risk (bidirectional splits
+  the accumulation).
+- **The overlay-verification step is non-negotiable** — every failure mode (body-lock,
+  decoy, drift, jitter) is visible in a 6-frame tracked strip and in nothing else.
+- Product UX = scrub → tap → watch the box track → accept/re-tap; this experiment is
+  the end-to-end proof it reaches human-grade, and the gate/guards handle the racking
+  tail (BN-4's track follows the plate into the rack; the gate drops those moves).
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.

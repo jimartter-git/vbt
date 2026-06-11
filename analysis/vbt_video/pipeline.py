@@ -12,7 +12,7 @@ import numpy as np
 from .frames import FrameSource, PyAVDecoder
 from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, DetectTracker,
                     ColorPlateTracker, PLATE_COLORS, Tracker, auto_seed_bbox, auto_seed_motion,
-                    seed_candidates)
+                    seed_candidates, track_bidirectional)
 from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
 from .plates import ScaleSpec
 
@@ -253,10 +253,13 @@ class VideoVelocitySource:
         d_meta["velocity_reliable"] = False
         return d_reps, d_meta
 
-    def estimate(self, source_or_path, seed_bbox=None):
+    def estimate(self, source_or_path, seed_bbox=None, seed_time=None):
         """`source_or_path`: a FrameSource or a video path. `seed_bbox`: (x,y,w,h)
         around the target; if None, auto-seed from the first frame. The pose tracker
-        ignores `seed_bbox` (it needs no seed) — leave it None there."""
+        ignores `seed_bbox` (it needs no seed) — leave it None there.
+        `seed_time` (s): tap-on-ANY-frame — the bbox is placed at the frame nearest
+        this time and the flow tracker runs BOTH directions from it (the human-grade
+        tap: seed where the plate is clearest, not wherever frame 0 happens to be)."""
         src = source_or_path if isinstance(source_or_path, FrameSource) else PyAVDecoder(source_or_path)
         if self.cfg.tracker == "auto":
             return self._estimate_auto(src)
@@ -265,18 +268,29 @@ class VideoVelocitySource:
             # avoids locking onto a static rack/background plate; fall back to the static
             # largest-blob seeder only if no moving circle is found. (cv-fusion roadmap #6.)
             seed_bbox = auto_seed_motion(src) or auto_seed_bbox(src.first().img)
-        track = self._tracker().track(src, seed_bbox)
-        # Auto-fallback: a low-confidence flow track means lost lock — retry occlusion-robust
-        # and keep whichever held better. Healthy clips skip this entirely (no regression).
-        used_occlusion = self.cfg.occlusion_robust
-        if (self.cfg.auto_occlusion and self.cfg.tracker == "flow"
-                and not self.cfg.occlusion_robust
-                and track.confidence < self.cfg.occlusion_conf):
-            alt = FlowTracker(band=self.cfg.band, anchor_alpha=self.cfg.flow_anchor_alpha,
-                              occlusion_robust=True, robust_scale=self.cfg.robust_scale
-                              ).track(src, seed_bbox)
-            if alt.confidence > track.confidence:
-                track, used_occlusion = alt, True
+        if seed_time is not None and self.cfg.tracker == "flow":
+            # Bidirectional tap: the auto-occlusion retry doesn't apply (each leg already
+            # starts at the best-visibility frame the user chose).
+            track = track_bidirectional(
+                src, seed_bbox, seed_time,
+                lambda: FlowTracker(band=self.cfg.band, anchor_alpha=_flow_anchor(self.cfg),
+                                    occlusion_robust=self.cfg.occlusion_robust,
+                                    robust_scale=self.cfg.robust_scale,
+                                    ellipse_scale=self.cfg.ellipse_scale))
+            used_occlusion = self.cfg.occlusion_robust
+        else:
+            track = self._tracker().track(src, seed_bbox)
+            # Auto-fallback: a low-confidence flow track means lost lock — retry occlusion-robust
+            # and keep whichever held better. Healthy clips skip this entirely (no regression).
+            used_occlusion = self.cfg.occlusion_robust
+            if (self.cfg.auto_occlusion and self.cfg.tracker == "flow"
+                    and not self.cfg.occlusion_robust
+                    and track.confidence < self.cfg.occlusion_conf):
+                alt = FlowTracker(band=self.cfg.band, anchor_alpha=self.cfg.flow_anchor_alpha,
+                                  occlusion_robust=True, robust_scale=self.cfg.robust_scale
+                                  ).track(src, seed_bbox)
+                if alt.confidence > track.confidence:
+                    track, used_occlusion = alt, True
         mpp, scale_meta = self._resolve_scale(src, track)
         # the seed-free detect tracker has jittery per-frame centres -> default a ROM floor
         rom_floor = self.cfg.rom_floor_frac or (0.5 if self.cfg.tracker == "detect" else 0.0)
@@ -312,6 +326,7 @@ class VideoVelocitySource:
             "n_frames": len(track.traj),
             "fps": round(src.fps, 2),
             "seed_bbox": tuple(int(v) for v in seed_bbox) if seed_bbox else None,
+            "seed_time": (round(float(seed_time), 3) if seed_time is not None else None),
             **scale_meta,
         }
         return reps, meta

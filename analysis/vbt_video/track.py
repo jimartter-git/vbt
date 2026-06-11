@@ -17,7 +17,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from .frames import FrameSource
+from .frames import Frame, FrameSource
 
 
 @dataclass
@@ -976,3 +976,94 @@ def auto_seed_bbox(img, min_area_frac: float = 0.004) -> tuple:
         raise ValueError("auto_seed_bbox: largest blob too small — pass --seed")
     x, y, w, h = cv2.boundingRect(best)
     return (x, y, w, h)
+
+
+# ---- Tap-on-ANY-frame: bidirectional tracking from a mid-clip seed ----
+#
+# The one-tap UX was frame-0-only, which makes real clips untappable when the plate is
+# occluded / fused with the lifter / textureless at t=0 yet perfectly clear mid-set
+# (docs/cv-fusion.md finding 6a: the RDLs, the dark-iron rows). The human answer is to
+# tap the plate at its CLEAREST moment — so: seed at any frame, track FORWARD from it,
+# track BACKWARD over the preceding frames (time-reversed), stitch the full trajectory.
+# Bonus: tracker drift accumulates outward from the seed instead of across the whole
+# set, so a mid-set seed roughly halves worst-case drift (the SC-1 late-set drift case).
+
+
+class ReplaySource(FrameSource):
+    """Decode once, hold JPEG-compressed frames in memory, then serve arbitrary
+    sub-windows forward or TIME-REVERSED — the substrate for tap-on-any-frame.
+    (JPEG q92 ≈ 50 KB/frame: a 30 s phone clip is ~45 MB, and the recompression
+    is far below the corner-texture scale flow tracks on.)"""
+
+    def __init__(self, source: FrameSource):
+        self._fps = source.fps
+        self._frames = []
+        for f in source:
+            ok, buf = cv2.imencode(".jpg", f.img, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+            if not ok:
+                raise ValueError("ReplaySource: JPEG encode failed")
+            self._frames.append((float(f.t), buf))
+        if not self._frames:
+            raise ValueError("no frames decoded")
+
+    @property
+    def fps(self) -> float:
+        return self._fps
+
+    def __iter__(self):
+        for t, buf in self._frames:
+            yield Frame(t, cv2.imdecode(buf, cv2.IMREAD_COLOR))
+
+    def nearest_time(self, t: float) -> float:
+        return min(self._frames, key=lambda x: abs(x[0] - t))[0]
+
+    def window(self, t0=None, t1=None, reverse=False) -> "FrameSource":
+        return _WindowView(self, t0, t1, reverse)
+
+
+class _WindowView(FrameSource):
+    """A re-iterable sub-window of a ReplaySource. When `reverse`, frames are served
+    last-to-first with timestamps remapped to t' = t_end − t (still increasing, so
+    the tracker and kinematics are direction-agnostic)."""
+
+    def __init__(self, rep: ReplaySource, t0, t1, reverse):
+        self._rep, self._t0, self._t1, self._rev = rep, t0, t1, reverse
+
+    @property
+    def fps(self) -> float:
+        return self._rep.fps
+
+    def __iter__(self):
+        fr = [x for x in self._rep._frames
+              if (self._t0 is None or x[0] >= self._t0 - 1e-9)
+              and (self._t1 is None or x[0] <= self._t1 + 1e-9)]
+        if self._rev:
+            T = fr[-1][0]
+            for t, buf in reversed(fr):
+                yield Frame(T - t, cv2.imdecode(buf, cv2.IMREAD_COLOR))
+        else:
+            for t, buf in fr:
+                yield Frame(t, cv2.imdecode(buf, cv2.IMREAD_COLOR))
+
+
+def track_bidirectional(source: FrameSource, seed_bbox, seed_time: float,
+                        tracker_factory=None) -> Track:
+    """Tap-on-any-frame: seed `seed_bbox` at (the frame nearest) `seed_time`, run the
+    tracker forward from there and backward over the preceding frames, and stitch one
+    full-clip trajectory. Confidence/size are duration-weighted across the two legs."""
+    make = tracker_factory or (lambda: FlowTracker(ellipse_scale=True))
+    rep = source if isinstance(source, ReplaySource) else ReplaySource(source)
+    t0 = rep.nearest_time(float(seed_time))
+    fwd = make().track(rep.window(t0, None), seed_bbox)
+    n_before = sum(1 for x in rep._frames if x[0] < t0 - 1e-9)
+    if n_before < 2:
+        return fwd                                  # seed at/near frame 0 → plain forward
+    bwd = make().track(rep.window(None, t0, reverse=True), seed_bbox)
+    bt = t0 - bwd.traj[:, 0]                        # reversed-leg times → absolute
+    back = np.column_stack([bt, bwd.traj[:, 1], bwd.traj[:, 2]])[::-1]
+    traj = np.vstack([back[:-1], fwd.traj])         # drop the duplicated seed frame
+    n_f, n_b = len(fwd.traj), len(bwd.traj)
+    conf = (fwd.confidence * n_f + bwd.confidence * n_b) / (n_f + n_b)
+    tpx = (fwd.target_px * n_f + bwd.target_px * n_b) / (n_f + n_b)
+    return Track(traj=traj, target_px=float(tpx), confidence=round(float(conf), 3),
+                 size_cv=max(fwd.size_cv, bwd.size_cv))
