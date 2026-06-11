@@ -416,6 +416,16 @@ tap-only, including the invalid taps: 0.27/0.18 with two body-sourced counts —
 5. **The 06-05 lockout-start "mis-taps" still tracked** — flow's near-seed re-centering
    forgives ±100px; the taps that fail are the ones on the wrong OBJECT or wrong TEXTURE,
    not slightly-wrong positions.
+6a. **Post-audit re-tap attempts (all failed honestly — these clips have NO valid frame-0
+   tap):** RDL-1/2: at frame 0 the working plate is visually FUSED with the lifter's
+   thighs (which is exactly why the body-lock happened) and the "obvious" plate disc is
+   through-the-rack background (re-tap → static guard). ROW-2-0608: a CORRECT tap on the
+   frame-0 plate goes static — dark iron gives flow no texture (re-confirms roadmap #4);
+   the v1 "9" survived only because its mis-placed box sat in the plate's mid-rep sweep
+   zone. **Product idea this motivates: TAP-ON-ANY-FRAME** — let the user tap the plate at
+   its clearest moment and track forward+backward (pairs naturally with roadmap #5
+   non-causal trajectory optimisation); the frame-0 constraint is what makes these clips
+   untappable, not the plates themselves.
 6. **⚑ The BODY-LOCK trap — a mis-tap the static guard CANNOT catch (lifter-caught).**
    The agent's RDL taps landed on the lifter's hip; the hip hinges at exactly rep cadence,
    so the track has high lock-confidence, regular cadence, healthy y-span — it passes the
