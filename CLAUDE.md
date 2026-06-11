@@ -30,12 +30,13 @@ and `docs/sources-and-fusion.md`.
   06-09 bench, 06-10 squats/RDLs all in `sets.csv`/`rep_metrics.csv`. (06-10 filed as set-level
   Vitruve averages — the app crashed before per-rep export.) Next upload → follow the ingestion
   + video triggers below.
-- **⚑ CV milestone (2026-06-10): out-of-the-box BEATS SmartBarbell on reps and on velocity-loss;
-  loses on absolute m/s.** Full current scoreboard (reps · velocity · velocity-loss · one-tap
-  vs auto, with the numbers and the honest weak spots) lives in **`docs/cv-fusion.md` →
-  "Full scoreboard snapshot (2026-06-10)"**. Headlines: auto/no-tap reps **0.55** vs SB **2.57**;
-  velocity-loss **6.2pp** vs SB **9.0pp** (common clips); absolute velocity SB wins (~0.07). See
-  learning #14 for what to do next.
+- **⚑ CV milestone (2026-06-11): the near-failure over-count is FIXED — reps AND velocity-loss
+  tightened together; absolute m/s still open.** Current scoreboard lives in
+  **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-11)"**. Headlines: auto/no-tap reps
+  **0.32** (lift-weighted **0.25**) vs SB 2.57/2.54, 21/22 within ±1, every bench+squat exact;
+  velocity-loss **3.2pp** vs SB **9.0pp** (common clips). Loss now has ONE canonical definition
+  everywhere (`vbt_analysis/metrics.py`). Absolute velocity unchanged (SB wins ~0.07; gated —
+  see #14). Gate design rules: learning #16.
 
 ## Repo map
 
@@ -175,7 +176,8 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    on clean clips; on dark iron a real manual-seed search reproduced auto on 6/7 (candidate-gen
    already finds the seed a human would tap); and on the dead-front row a naive tap *hurts* (the
    big disc is a rack decoy, working plates are edge-on → detect/auto is best — re-confirms #12).
-   **⚑ Highest-leverage fix = the near-failure over-count.** The clips we over-count (BN-2/BN-4
+   **⚑ Highest-leverage fix = the near-failure over-count (FIXED 2026-06-11 → see #16:
+   both clips now exact, loss errors 3.3/1.4pp).** The clips we over-count (BN-2/BN-4
    0609 → 11/12) are the SAME clips whose velocity-loss is wrong — one phantom rep at the grindy
    lockout corrupts the loss formula. It's a *segmentation* problem (lifter racks/drifts at
    near-failure lockout), needs no torch/HD, and tightens BOTH counts and loss on the heaviest
@@ -198,6 +200,31 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    our residual errors cluster in the down-weighted rows while SB's big misses are on the main
    lifts (SQ/DL). When judging a new CV change, prefer the **lift-weighted** number; never trade a
    main-lift regression for an accessory gain.
+
+16. **Rep-plausibility gate (2026-06-11): terminal phantoms are POSITION-anomalous — and the
+   three ways NOT to build the gate (each validated by a real failure; don't re-litigate).**
+   Rack-in / put-down / lockout-drift phantoms don't anchor at the set's own bands: they start
+   off the bottom band or end far above the top band by **0.68–3.3×ROM** (neighbor-tolerant)
+   while every real trailing rep on the corpus sits **≤0.33×ROM** — wide separation, thresholds
+   insensitive ±20%. Implementation: `kinematics._plausibility_gate` (+`apply_plausibility`),
+   `VideoConfig.plausibility_gate` default OFF (manual/one-tap paths byte-identical); the AUTO
+   path applies it to flow/profile picks. The three constraints: (a) **post-selection only** —
+   gating candidates BEFORE flow-verification changes their counts/cadence scores and flips the
+   pick onto a decoy (BN-4 12→3); (b) **trailing-strip only** — the phantom family is terminal
+   by mechanism; judging leading/mid reps positionally kills real reps on distorted-geometry
+   clips (dead-front ROW-4 8→6); (c) **abstain on position-incoherent tracks**
+   (MAD(start)>0.25×ROM) **and never gate the detect path** — position plausibility needs
+   position-trustworthy tracks (dark-iron flow resonator ROW-1-0608: 10→0 without this).
+   Result: reps 0.55→**0.32** (weighted 0.48→**0.25**), loss 6.2→**3.2pp**; no clip worse.
+   Same session: **ONE canonical velocity-loss** (`vbt_analysis/metrics.py::velocity_loss_pct`,
+   best→mean-of-last-2, <3 reps=NaN, phantoms excluded) replaced FOUR divergent formulas
+   (vel_eval / dataset compare best→last / velocity.py best→min / Swift best→min — mirrored in
+   Swift `SetSummary`, keep in lock-step). Measured: k=2 window beats k=1 (3.97 vs 5.57pp
+   weighted); excluding partial_rom reps from the window is noise (<0.2pp) → off. compare.py's
+   printed VL re-baselined (was best→last). Residual known misses, all honest limits: DL-3-0605
+   +1 (11th candidate positionally identical to a real grindy partial — only the one-tap/editor
+   separates them), DL-1-2024 +1 (detect, <4 reps = below gate minimum), ROW-4-0608 −2
+   (dead-front defeats every tool), SC-1 loss 65vs27 (single-DB accessory).
 
 ## ⚑ Video trigger — READ THIS
 

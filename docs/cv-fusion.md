@@ -276,6 +276,87 @@ BN-1 0.43 vs 0.37) while fast diagonal-bumper clips read ~2×. This is the roadm
   buildable here today; classical Hough auto-sizing already proven unsafe to default-on, see
   roadmap #2). Velocity-loss being scale-invariant is why we win the signal that matters anyway.
 
+> ⚑ **Superseded by the 2026-06-11 snapshot below** (the near-failure over-count fix +
+> the ONE canonical loss). The tables above remain the honest 06-10 baseline.
+
+## Full scoreboard snapshot (2026-06-11) — the near-failure fix + ONE canonical loss
+
+Same corpus, same no-cheating rules as 06-10 (auto gets ONLY the clip path; GT/SB scoring-only).
+Regenerate: `cv_eval.py --auto` · `vel_eval.py`. All 42 tests green; one-tap/manual paths
+byte-identical (every change is auto-path-only or definition-level).
+
+### What changed
+
+1. **The near-failure over-count is FIXED — learning #14's "highest-leverage fix", landed.**
+   A **rep-plausibility (position-anchor) gate**: real reps START at the set's own bottom
+   band (the more-consistent extreme) and END no higher than its top band; rack-in /
+   put-down / lockout-drift phantoms violate one of those by 0.68–3.3×ROM (neighbor-
+   tolerant) while every real trailing rep on the corpus sits ≤0.33×ROM — wide separation,
+   thresholds insensitive ±20%. `kinematics._plausibility_gate` + `apply_plausibility`;
+   `VideoConfig.plausibility_gate` (default OFF). The auto path applies it to flow/profile
+   picks. **Three design constraints, each validated by a failure** (do NOT re-litigate):
+   - **Post-selection only.** Gating candidates BEFORE auto's flow-verification changes
+     their counts/cadence-regularity scores and flips the pick onto a decoy (BN-4: 12→3).
+   - **Trailing-strip only.** The phantom family is terminal by mechanism (the lifter
+     racks/sets down AFTER the last rep). Judging leading/mid reps positionally kills real
+     reps on distorted-geometry clips (dead-front ROW-4: 8→6 when gated globally).
+   - **Abstain on incoherent positions** (MAD(start) > 0.25×median-ROM) **and on the
+     detect fallback** — position plausibility needs position-trustworthy tracks
+     (dark-iron ROW-1-0608, a count-right/position-garbage flow resonator: 10→0 without
+     this; trustworthy flow tracks measure MAD ≤ 0.13, resonators 0.5–2.6).
+2. **ONE canonical velocity-loss** — `analysis/vbt_analysis/metrics.py::velocity_loss_pct`:
+   **best rep → mean of the last min(2, n−1) reps; <3 usable reps = NaN; phantom/missed
+   excluded.** Previously FOUR divergent formulas (vel_eval best→mean-last-2, dataset
+   `compare.py` best→last, `vbt_analysis.velocity` best→min, Swift `SetSummary` best→min) —
+   loss numbers were silently incomparable across tools. Now vel_eval, compare.py,
+   velocity.py and (mirrored, with tests) Swift `SetSummary` all share the definition.
+   Measured on the board: the k=2 terminal window beats k=1 decisively (lift-weighted
+   |err| 3.97 vs 5.57pp — single-terminal-rep noise is real); excluding `partial_rom`
+   reps from the window is noise-level (<0.2pp) and asymmetric vs GT → off by default.
+   **Re-baselining:** vel_eval already used this formula → board numbers comparable to
+   06-10; `compare.py`'s printed VL changed semantics (was best→last) → its per-set VL
+   columns re-baseline, labelled in its output.
+
+### (1) Reps — auto/no-tap vs SmartBarbell (Δ from the 06-10 board in brackets)
+
+| | SmartBarbell | Auto, no tap |
+|---|---|---|
+| **Mean abs error** (unweighted) | 2.57 | **0.32** [was 0.55] |
+| **Mean abs error** (lift-weighted) | 2.54 | **0.25** [was 0.48] |
+| Exact (Δ=0) | 7 / 21 | **16 / 22** [was 13] |
+| Within ±1 | 13 / 21 | **21 / 22** [was 19] |
+
+Movers (all improvements; **no clip got worse** — verified per-clip vs the 06-10 baseline):
+BN-2-0609 11→**10**, BN-4-0609 12→**10** (the near-failure targets), ROW-2-0601 11→**10**,
+ROW-3-0601 12→**11** (put-down phantoms — caught by END-overtravel: the bar travels
++2.5–3.1×ROM above the top band when stood up/racked). Every bench and squat on the corpus
+is now EXACT. Remaining errors: ROW-3-0601 +1 · DL-1-2024 +1 (detect, 3 candidates < gate
+minimum) · DL-3-0605 +1 (the 11th candidate starts at the floor and ends low — positionally
+identical to a real grindy partial; one-tap fixes it, position plausibility honestly can't)
+· ROW-2-0608 −1 · ROW-3-0608 +1 · ROW-4-0608 −2 (dead-front, defeats every tool; SB=1).
+
+### (2) Velocity-loss — the count fix repairs the fatigue signal, as predicted
+
+The two clips we over-counted were the two clips whose loss was corrupt — one bug, fixed
+together: **BN-2-0609 loss err 16.5→3.3pp** (43.0→23.2 vs Vitruve 26.5), **BN-4-0609
+21.2→1.4pp** (23.4→46.0 vs Vitruve 44.6).
+
+| | 06-10 | **06-11** | SmartBarbell |
+|---|---|---|---|
+| apples-to-apples, 11 common clips | 6.2pp | **3.2pp** | 9.0pp |
+| all 13 reported clips (unweighted) | 8.5pp | **6.0pp** | — |
+| all 13 (lift-weighted) | 6.7pp | **4.0pp** | — |
+
+Every MAIN-lift clip is now within 4.3pp of Vitruve. The one bad miss is unchanged:
+SC-1 (DB press, accessory, ×0.25) 65.2 vs 26.7 — single-dumbbell tracking, outside the
+barbell wheelhouse (roadmap: pose/watch fusion, not more plate CV).
+
+### Where this leaves the goal
+- **Reps: WON, harder** — 0.32/0.25 vs SB 2.57/2.54; 21/22 within ±1.
+- **Velocity-loss: WON, ~3×** — 3.2pp vs 9.0pp apples-to-apples.
+- **Absolute velocity: still OPEN** (unchanged — gated on HD clips or a learned
+  plate-sizer; neither buildable/approved here).
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.
