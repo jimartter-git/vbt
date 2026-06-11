@@ -371,6 +371,47 @@ barbell wheelhouse (roadmap: pose/watch fusion, not more plate CV).
 - **DL-1-2024 +1 / 0608 rows ±1–2**: detect-path/incoherent-position clips, below the
   plausibility gate's applicability by design (see learning #16).
 
+## The LLM-tap experiment (2026-06-11) — simulating the one-tap UX end-to-end
+
+An agent simulated the product's tap UX on the FULL corpus: viewed frames per clip,
+placed a seed on the working plate, verified it (overlay across the clip + the
+`static_track_suspect` guard as the "did my tap track?" feedback), re-tapped on obvious
+failures — then ran `flow + relative gate + ellipse scale + plausibility gate` (= the
+`--gate` board config; seeds registered in `CLIPS`). Also: the four 2026-06-10 Equinox
+clips (2 squats, 2 RDLs; GT = lifter count, Vitruve crashed) were registered, extending
+the corpus 22 → 26. On the 26-clip corpus:
+
+| | Auto (no tap) | **LLM-tap** (re-tap loop, ≤4 tries) |
+|---|---|---|
+| reps mean abs err (unweighted) | 0.31 | **0.27** |
+| reps mean abs err (lift-weighted) | 0.24 | **0.18** |
+| exact / within ±1 | 18 / 24 of 26 | **20 / 24** of 26 |
+| velocity-LOSS \|err vs Vitruve\| (13 GT clips) | **6.0pp** | 7.7pp |
+
+**Findings (the interesting ones):**
+1. **The tap edges auto on COUNTS but LOSES on velocity-loss.** BN-4-0609 is the tell:
+   the tap counted 10/10 yet its loss read 7% vs Vitruve's 45% — the tapped left plate
+   track is count-right but velocity-wrong, while auto's candidate-verification (lock
+   confidence × cadence regularity) had selected a better-quality track (loss err
+   1.4pp). **Count-equal ≠ velocity-equal; the verification score is a track-quality
+   judge, not just a counting heuristic.** Product implication: feed the user's tap in
+   as a PRIORITY CANDIDATE through the same flow-verification scoring — assist, don't
+   override.
+2. **The static-seed guard is the re-tap UX, working.** 5 of the agent's mis-taps
+   (boxes on floor/background/rack post) were caught instantly as `static_track_suspect`
+   → re-tap. 17/25 tappable clips landed on the first tap; 3 needed three; 2 needed four.
+3. **On matte/dark plates, tap the textured HUB/logo, not the rim.** Flow needs corners;
+   a matte bumper face has none (ROW-1-0601 took 4 attempts until the tap covered the
+   hub). Extends the texture lesson of roadmap #4.
+4. **Auto beat the tap outright on 2 clips:** RDL-1-0610 (a rack post occludes the plate
+   every rep — candidate search finds a trackable target a human can't pick from one
+   frame; auto 7/8 vs best-tap 6/8) and BN-1-0609 (auto 10/10 vs tap 9/10). ROW-4-0608
+   remains UNTAPPABLE (working plates edge-on; the only big disc is a rack decoy —
+   re-verified). One-tap is NOT a strict upgrade; it's a complementary candidate source.
+5. **The 06-05 lockout-start "mis-taps" still tracked** — flow's near-seed re-centering
+   forgives ±100px; the taps that fail are the ones on the wrong OBJECT or wrong TEXTURE,
+   not slightly-wrong positions.
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.

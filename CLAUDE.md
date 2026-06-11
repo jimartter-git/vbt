@@ -226,6 +226,17 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    separates them), DL-1-2024 +1 (detect, <4 reps = below gate minimum), ROW-4-0608 −2
    (dead-front defeats every tool), SC-1 loss 65vs27 (single-DB accessory).
 
+17. **LLM-tap experiment (2026-06-11): the tap edges auto on counts (0.27/0.18 vs 0.31/0.24,
+   26-clip corpus) but LOSES on velocity-loss (7.7 vs 6.0pp) — auto's flow-verification picks
+   better-quality TRACKS than a human seed.** BN-4-0609: tap counted 10/10 but read loss 7% vs
+   Vitruve 45% (auto's candidate: 1.4pp err) — count-equal ≠ velocity-equal. Product rule: the
+   user's tap should enter as a PRIORITY CANDIDATE through the same verification scoring, never
+   blindly override it. The `static_track_suspect` guard worked as the live re-tap feedback (5
+   mis-taps caught instantly); on matte/dark plates tap the textured HUB/logo, not the rim (flow
+   needs corners). Auto beat the tap outright on occlusion (RDL-1-0610 rack post, 7/8 vs 6/8) and
+   ROW-4 stays untappable (#12). Corpus now 26 clips (the 06-10 Equinox squats/RDLs registered);
+   tap seeds in `cv_eval.py` CLIPS, reproduce with `--gate`.
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip

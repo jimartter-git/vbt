@@ -83,15 +83,40 @@ CLIPS = {
                       {"flow": (160, 710, 180, 180)}, "deadlift 135lb set3, diagonal 440px - flow 10/10 (beats SB=6); pose@0.78 vs Vit 0.82", None,
                       {"angle": "diagonal", "plate": 45, "kind": "bumper"}),
     # --- 2026-06-08 barbell rows (dark IRON, front) + 2026-06-09 heavy bench (dark iron) ---
-    # seed-free: use the shipped AUTO fusion (flow⊕detect) (cv_eval --auto). manual seeds N/A (dark iron).
-    "20260608-ROW-1": ("dataset/raw/060826_row1.mov", {"detect": None}, "row TnG, front, dark iron", None),
-    "20260608-ROW-2": ("dataset/raw/060826_row2.mov", {"detect": None}, "row TnG, front, dark iron", None),
-    "20260608-ROW-3": ("dataset/raw/060826_row3.mov", {"detect": None}, "row TnG, front, dark iron", None),
-    "20260608-ROW-4": ("dataset/raw/060826_row4.mov", {"detect": None}, "row TnG, dead-front (hardest)", None),
-    "20260609-BN-1": ("dataset/raw/20260609-BN-1.mov", {"detect": None}, "bench 205lb, dark iron", None),
-    "20260609-BN-2": ("dataset/raw/20260609-BN-2.mov", {"detect": None}, "bench 195lb, dark iron", None),
-    "20260609-BN-3": ("dataset/raw/20260609-BN-3.mov", {"detect": None}, "bench 200lb, dark iron", None),
-    "20260609-BN-4": ("dataset/raw/20260609-BN-4.mov", {"detect": None}, "bench 205lb near-failure, dark iron", None),
+    # detect: None = the shipped AUTO fusion path. flow seeds = the verified LLM-tap seeds
+    # (2026-06-11 tap experiment; run with --gate to reproduce its counts — the tap config
+    # includes the plausibility gate).
+    "20260608-ROW-1": ("dataset/raw/060826_row1.mov", {"flow": (90, 352, 85, 85), "detect": None},
+                       "row TnG, front, dark iron - LLM-tap 10/10 (1 tap, --gate)", None),
+    "20260608-ROW-2": ("dataset/raw/060826_row2.mov", {"flow": (104, 382, 103, 103), "detect": None},
+                       "row TnG, front, dark iron - LLM-tap 9/10 (--gate)", None),
+    "20260608-ROW-3": ("dataset/raw/060826_row3.mov", {"flow": (85, 335, 110, 110), "detect": None},
+                       "row TnG, front, dark iron - LLM-tap 10/10 (--gate)", None),
+    "20260608-ROW-4": ("dataset/raw/060826_row4.mov", {"detect": None},
+                       "row TnG, dead-front (hardest) - UNTAPPABLE: working plates edge-on, "
+                       "big disc = rack decoy (verified again 2026-06-11); auto is best", None),
+    "20260609-BN-1": ("dataset/raw/20260609-BN-1.mov", {"flow": (18, 382, 95, 95), "detect": None},
+                      "bench 205lb, dark iron - LLM-tap 9/10 (3 attempts, --gate); auto 10/10 better", None),
+    "20260609-BN-2": ("dataset/raw/20260609-BN-2.mov", {"flow": (31, 382, 88, 88), "detect": None},
+                      "bench 195lb, dark iron - LLM-tap 10/10 (1 tap, --gate)", None),
+    "20260609-BN-3": ("dataset/raw/20260609-BN-3.mov", {"flow": (66, 402, 76, 76), "detect": None},
+                      "bench 200lb, dark iron - LLM-tap 10/10 (1 tap, --gate)", None),
+    "20260609-BN-4": ("dataset/raw/20260609-BN-4.mov", {"flow": (10, 300, 96, 96), "detect": None},
+                      "bench 205lb near-failure, dark iron - LLM-tap 10/10 count (3 attempts, --gate) "
+                      "BUT its velocity-loss is wrong (7 vs Vit 45%) - auto's verified candidate is the "
+                      "better TRACK; count-equal != velocity-equal", None),
+    # --- 2026-06-10 Equinox squats + RDLs (hex iron, mirror; Vitruve crashed -> GT = lifter
+    # count in sets.csv actual_reps; SB counts in set notes only, not per-rep rows) ---
+    "20260610-SQ-1": ("dataset/raw/061026-SQ1.mov", {"flow": (190, 305, 80, 80)},
+                      "squat 225lb set1, Equinox hex+mirror 60fps - LLM-tap 10/10 (1 tap); auto 10/10", None),
+    "20260610-SQ-4": ("dataset/raw/061026-SQ4.mov", {"flow": (95, 320, 90, 90)},
+                      "squat 225lb set4, Equinox hex - LLM-tap 10/10 (1 tap); auto 10/10", None),
+    "20260610-RDL-1": ("dataset/raw/061026-RDL1.mov", {"flow": (85, 470, 115, 115)},
+                       "RDL 225lb set1 - rack post occludes the plate every rep: best tap 6/8 "
+                       "(4 attempts), auto 7/8 BEATS the tap (candidate search finds what a "
+                       "human can't see through the post)", None),
+    "20260610-RDL-2": ("dataset/raw/061026-RDL2.mov", {"flow": (85, 470, 115, 115)},
+                       "RDL 225lb set2 - LLM-tap 8/8 (1 tap); auto 8/8", None),
 }
 
 
@@ -124,7 +149,8 @@ def gt_counts(set_id):
     """(ref_count, ref_mean, competitor_label, competitor_count) from the DB — falls back
     to the best on-bar app when there's no Vitruve row (e.g. the row clips)."""
     rows = [r for r in csv.DictReader(open(REPS_CSV))
-            if r["set_id"] == set_id and r["metric"] == "mean_velocity"]
+            if r["set_id"] == set_id and r["metric"] == "mean_velocity"
+            and (r["rep_index"] or "").strip()]   # blank rep_index = SET-level row, not a rep
     out = {}
     for r in rows:
         out.setdefault(r["vendor"], []).append(r)
@@ -137,13 +163,13 @@ def gt_counts(set_id):
     return (len(real(ref)) if ref else 0, rmean, comp, len(real(comp)) if comp else 0)
 
 
-def run(clip, tracker, seed, adaptive, occlusion=False, band=None, scale=None):
+def run(clip, tracker, seed, adaptive, occlusion=False, band=None, scale=None, gate=False):
     spec = None
     if scale and tracker != "pose":      # plate scale is N/A for the pose/seed-free path
         spec = ScaleSpec(top_plate=scale["plate"], kind=scale["kind"], angle=scale["angle"])
     cfg = VideoConfig(tracker=tracker, rep_gate=("relative" if adaptive else "absolute"),
                       occlusion_robust=(occlusion and tracker == "flow"), band=band,
-                      scale_spec=spec)
+                      scale_spec=spec, plausibility_gate=gate)
     reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed)
     mv = [r["mean_velocity"] for r in reps]
     return (len(reps), (sum(mv) / len(mv) if mv else float("nan")),
@@ -157,7 +183,8 @@ def _sb_count(sid):
     reps = set()
     for r in csv.DictReader(open(REPS_CSV)):
         if (r["set_id"] == sid and r["vendor"] == "smartbarbell"
-                and r["metric"] == "mean_velocity" and (r["flag"] or "") != "phantom"):
+                and r["metric"] == "mean_velocity" and (r["flag"] or "") != "phantom"
+                and (r["rep_index"] or "").strip()):   # skip set-level rows
             reps.add(r["rep_index"])
     return len(reps) if reps else None
 
@@ -214,6 +241,9 @@ def main():
     ap.add_argument("--set", dest="only")
     ap.add_argument("--adaptive", action="store_true", help="relative (adaptive) rep gating")
     ap.add_argument("--occlusion", action="store_true", help="flow coast + re-acquire")
+    ap.add_argument("--gate", action="store_true",
+                    help="enable the rep-plausibility gate on the seeded paths (the tap-UX "
+                         "config; the auto path always applies it post-selection)")
     ap.add_argument("--scale", action="store_true",
                     help="angle-aware px→m via each clip's plate+angle (ScaleSpec); "
                          "side=trusted, diagonal=anchored+lower conf, front=relative-only")
@@ -238,13 +268,15 @@ def main():
         scale = CLIPS[sid][4] if args.scale and len(CLIPS[sid]) > 4 else None
         clip = os.path.join(REPO, clip_rel)
         gtn, gtmean, comp, compn = gt_counts(sid)
+        if not gtn:                        # no per-rep GT rows → the lifter's logged count
+            gtn = _true_gt(sid, gtn)
         compstr = f"{comp[:5]}={compn}" if comp else "-"
         first = True
         for tracker, seed in trackers.items():
             rownote = note if first else ""
             try:
                 n, mean, conf, suspect, static = run(clip, tracker, seed, args.adaptive,
-                                                     args.occlusion, band, scale)
+                                                     args.occlusion, band, scale, args.gate)
                 delta = f"{n}({n - gtn:+d})"
                 meanstr = (f"{mean:.2f}?" if suspect else f"{mean:.2f}")   # ? = scale flagged
                 # A barely-moving but confident track = seed on a STATIC object (rack/background
