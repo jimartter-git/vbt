@@ -226,16 +226,21 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    separates them), DL-1-2024 +1 (detect, <4 reps = below gate minimum), ROW-4-0608 −2
    (dead-front defeats every tool), SC-1 loss 65vs27 (single-DB accessory).
 
-17. **LLM-tap experiment (2026-06-11): the tap edges auto on counts (0.27/0.18 vs 0.31/0.24,
-   26-clip corpus) but LOSES on velocity-loss (7.7 vs 6.0pp) — auto's flow-verification picks
-   better-quality TRACKS than a human seed.** BN-4-0609: tap counted 10/10 but read loss 7% vs
-   Vitruve 45% (auto's candidate: 1.4pp err) — count-equal ≠ velocity-equal. Product rule: the
-   user's tap should enter as a PRIORITY CANDIDATE through the same verification scoring, never
-   blindly override it. The `static_track_suspect` guard worked as the live re-tap feedback (5
-   mis-taps caught instantly); on matte/dark plates tap the textured HUB/logo, not the rim (flow
-   needs corners). Auto beat the tap outright on occlusion (RDL-1-0610 rack post, 7/8 vs 6/8) and
-   ROW-4 stays untappable (#12). Corpus now 26 clips (the 06-10 Equinox squats/RDLs registered);
-   tap seeds in `cv_eval.py` CLIPS, reproduce with `--gate`.
+17. **LLM-tap experiment (2026-06-11, lifter-audited): the tap (with re-tap + fallback) edges
+   auto on counts (0.23/0.16 vs 0.31/0.24, 26-clip corpus) but LOSES on velocity-loss (7.7 vs
+   6.0pp) — auto's flow-verification picks better-quality TRACKS than a human seed.** BN-4-0609:
+   tap counted 10/10 but read loss 7% vs Vitruve 45% (auto's candidate: 1.4pp) — count-equal ≠
+   velocity-equal. Product rule: the user's tap enters as a PRIORITY CANDIDATE through the same
+   verification scoring, never a blind override. **⚑ The BODY-LOCK trap (lifter-caught): a tap
+   on the LIFTER (RDL hip) tracks the hinge at perfect rep cadence — passes the static guard,
+   would pass verification scoring, produces plausible counts with meaningless velocity. Only
+   the human reviewing the tracked overlay catches it** → the tap-confirm UI must play back WHAT
+   is tracked; cheap guard to build: `no_plate_at_lock` (no plate-circle detectable at the locked
+   target). Other audit findings: ROW-2-0608's tap was wrong at frame 0 and recovered by luck;
+   SC-1's −1 and bad loss are late-set DRIFT off the DB, not segmentation. Static guard caught 5
+   floor/background mis-taps live; matte plates need the tap on the textured HUB/logo (flow needs
+   corners); ROW-4 untappable (#12). Corpus now 26 clips (06-10 Equinox registered); valid tap
+   seeds in `cv_eval.py` CLIPS (RDL taps removed — body-tracks), reproduce with `--gate`.
 
 ## ⚑ Video trigger — READ THIS
 

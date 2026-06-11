@@ -381,12 +381,17 @@ failures — then ran `flow + relative gate + ellipse scale + plausibility gate`
 clips (2 squats, 2 RDLs; GT = lifter count, Vitruve crashed) were registered, extending
 the corpus 22 → 26. On the 26-clip corpus:
 
-| | Auto (no tap) | **LLM-tap** (re-tap loop, ≤4 tries) |
+| | Auto (no tap) | **LLM-tap** (re-tap loop ≤4 tries, + auto fallback where no valid tap exists) |
 |---|---|---|
-| reps mean abs err (unweighted) | 0.31 | **0.27** |
-| reps mean abs err (lift-weighted) | 0.24 | **0.18** |
-| exact / within ±1 | 19 / 24 of 26 | **21 / 24** of 26 |
+| reps mean abs err (unweighted) | 0.31 | **0.23** |
+| reps mean abs err (lift-weighted) | 0.24 | **0.16** |
+| exact / within ±1 | 19 / 24 of 26 | **21 / 25** of 26 |
 | velocity-LOSS \|err vs Vitruve\| (13 GT clips) | **6.0pp** | 7.7pp |
+
+⚠ Corrected 2026-06-11 (lifter-audited): the experiment's first scoring (0.27/0.18) silently
+counted TWO invalid taps — see finding 6. With those reclassified as tap-failures (terminal
+state = auto fallback, like ROW-4) the honest tap column is the one above. Strictly-as-run,
+tap-only, including the invalid taps: 0.27/0.18 with two body-sourced counts — do not quote it.
 
 **Findings (the interesting ones):**
 1. **The tap edges auto on COUNTS but LOSES on velocity-loss.** BN-4-0609 is the tell:
@@ -411,6 +416,20 @@ the corpus 22 → 26. On the 26-clip corpus:
 5. **The 06-05 lockout-start "mis-taps" still tracked** — flow's near-seed re-centering
    forgives ±100px; the taps that fail are the ones on the wrong OBJECT or wrong TEXTURE,
    not slightly-wrong positions.
+6. **⚑ The BODY-LOCK trap — a mis-tap the static guard CANNOT catch (lifter-caught).**
+   The agent's RDL taps landed on the lifter's hip; the hip hinges at exactly rep cadence,
+   so the track has high lock-confidence, regular cadence, healthy y-span — it passes the
+   static guard AND would pass flow-verification scoring, and it produced plausible counts
+   (6/8, 8/8) with meaningless bar-velocity. **Caught only by the lifter reviewing the
+   tracked-overlay frames** ("that's my butt, not the plate"). Three consequences:
+   (a) the tap-confirm UI must show WHAT is being tracked (overlay playback), not just a
+   count — the human review IS the verification layer for body-locks; (b) a cheap
+   programmatic guard exists to build: no plate-circle detectable at/near the locked
+   target = `no_plate_at_lock` flag (the hip has no rim); (c) same audit found the
+   ROW-2-0608 tap was misplaced at frame 0 (background person) and only recovered because
+   flow snapped to the plate sweeping through — a count right by luck — and SC-1's miss is
+   late-set DRIFT off the dumbbell (~t=20s), which also explains its corrupted loss
+   (51% vs 27%): drift, not segmentation, is SC-1's real problem.
 
 ## Roadmap — to genuinely best-in-class
 

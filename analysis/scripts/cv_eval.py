@@ -111,12 +111,14 @@ CLIPS = {
                       "squat 225lb set1, Equinox hex+mirror 60fps - LLM-tap 10/10 (1 tap); auto 10/10", None),
     "20260610-SQ-4": ("dataset/raw/061026-SQ4.mov", {"flow": (95, 320, 90, 90)},
                       "squat 225lb set4, Equinox hex - LLM-tap 10/10 (1 tap); auto 10/10", None),
-    "20260610-RDL-1": ("dataset/raw/061026-RDL1.mov", {"flow": (85, 470, 115, 115)},
-                       "RDL 225lb set1 - rack post occludes the plate every rep: best tap 6/8 "
-                       "(4 attempts), auto 7/8 BEATS the tap (candidate search finds what a "
-                       "human can't see through the post)", None),
-    "20260610-RDL-2": ("dataset/raw/061026-RDL2.mov", {"flow": (85, 470, 115, 115)},
-                       "RDL 225lb set2 - LLM-tap 8/8 (1 tap); auto 8/8", None),
+    "20260610-RDL-1": ("dataset/raw/061026-RDL1.mov", {"detect": None},
+                       "RDL 225lb set1 - NO VALID TAP (4 attempts): plate occluded by the rack "
+                       "post; taps land on the LIFTER and track the hip hinge - a body-lock "
+                       "passes the static guard AND counts at rep cadence (lifter-caught, "
+                       "2026-06-11). Use auto (7/8).", None),
+    "20260610-RDL-2": ("dataset/raw/061026-RDL2.mov", {"detect": None},
+                       "RDL 225lb set2 - same body-track trap as RDL-1 (the '8/8 tap' was the "
+                       "lifter's hips, not the plate). Use auto (8/8).", None),
 }
 
 
