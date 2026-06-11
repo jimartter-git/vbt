@@ -100,6 +100,37 @@ Metric's own stated table (mean velocity; Novice / Intermediate / Advanced):
 advanced. Deadlift MVT is ~**0.15–0.20**. Lift- & lifter-specific; set once and
 keep it.
 
+## 7b. OVR Performance conversion charts *(vendor ad graphics, 2026-06-12 — UNVERIFIED weak priors)*
+
+OVR Performance (bar-mounted VBT device, Vitruve-style) publishes two conversion tables
+(lifter-supplied screenshots; OVR's own fine print: "estimates — each athlete will have a
+unique load-velocity profile"):
+
+**%1RM → mean velocity (m/s):**
+
+| %1RM | Squat | Bench | Deadlift |
+|---|---|---|---|
+| 40% | 1.20 | 1.05 | – |
+| 50% | 1.05 | 0.90 | – |
+| 60% | 0.90 | 0.75 | 0.60 |
+| 70% | 0.75 | 0.60 | 0.50 |
+| 80% | 0.60 | 0.45 | 0.45 |
+| 90% | 0.45 | 0.30 | 0.30 |
+| 100% | **0.30** | **0.18** | **0.18** |
+
+**RPE ↔ RIR ↔ velocity-loss ↔ last-rep velocity:** RPE 5.5→10 ↔ RIR 4→0 ↔
+VL 5→45% ↔ last-rep 0.55→0.25 m/s (generic, lift-unspecified frame).
+
+**Why filed (cross-vendor convergence — strengthens, doesn't replace, §6/§7):**
+- OVR's 100%-1RM row sits inside Metric's MVT bands and independently re-confirms
+  **deadlift MVT ≈ 0.18, not 0.25** (learning #6). Two vendors, same answer.
+- OVR RPE 8 ↔ ~20–25% VL = exactly Metric's strength anchor (§6); RPE 10 ↔ 40–45% ≈
+  "failure ~40%". The VL→RPE mapping is now double-sourced.
+- vs the PERSONAL curves (`dataset/priors/`): the lifter's grind velocities sit BELOW
+  OVR's generic floors on all three lifts (SQ 0.22 vs 0.30, BN 0.10 vs 0.18, DL 0.12 vs
+  0.18) — an "advanced" profile, and a concrete demonstration of why personal priors
+  must override universal ones (§5). Use OVR/Metric tables as cold-start bounds only.
+
 ## 8. Product/UX ideas worth stealing
 
 - **Readiness from first-3-reps vs 6-week baseline** — zero-input autoregulation.
