@@ -412,6 +412,104 @@ def test_relative_gate_does_not_invent_reps_from_jitter():
     assert abs(len(reps_rel) - 3) <= 1
 
 
+def _traj_with_rack_tail(n_reps=4, A=0.25, T=2.0, drift_m=0.15, lift_m=0.6,
+                         fps=60.0, mpp=0.005):
+    """`n_reps` clean reps, then the near-failure ENDGAME (the 20260609 BN-2/BN-4
+    phantom source): from lockout (top), a slow drift UP into the hooks, then a big
+    fast rack LIFT — two positive-velocity runs that START at the top, not the set's
+    bottom anchor. Returns (traj, mpp)."""
+    ts, cys = [], []
+    cur = 0.0
+    for _ in range(n_reps):
+        nf = int(T * fps)
+        for i in range(nf):
+            tt = i / fps
+            pos = -A * np.cos(2 * np.pi * tt / T)
+            ts.append(cur + tt)
+            cys.append(H / 2.0 - pos / mpp)
+        cur += nf / fps
+    # hold at the bottom a beat, rise to lockout (the last rep's top), pause...
+    def _move(p0, p1, dur):
+        nonlocal cur
+        nf = max(2, int(dur * fps))
+        for i in range(nf):
+            a = i / (nf - 1)
+            ts.append(cur + i / fps)
+            cys.append(H / 2.0 - (p0 + a * (p1 - p0)) / mpp)
+        cur += nf / fps
+    _move(-A, A, T / 2)              # final ascent to lockout
+    _move(A, A, 0.8)                 # hold at lockout
+    _move(A, A + drift_m, 0.7)       # slow drift UP toward the hooks (phantom 1)
+    _move(A + drift_m, A + drift_m, 0.5)
+    _move(A + drift_m, A + drift_m + lift_m, 0.5)   # fast rack lift (phantom 2)
+    return np.column_stack([np.asarray(ts), np.full(len(ts), W / 2.0),
+                            np.asarray(cys)]), mpp
+
+
+def test_plausibility_gate_drops_rack_phantoms():
+    # Without the gate the lockout-drift + rack-lift runs read as extra "reps" (the
+    # near-failure over-count that also corrupts velocity-loss — learning #14). The
+    # position-anchor gate drops them: they start at the TOP, not the set's bottom band.
+    from vbt_video.kinematics import trajectory_to_reps
+    traj, mpp = _traj_with_rack_tail(n_reps=4)
+    n_real = 4 + 1                                       # 4 cycles + the final ascent
+    off = trajectory_to_reps(traj, mpp, rep_gate="relative")
+    on = trajectory_to_reps(traj, mpp, rep_gate="relative", plausibility=True)
+    assert len(off) > n_real                             # phantoms got counted before
+    assert len(on) == n_real                             # gate drops exactly the phantoms
+    # and the surviving reps are the REAL ones (start at the bottom anchor)
+    starts = [r["pos_start"] for r in on]
+    assert max(starts) - min(starts) < 0.2 * 2 * 0.25 / 1  # tight bottom band (m)
+
+
+def test_plausibility_gate_keeps_partial_reps():
+    # Partial (short-lockout) reps end BELOW the top band — the gate is one-sided and
+    # must keep them (the SQ-3 touch-and-go lesson: count, flag, don't drop).
+    from vbt_video.kinematics import trajectory_to_reps
+    traj, mpp = _mixed_rom_traj([(0.25, 2.0)] * 3 + [(0.10, 1.0)] * 2)
+    on = trajectory_to_reps(traj, mpp, rep_gate="relative", plausibility=True)
+    off = trajectory_to_reps(traj, mpp, rep_gate="relative")
+    assert len(on) == len(off)                           # gate is a no-op here
+    assert sum(1 for r in on if r.get("flag") == "partial_rom") >= 2
+
+
+def test_plausibility_gate_noop_on_clean_set():
+    from vbt_video.kinematics import trajectory_to_reps
+    traj, mpp = _mixed_rom_traj([(0.25, 2.0)] * 5)
+    on = trajectory_to_reps(traj, mpp, rep_gate="relative", plausibility=True)
+    off = trajectory_to_reps(traj, mpp, rep_gate="relative")
+    assert [r["t"] for r in on] == [r["t"] for r in off]  # identical reps
+
+
+def test_plausibility_gate_is_trailing_only():
+    # A LEADING positional outlier (e.g. real reps measured with distorted geometry at
+    # the start — the dead-front ROW-4 case, or a clip that opens mid-rep) is never
+    # stripped: the validated phantom family (rack-in / put-down / lockout drift) is
+    # TERMINAL by mechanism, and judging early reps positionally mis-fires.
+    from vbt_video.kinematics import apply_plausibility
+    reps = [dict(rep_index=i + 1, t=float(i), t_end=i + 0.8, mean_velocity=0.5,
+                 peak_velocity=0.8, rom=50.0, pos_start=0.0, pos_end=0.5)
+            for i in range(6)]
+    reps[0]["pos_start"] = 0.6                      # leading outlier (>0.5×ROM off)
+    reps[0]["pos_end"] = 1.1
+    assert len(apply_plausibility(reps)) == 6       # kept — gate only strips the tail
+
+
+def test_plausibility_gate_abstains_on_incoherent_positions():
+    # When start positions are all over the place relative to ROM (a jittery /
+    # resonating track — dark-iron rows), set statistics mean nothing: the gate
+    # must abstain entirely rather than strip real reps.
+    import numpy as np
+    from vbt_video.kinematics import apply_plausibility
+    rng = np.random.default_rng(1)
+    reps = []
+    for i in range(10):
+        s = float(rng.uniform(-0.5, 0.5))           # MAD(start) >> 0.25 × ROM (0.1 m)
+        reps.append(dict(rep_index=i + 1, t=float(i), t_end=i + 0.8, mean_velocity=0.5,
+                         peak_velocity=0.8, rom=10.0, pos_start=s, pos_end=s + 0.1))
+    assert len(apply_plausibility(reps)) == 10      # abstained — nothing stripped
+
+
 def test_hybrid_anthro_scale_with_implement_position_tracker():
     # The Scaler seam is independent of the Tracker: track the disc for POSITION (CSRT),
     # but take px→m from a body segment (a separate pose pass) — the plate-type/angle-robust

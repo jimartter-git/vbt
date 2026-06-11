@@ -71,6 +71,12 @@ class VideoConfig:
     rom_floor_frac: float = 0.0
     # measure plate diameter as the ellipse MAJOR axis (fix diagonal-plate 2x velocity, roadmap #2)
     ellipse_scale: bool = False
+    # Rep-plausibility (position-anchor) gate: reject candidate reps that don't start at
+    # the set's own bottom band / end wildly above its top band — the rack-in / un-rack /
+    # near-failure lockout-drift phantoms (the over-count that corrupts velocity-loss,
+    # learning #14). Relative to the set's own median ROM (tempo/scale/lift-invariant).
+    # Default OFF (validated paths byte-identical); the AUTO path enables it.
+    plausibility_gate: bool = False
     # learned/profile tracker (tracker='profile'): the working bumper colour for this gym/session
     # ('blue'/'red'/'green'/'yellow' or an (hsv_lo,hsv_hi) tuple). Reliable colour detect+size.
     plate_color: object = None
@@ -198,6 +204,10 @@ class VideoVelocitySource:
         detect's covers flow's dark-plate failure."""
         from dataclasses import replace
         import numpy as _np
+        from .kinematics import apply_plausibility
+        # NOTE: the plausibility gate is applied POST-selection (on the winning track
+        # only), never inside the candidate runs — gating before selection changes the
+        # candidates' counts/regularity and can flip the pick onto a decoy (BN-4 12→3).
         base = replace(self.cfg, rep_gate="relative", ellipse_scale=True)
         # PROFILE-FIRST when this gym's plate colour is known (reliable detect+size -> the
         # most accurate VELOCITY; beats SB absolute on coloured plates). Then flow, then detect.
@@ -205,7 +215,7 @@ class VideoVelocitySource:
             p_reps, p_meta = VideoVelocitySource(replace(base, tracker="profile")).estimate(src)
             if p_meta.get("track_confidence", 0.0) >= 0.6 and len(p_reps) >= 3:
                 p_meta["auto_pick"] = "profile"; p_meta["velocity_reliable"] = True
-                return p_reps, p_meta
+                return apply_plausibility(p_reps), p_meta
 
         def _regularity(reps):
             if len(reps) < 3:
@@ -230,11 +240,14 @@ class VideoVelocitySource:
             _, f_reps, f_meta = best
             f_meta["auto_pick"] = "flow"
             f_meta["velocity_reliable"] = True
-            return f_reps, f_meta
+            return apply_plausibility(f_reps), f_meta
         # No candidate held lock (dark/low-texture iron, hex, etc.) -> DetectTracker for the
         # COUNT, abstaining on absolute velocity (jittery per-frame centres; honest-velocity rule).
         d_reps, d_meta = VideoVelocitySource(replace(base, tracker="detect")).estimate(src)
         d_meta["auto_pick"] = "detect"
+        # NO plausibility gate on the detect fallback: its per-frame centres are jittery
+        # (the very reason this path abstains on velocity), so position-anchor
+        # plausibility has nothing trustworthy to anchor on.
         for r in d_reps:
             r["velocity_relative_only"] = True
         d_meta["velocity_reliable"] = False
@@ -269,7 +282,8 @@ class VideoVelocitySource:
         rom_floor = self.cfg.rom_floor_frac or (0.5 if self.cfg.tracker == "detect" else 0.0)
         reps = trajectory_to_reps(track.traj, mpp, self.cfg.peak_min, self.cfg.rom_min,
                                   rom_floor_frac=rom_floor,
-                                  rep_gate=self.cfg.rep_gate)
+                                  rep_gate=self.cfg.rep_gate,
+                                  plausibility=self.cfg.plausibility_gate)
         scale_conf, scale_suspect = self._scale_confidence(track, reps, scale_meta)
         if scale_suspect:
             # Honest-velocity rule (CLAUDE.md / docs): when the px→m ruler can't be

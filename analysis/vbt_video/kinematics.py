@@ -106,11 +106,95 @@ def _segment_concentric(t, v, pos, peak_min, rom_min, fs, rep_gate="absolute",
     return [(s, e) for (s, e, peak, rom) in floored if peak >= peak_gate]
 
 
+# --- Rep-plausibility (position-anchor) gate constants ---
+# A real rep's concentric STARTS at the set's own bottom anchor (the more-consistent
+# extreme — docs/sources-and-fusion.md "Tempo-invariance") and ends no higher than the
+# set's top band; rack-in / put-down / near-failure lockout-drift phantoms violate one
+# of those. The gate is TRAILING-ONLY: it strips anomalous reps from the set's END,
+# stopping at the first in-band rep — the validated phantom family is terminal by
+# mechanism (the lifter racks/sets down AFTER the last rep; learning #14), and judging
+# mid/leading reps positionally mis-fires on distorted-geometry clips (dead-front
+# ROW-4: real reps at +0.8–1.6×ROM). Corpus evidence (2026-06-11): trailing phantoms
+# deviate 0.68–3.3×ROM (neighbor-tolerant) while every real trailing rep is ≤0.33×ROM —
+# a wide separation, so the thresholds are not finely tuned. All thresholds are
+# fractions of the set's own median ROM (scale- and tempo-invariant).
+_ANCHOR_DEV_FRAC = 0.5      # start-deviation (vs median, neighbor-tolerant) → anomalous
+_OVERTRAVEL_FRAC = 1.0      # end ABOVE median end by this × median ROM → anomalous
+#   (one-sided: ending BELOW the band is a partial/grindy rep — kept and flagged, never cut)
+_MIN_REPS_FOR_GATE = 4      # need a meaningful median before trusting set statistics
+_GATE_MAX_START_MAD = 0.25  # applicability: if MAD(start)/median ROM exceeds this, the
+#   trajectory's positions are too incoherent for position plausibility — gate abstains
+#   (trustworthy flow tracks measure ≤0.13; dark-iron resonators 0.5–2.6: huge margin)
+
+
+def _plausibility_gate(reps):
+    """Strip TRAILING candidate reps that don't anchor at the set's own bottom/top
+    bands — the rack-in / put-down / near-failure lockout-drift phantoms (the
+    over-count that also corrupts velocity-loss; learning #14).
+
+    Start deviation is neighbor-tolerant (min of |start − median| and the step from
+    the previous rep), so a slowly drifting bottom (posture creep, row arc) never
+    reads as anomalous while an isolated terminal jump does. The gate ABSTAINS
+    entirely when the track's start positions are incoherent (MAD > 0.25×ROM) —
+    position plausibility means nothing on positions you can't trust (the same
+    honest-abstention rule as detect-path velocity)."""
+    if len(reps) < _MIN_REPS_FOR_GATE:
+        return reps
+    starts = np.array([r["pos_start"] for r in reps], dtype=float)
+    med_start = float(np.median(starts))
+    med_end = float(np.median([r["pos_end"] for r in reps]))
+    med_rom = float(np.median([r["rom"] for r in reps])) / 100.0   # cm → m
+    if med_rom <= 0:
+        return reps
+    if float(np.median(np.abs(starts - med_start))) > _GATE_MAX_START_MAD * med_rom:
+        return reps                       # positions incoherent → abstain
+
+    def _anomalous(i):
+        sdev = abs(starts[i] - med_start)
+        if i > 0:                         # neighbor tolerance (drift-proof)
+            sdev = min(sdev, abs(starts[i] - starts[i - 1]))
+        over = reps[i]["pos_end"] - med_end
+        return (sdev > _ANCHOR_DEV_FRAC * med_rom
+                or over > _OVERTRAVEL_FRAC * med_rom)
+
+    n = len(reps)
+    while n > 3 and _anomalous(n - 1):    # strip from the END; stop at an in-band rep
+        n -= 1
+    kept = reps[:n]
+    if len(kept) != len(reps):
+        for i, r in enumerate(kept, 1):
+            r["rep_index"] = i
+    return kept
+
+
+def apply_plausibility(reps):
+    """Post-hoc plausibility gate for reps already produced by `trajectory_to_reps`.
+
+    The AUTO path applies the gate AFTER candidate selection (on the winning track
+    only) — gating every candidate's count BEFORE selection changes the
+    confidence×regularity scores and can flip the pick onto a decoy (verified on
+    20260609-BN-4: pre-selection gating flipped the winner, 12→3). Post-selection,
+    the validated selection behaviour is untouched and the gate is purely an output
+    filter. `partial_rom` flags are recomputed on the kept reps (the phantom runs
+    no longer contaminate the median)."""
+    kept = _plausibility_gate([dict(r) for r in reps])
+    if len(kept) != len(reps) and kept:
+        med = float(np.median([r["rom"] for r in kept]))
+        for r in kept:
+            if med > 0 and r["rom"] < 0.7 * med:
+                r["flag"] = "partial_rom"
+            elif r.get("flag") == "partial_rom":
+                del r["flag"]
+    return kept
+
+
 def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
-                       rep_gate="absolute", rom_floor_frac=0.0):
+                       rep_gate="absolute", rom_floor_frac=0.0, plausibility=False):
     """`track_traj` = N x 3 (t, cx, cy) px. Returns list of per-rep dicts.
     `rep_gate`: "absolute" (fixed ROM/peak, validated) or "relative" (adaptive,
-    tempo-invariant — see `_segment_concentric`)."""
+    tempo-invariant — see `_segment_concentric`). `plausibility`: apply the
+    position-anchor rep-plausibility gate (see `_plausibility_gate`; default off —
+    the validated paths are unchanged; the auto path enables it)."""
     t = track_traj[:, 0].astype(float)
     y_px = track_traj[:, 2].astype(float)
     # image y grows DOWNWARD → bar up = y decreasing → vertical position (up +):
@@ -145,10 +229,19 @@ def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
         out.append({
             "rep_index": i,
             "t": round(float(tu[s]), 3),                            # rep start time (s)
+            "t_end": round(float(tu[e]), 3),                        # rep end time (s)
             "mean_velocity": round(float(seg_v[a0:a1 + 1].mean()), 3),
             "peak_velocity": round(peak, 3),
             "rom": round(float(posu_s[e] - posu_s[s]) * 100, 1),   # cm
+            # concentric start/end position (m, up-positive, arbitrary origin) — the rep
+            # boundaries the manual editor binds to, and the plausibility gate's anchors
+            "pos_start": round(float(posu_s[s]), 3),
+            "pos_end": round(float(posu_s[e]), 3),
         })
+    # Rep plausibility BEFORE the partial/floor logic, so phantom runs (rack-in,
+    # un-rack, lockout drift) don't contaminate the medians those rules use.
+    if plausibility:
+        out = _plausibility_gate(out)
     # Count vs measure: flag reps whose ROM is well under the set median as
     # `partial_rom` so downstream velocity/loss comparisons can exclude them
     # (a partial/no-lockout rep is counted, but isn't apples-to-apples). See
