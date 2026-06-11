@@ -354,8 +354,22 @@ barbell wheelhouse (roadmap: pose/watch fusion, not more plate CV).
 ### Where this leaves the goal
 - **Reps: WON, harder** — 0.32/0.25 vs SB 2.57/2.54; 21/22 within ±1.
 - **Velocity-loss: WON, ~3×** — 3.2pp vs 9.0pp apples-to-apples.
+- **One-tap board: unchanged from 06-10** (0.36) — the gate is default-OFF outside the
+  auto path, so the manual/one-tap paths are byte-identical (full suite re-verified).
+  Note the auto path (0.32) now slightly BEATS the 06-10 one-tap number: the over-counts
+  the tap used to buy back are gone.
 - **Absolute velocity: still OPEN** (unchanged — gated on HD clips or a learned
   plate-sizer; neither buildable/approved here).
+
+### Why the residual errors are at the segmentation floor (assessed, not assumed)
+- **ROW-3-0601 +1**: a 4 cm mid-set micro-rep (0.12×median ROM). A flow-path relative-ROM
+  floor CANNOT remove it without killing SC-1's real grindy rep 9 (also 0.12×median, GT
+  rep) — measured, the two are numerically identical. Only peak-shape/prior/human-tap
+  separates them. Don't re-try ROM floors here.
+- **DL-3-0605 +1**: the 11th candidate starts at the floor and ends low — positionally a
+  real grindy partial. The one-tap/manual editor is the resolution (per learning #11).
+- **DL-1-2024 +1 / 0608 rows ±1–2**: detect-path/incoherent-position clips, below the
+  plausibility gate's applicability by design (see learning #16).
 
 ## Roadmap — to genuinely best-in-class
 
@@ -426,7 +440,13 @@ The Python side exposes proposals + editable boundaries; the app makes them corr
    `auto_occlusion`, so it can't regress textured-plate clips). Texture, not just
    clutter, should drive tracker choice. (Bumpers = high texture/colour → flow is
    fine; dark iron = detector.)
-7. **Bilateral plate tracking (track BOTH bar ends).** SmartBarbell tracks the plate on
+7. **Bilateral plate tracking (track BOTH bar ends).** ⚑ *2026-06-11 assessment: currently
+   UNVALIDATABLE on this corpus — its showcase failure (BN-1-0609 edge-clipping, SB 3/10) is
+   already exact via candidate-gen picking the visible end, and every clip with two visible
+   plate faces is exact too; the remaining errors are front-view/dark-iron clips where the
+   second plate is also edge-on. Build it when a clip exists that exhibits single-end failure
+   with the other end visible (validation discipline: no feature the board can't judge).*
+   SmartBarbell tracks the plate on
    *each* end of the bar when both are in frame (the red + green boxes) and uses one if
    only one is visible — observed 2026-06-09. We should match and exceed this: track both
    plate ends and **fuse** them. Wins: (a) redundancy — if one end clips the frame,
