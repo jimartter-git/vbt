@@ -51,6 +51,7 @@ and `docs/sources-and-fusion.md`.
 | `docs/vbt-reference.md` | VBT science + competitor accuracy/metrics (verified vs PDFs) |
 | `docs/generalization.md` | generalizing CV to any lift: tracker families × scale strategies (one spine, swappable front-ends; pose/equipment-free path) |
 | `docs/cv-fusion.md` | the standalone video estimator as a best-in-class SmartBarbell competitor: what's built (adaptive gating, occlusion auto-fallback, scale confidence), the `cv_eval.py` scoreboard, and the robustness roadmap |
+| `docs/video-storage.md` | HD masters too big for git → live in Cloudflare R2 (`vbt-video`); repo keeps `dataset/raw/manifest.csv` pointer + `vbt_video/clip_store.py::resolve_clip()` (local→cache→download). Phone upload (Safari / Worker+Shortcut) + the live-app direction |
 | `dataset/` | the living multi-vendor measurement DB (+ `dataset/README.md`, `dataset/INGESTION.md`) |
 | `analysis/` | Python pipelines: `vbt_analysis/` (IMU ZUPT) + `vbt_video/` (our own CV velocity — PyAV+OpenCV, pluggable trackers, `plates.py` plate+angle→scale, outputs vendor `mevbt_cv`). Board: `scripts/cv_eval.py` (`--scale` = angle-aware). **Onboarding a new clip: `analysis/CV_ONBOARDING.md`** |
 | `Watch/` `iOS/` `Packages/VBTCore/` | the Swift app + shared package |

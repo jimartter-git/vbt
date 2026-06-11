@@ -24,6 +24,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from vbt_video import VideoConfig, VideoVelocitySource  # noqa: E402
 from vbt_video.plates import ScaleSpec  # noqa: E402
+from vbt_video.clip_store import resolve_clip  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REPS_CSV = os.path.join(REPO, "dataset", "rep_metrics.csv")
@@ -216,7 +217,7 @@ def _auto_board(sets):
     import numpy as _np
     oe = []; se = []                 # lists of (err, weight)
     for sid in sets:
-        clip = os.path.join(REPO, CLIPS[sid][0])
+        clip = resolve_clip(CLIPS[sid][0], REPO)
         refn, _, _, _ = gt_counts(sid)
         gt = _true_gt(sid, refn)
         sbn = _sb_count(sid)
@@ -268,7 +269,7 @@ def main():
     for sid in sets:
         clip_rel, trackers, note, band = CLIPS[sid][:4]
         scale = CLIPS[sid][4] if args.scale and len(CLIPS[sid]) > 4 else None
-        clip = os.path.join(REPO, clip_rel)
+        clip = resolve_clip(clip_rel, REPO)
         gtn, gtmean, comp, compn = gt_counts(sid)
         if not gtn:                        # no per-rep GT rows → the lifter's logged count
             gtn = _true_gt(sid, gtn)

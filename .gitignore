@@ -38,3 +38,7 @@ dataset/raw/*
 !dataset/raw/*.txt
 !dataset/raw/*.mp4
 !dataset/raw/*.mov
+!dataset/raw/manifest.csv
+# HD masters live in R2 (docs/video-storage.md); resolve_clip() caches downloads
+# here (gitignored) — only the manifest pointer is committed.
+dataset/.clipcache/
