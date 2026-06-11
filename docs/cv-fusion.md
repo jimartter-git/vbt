@@ -385,7 +385,7 @@ the corpus 22 → 26. On the 26-clip corpus:
 |---|---|---|
 | reps mean abs err (unweighted) | 0.31 | **0.27** |
 | reps mean abs err (lift-weighted) | 0.24 | **0.18** |
-| exact / within ±1 | 18 / 24 of 26 | **20 / 24** of 26 |
+| exact / within ±1 | 19 / 24 of 26 | **21 / 24** of 26 |
 | velocity-LOSS \|err vs Vitruve\| (13 GT clips) | **6.0pp** | 7.7pp |
 
 **Findings (the interesting ones):**
