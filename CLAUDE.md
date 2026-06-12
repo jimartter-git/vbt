@@ -30,13 +30,13 @@ and `docs/sources-and-fusion.md`.
   06-09 bench, 06-10 squats/RDLs all in `sets.csv`/`rep_metrics.csv`. (06-10 filed as set-level
   Vitruve averages — the app crashed before per-rep export.) Next upload → follow the ingestion
   + video triggers below.
-- **⚑ CV milestone (2026-06-11): the near-failure over-count is FIXED — reps AND velocity-loss
-  tightened together; absolute m/s still open.** Current scoreboard lives in
-  **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-11)"**. Headlines: auto/no-tap reps
-  **0.32** (lift-weighted **0.25**) vs SB 2.57/2.54, 21/22 within ±1, every bench+squat exact;
-  velocity-loss **3.2pp** vs SB **9.0pp** (common clips). Loss now has ONE canonical definition
-  everywhere (`vbt_analysis/metrics.py`). Absolute velocity unchanged (SB wins ~0.07; gated —
-  see #14). Gate design rules: learning #16.
+- **⚑ CV milestone (2026-06-12): ALL THREE product metrics now beat SmartBarbell.** Scoreboard:
+  **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-12)"**. Human-grade tap path: reps
+  **0.12** (wtd 0.07, 24/26 exact) vs SB 2.57 · velocity-loss **2.2pp** vs 9.0 · **absolute m/s
+  0.057 vs 0.068 — the open metric, closed by the human-confirmed rim** (`rim_px`, learning #19).
+  Auto/no-tap: 0.31/0.24, loss 6.0pp. ONE canonical loss everywhere (`vbt_analysis/metrics.py`).
+  Bilateral fusion built+validated, gated on both-plates-in-frame footage. ROM priors derived
+  (`dataset/priors/*_rom.csv`). Key rules: learnings #16–#19.
 
 ## Repo map
 
@@ -259,6 +259,23 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    ROW-4 dead-front (edge-on sliver, untrackable for every tool), BN-3-0605 loss 11.5pp
    (diagonal-bumper perspective scale varies through the ROM — physics). Product UX = scrub →
    tap → watch the box track → accept/re-tap.
+
+19. **Absolute velocity WON via the human-confirmed RIM, not better auto-measurement (2026-06-12):
+   tap 0.057 vs SB 0.068 set-MV |err| (common 11) — all three product metrics now beat SB.** The
+   new abs-velocity harness (`vel_eval.py --tap`, also per-rep RMSE) localized ALL remaining
+   error in 5 clips with ONE mechanism: the ruler measured the ~113px HUB, not the ~210px RIM
+   (diagonal bumpers ~2×, hex squats ~1.25×). Fix = learning #10's confirm/adjust surface made
+   real: `VideoConfig.rim_px` (+ `cv_eval.RIM_PX`), a per-clip human circle-confirm — scale-only,
+   tracking untouched, loss unchanged (scale-invariant ✓). Any-frame taps alone were ALREADY
+   device-grade on dark iron + deadlifts (rRMSE 0.01–0.10). Same session: **bilateral fusion
+   built + validated** (`vbt_video/bilateral.py`: tilt cancellation; f-free depth tier
+   pos=−D·(cy−cy0)/d(t); per-rep `lr_disagree` flags — a deliberately bad second end got 10/10
+   reps flagged, guardrail #3 proven) but **productively GATED**: clips needing scale help have
+   the far plate OFF-frame; capture ask = both plates in frame, side-on, Vitruve running. ROM
+   priors now derived from Vitruve rows (`derive_rom_priors.py`, advisory `rom_prior_cm` —
+   flags, never gates; a whole-set outlier = scale-error tell). Residuals, named: BN-2/3-0605
+   0.14/0.11 (perspective-through-ROM → the depth tier fed by rim-anchored size traces), SC-1
+   (accessory, not chased). Thin margin — honest: we edge SB on abs, not crush it.
 
 ## ⚑ Video trigger — READ THIS
 
