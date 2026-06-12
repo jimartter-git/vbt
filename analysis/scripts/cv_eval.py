@@ -137,9 +137,19 @@ CLIPS = {
 # like WL Analysis's manual circle). Scale-only override; fixes the hub-vs-rim
 # mismeasure that made diagonal bumpers read ~2×. A per-clip human measurement,
 # never auto-fitted.
+# values = (diameter_px, confirm_time_s) — the depth tier anchors its trace AT the
+# confirmed frame (anchoring elsewhere silently re-scales the ruler).
 RIM_PX = {
-    "20260605-BN-1": 210, "20260605-BN-2": 205, "20260605-BN-3": 207,
-    "20260604-SQ-1": 115, "20260604-SQ-3": 122,
+    "20260605-BN-1": (210, 16.7), "20260605-BN-2": (205, 6.1), "20260605-BN-3": (207, 11.0),
+    "20260604-SQ-1": (115, 0.5), "20260604-SQ-3": (122, 0.5),
+    "20260609-BN-4": (110, 14.0),
+}
+
+# Working-plate colour per clip (for the colour-mask continuous size trace; the 0605
+# travel gym = blue bumpers). Only consulted when the depth tier is active.
+PLATE_COLOR = {
+    "20260605-BN-1": "blue", "20260605-BN-2": "blue", "20260605-BN-3": "blue",
+    "20260605-DL-1": "blue", "20260605-DL-2": "blue", "20260605-DL-3": "blue",
 }
 
 # Reference trust order: Vitruve (ground truth) > on-bar BLE apps. The highest-priority

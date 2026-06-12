@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.dirname(__file__))
 from vbt_video import VideoConfig, VideoVelocitySource  # noqa: E402
 from vbt_analysis.metrics import velocity_loss_pct  # noqa: E402  (THE canonical loss)
-from cv_eval import lift_weight, CLIPS, RIM_PX  # noqa: E402  (weights + seeds + confirmed rims)
+from cv_eval import lift_weight, CLIPS, RIM_PX, PLATE_COLOR  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RM = os.path.join(REPO, "dataset", "rep_metrics.csv")
@@ -63,8 +63,13 @@ def _estimate(sid, path, tap):
         seed_time = None
         if len(seed) == 5:
             seed, seed_time = tuple(seed[:4]), float(seed[4])
+        rp = RIM_PX.get(sid)
+        rim_px, rim_t = (rp if rp is not None else (None, None))
+        # NOTE: depth_scale (the continuous-ruler tier) is EXPERIMENTAL default-OFF after
+        # the 2026-06-12 attempts (see cv-fusion postmortem): the 440px traces conflate
+        # mask-fraction/mode-switch variation with true perspective. Constant rim ships.
         cfg = VideoConfig(tracker="flow", rep_gate="relative", ellipse_scale=True,
-                          plausibility_gate=True, band=band, rim_px=RIM_PX.get(sid))
+                          plausibility_gate=True, band=band, rim_px=rim_px, rim_t=rim_t)
         reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed, seed_time=seed_time)
         rel = True                             # tap tracks are visually verified
     else:
@@ -103,15 +108,20 @@ def main():
         smv_set = float(np.mean(sbv)) if len(sbv) >= 3 else float("nan")
         rmse = (float(np.sqrt(np.mean((np.array(our) - np.array(vit)) ** 2)))
                 if rel and len(our) == len(vit) else float("nan"))
-        if rel and omv_set == omv_set:
-            arows.append((abs(omv_set - vmv_set),
-                          abs(smv_set - vmv_set) if smv_set == smv_set else float("nan"),
-                          rmse, w))
+        o_err = abs(omv_set - vmv_set) if omv_set == omv_set else float("nan")
+        s_err = abs(smv_set - vmv_set) if smv_set == smv_set else float("nan")
+        if rel and o_err == o_err:
+            arows.append((o_err, s_err, rmse, w))
+        # per-clip verdict: W/L vs SB, and the success bar (≤ SB err or ≤0.05, the harder)
+        bar = min(s_err, 0.05) if s_err == s_err else 0.05
+        wl = ("W" if o_err <= s_err else "L") if (o_err == o_err and s_err == s_err) else "·"
+        verdict = (f"{wl}{'✓' if o_err <= bar + 1e-9 else '✗'}"
+                   if o_err == o_err and tier == "main" else " ")
         print(f"{sid:<15}{tier:>10}{('Y' if rel else '-'):>5}"
               f"{vl:>9.1f}{(sl if sl == sl else float('nan')):>8.1f}{(ol if ol == ol else float('nan')):>9.1f}"
               f" | {vmv_set:>7.2f}{(smv_set if smv_set == smv_set else float('nan')):>7.2f}"
               f"{(omv_set if omv_set == omv_set else float('nan')):>7.2f}"
-              f"{(rmse if rmse == rmse else float('nan')):>7.2f}", flush=True)
+              f"{(rmse if rmse == rmse else float('nan')):>7.2f}  {verdict}", flush=True)
 
     def _u(vals):
         vals = [v for v in vals if v == v]
