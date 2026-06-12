@@ -27,6 +27,8 @@ class Track:
     confidence: float         # 0..1  (fraction of frames the tracker held lock)
     size_cv: float = 0.0      # coeff. of variation of the size samples — a scale-quality
     #   signal (a jittery plate radius = unreliable px→m). 0 = unknown/stable.
+    sizes: np.ndarray = None  # optional M x 2 (t, diameter_px) raw size samples — the
+    #   per-frame ruler trace bilateral depth correction needs (None = not recorded)
 
 
 class Tracker(ABC):
@@ -413,7 +415,7 @@ class FlowTracker(Tracker):
                 d = _detect_plate(f.img, x0b, x1b, rmed, near=(cx, cy))
                 if d is not None and (d[0] - cx) ** 2 + (d[1] - cy) ** 2 < (1.2 * rmed) ** 2:
                     cx, cy, rmed = d[0], d[1], d[2]
-                    radii.append(d[2])
+                    radii.append((f.t, d[2]))
                 pts = self._seed(g, cx, cy, rmed)
             else:
                 if pts is None or pts.shape[0] < 4:
@@ -449,7 +451,7 @@ class FlowTracker(Tracker):
                             and abs(d[2] - rmed) / max(rmed, 1.0) < 0.40):
                         cx, cy, rmed = d[0], d[1], d[2]      # re-acquired — re-seed the cloud
                         pts = self._seed(g, cx, cy, rmed)
-                        radii.append(d[2]); healthy += 1; fails = 0; last_v = np.zeros(2)
+                        radii.append((f.t, d[2])); healthy += 1; fails = 0; last_v = np.zeros(2)
                     elif fails <= self.coast_frames:         # bridge a short gap on last velocity
                         cx += float(last_v[0]) * self.coast_decay ** fails
                         cy += float(last_v[1]) * self.coast_decay ** fails
@@ -467,7 +469,7 @@ class FlowTracker(Tracker):
                             em = _ellipse_radius(f.img, d[0], d[1], d[2])
                             if em is not None:
                                 rr = em
-                        radii.append(rr)
+                        radii.append((f.t, rr))
                         # slow position correction toward the rim centre (see __init__).
                         if self.anchor_alpha > 0.0 and abs(d[2] - rmed) / max(rmed, 1.0) < 0.20:
                             cx += self.anchor_alpha * (d[0] - cx)
@@ -479,12 +481,16 @@ class FlowTracker(Tracker):
             n += 1
         if n == 0:
             raise ValueError("no frames decoded")
-        rmed = float(np.median(radii)) if radii else r0
-        size_cv = (float(np.std(radii) / np.mean(radii))
-                   if len(radii) >= 3 and np.mean(radii) > 0 else 0.0)
+        rs = [r for _, r in radii]
+        rmed = float(np.median(rs)) if rs else r0
+        size_cv = (float(np.std(rs) / np.mean(rs))
+                   if len(rs) >= 3 and np.mean(rs) > 0 else 0.0)
         traj = np.column_stack([np.asarray(ts, float), np.asarray(xs), np.asarray(ys)])
+        sizes = (np.array([(t, 2.0 * r) for t, r in radii], dtype=float)
+                 if radii else None)
         return Track(traj=traj, target_px=2.0 * rmed,
-                     confidence=round(healthy / max(1, n - 1), 3), size_cv=round(size_cv, 3))
+                     confidence=round(healthy / max(1, n - 1), 3), size_cv=round(size_cv, 3),
+                     sizes=sizes)
 
 
 # ---- Pose front-end: the equipment-free, universal tracker ----
@@ -1065,5 +1071,14 @@ def track_bidirectional(source: FrameSource, seed_bbox, seed_time: float,
     n_f, n_b = len(fwd.traj), len(bwd.traj)
     conf = (fwd.confidence * n_f + bwd.confidence * n_b) / (n_f + n_b)
     tpx = (fwd.target_px * n_f + bwd.target_px * n_b) / (n_f + n_b)
+    sizes = None
+    chunks = []
+    if bwd.sizes is not None and len(bwd.sizes):
+        chunks.append(np.column_stack([t0 - bwd.sizes[:, 0], bwd.sizes[:, 1]]))
+    if fwd.sizes is not None and len(fwd.sizes):
+        chunks.append(fwd.sizes)
+    if chunks:
+        sizes = np.vstack(chunks)
+        sizes = sizes[np.argsort(sizes[:, 0])]
     return Track(traj=traj, target_px=float(tpx), confidence=round(float(conf), 3),
-                 size_cv=max(fwd.size_cv, bwd.size_cv))
+                 size_cv=max(fwd.size_cv, bwd.size_cv), sizes=sizes)
