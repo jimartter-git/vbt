@@ -624,9 +624,13 @@ masks shape-shift; both now self-abstain). The named unlocks, pick any: **(a) a 
 plate sizer — torch-gated in this container** (roadmap #6, now THE bottleneck for per-clip
 absolute parity); **(b) capture quality — HD or closer framing** (the 0609 sets prove the
 pipeline is device-grade when the plate is ~100px-sharp); **(c) both-plates-in-frame
-footage** → bilateral d(t) cross-checking (the machinery is built and waiting). Until one
-arrives, the honest answer on diagonal low-res clips is the constant confirmed rim ± its
-documented perspective bias.
+footage WITH Vitruve running** → bilateral d(t) cross-checking (the machinery is built and
+waiting). Corpus check (2026-06-12, lifter-prompted): exactly ONE existing clip has both
+plates fully in frame — DL-1-2024 (1080p, coloured bumpers) — but it has NO velocity GT
+(2-rep count from an SB screenshot only), so it can validate bilateral machinery in the
+positive case but can't be scored. The 0605 sets have the truth but not the geometry;
+DL-1-2024 has the geometry but not the truth. Until a set has both, the honest answer on
+diagonal low-res clips is the constant confirmed rim ± its documented perspective bias.
 
 ## Roadmap — to genuinely best-in-class
 
