@@ -583,6 +583,51 @@ job), not ruler-disagreement-shaped. The personal-forearm calibration idea (solv
 fraction against device-grade clips, record in anthropometry.csv) remains the right
 first step whenever pose work starts.
 
+## The continuous-ruler campaign (2026-06-12, same day) — built, gated, POSTMORTEM
+
+**Goal:** match SmartBarbell per-clip on absolute velocity by re-measuring the plate every
+frame (their visible mechanism). **Outcome: the machinery is built and synthetically exact,
+but BOTH 440px trace sources fail the honesty gates on the residual clips — constant rim
+stays production. Stop rule fired after two attempts per mechanism.**
+
+**What shipped (all default-off/experimental except the gates and one rim):**
+- `VideoConfig.depth_scale` — the single-end continuous ruler, pos = −D·(cy−cy0)/d(t),
+  anchored AT the human's confirm frame (`rim_t`; anchoring at the median silently
+  re-scales the ruler — caught by the synthetic). Pinhole-exact on the rendered fixture
+  (recovers truth where the constant ruler is biased; 2 e2e tests).
+- `bilateral.anchored_trace` quality gates, each catching a REAL failure: jitter =
+  MAD-vs-rolling-median-of-3 (rate-independent — successive-diff falsely rejected fast
+  real swings); a PHYSICAL range cap (25%) that auto-abstains on hub/rim **mode-switching**
+  (the 0604 squat Hough traces "swing" 40% — that's bimodal detection smoothed into a fake
+  depth signal, and it CHANGED A REP COUNT before the cap existed).
+- `color_size_trace` (+ occlusion upper-envelope: a crossing arm only ever SHRINKS a
+  colour mask) — clean as a signal (noise 0.3–0.6%) but its SHAPE conflates mask-fraction
+  variation with true perspective: attempt 1 corrupted BN-3 (+0.11 abs), attempt 2 (with
+  envelope) still traded BN-2's loss (+8.3pp) for its abs. No shared gate separates the
+  bench it helps from the bench it hurts → per-outcome enabling would be board-fitting →
+  default OFF.
+- One more constant-rim win: BN-4-0609 rim-confirmed (110px hex; its uniform −23% bias was
+  an over-sized ruler — flagged independently by the new ROM prior, 23 cm vs the 32–42 cm
+  bench band) → abs err 0.07→0.05. A DL-2 rim attempt REGRESSED (0.08→0.21) and was
+  reverted: DL-2's error is real out-of-plane motion (front-quarter pull), not a ruler
+  constant — no static rim can fix it.
+
+**Final state (vel_eval --tap, per-clip W/L column now on every run):** aggregate abs
+**0.055 vs SB 0.068** (common-11), loss 2.2pp, counts untouched, 50 tests green.
+Per-clip vs SB: we win 6 mains outright; SB still wins the 0605 benches (0.10–0.14 vs
+0.00–0.03), SQ-3 (0.08 vs 0.01), BN-4 (0.05 vs 0.01), DL-2 (no SB).
+
+**THE FLOOR, NAMED (the stop rule's deliverable):** closing the per-clip gap on those five
+requires a plate sizer that stays accurate per-frame at 440px under arm-crossing and
+hub/rim ambiguity. Classical options are exhausted honestly (Hough mode-switches; colour
+masks shape-shift; both now self-abstain). The named unlocks, pick any: **(a) a learned
+plate sizer — torch-gated in this container** (roadmap #6, now THE bottleneck for per-clip
+absolute parity); **(b) capture quality — HD or closer framing** (the 0609 sets prove the
+pipeline is device-grade when the plate is ~100px-sharp); **(c) both-plates-in-frame
+footage** → bilateral d(t) cross-checking (the machinery is built and waiting). Until one
+arrives, the honest answer on diagonal low-res clips is the constant confirmed rim ± its
+documented perspective bias.
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.

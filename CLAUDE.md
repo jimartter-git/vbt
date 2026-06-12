@@ -277,6 +277,24 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    0.14/0.11 (perspective-through-ROM → the depth tier fed by rim-anchored size traces), SC-1
    (accessory, not chased). Thin margin — honest: we edge SB on abs, not crush it.
 
+20. **Continuous-ruler campaign (2026-06-12): built, synthetically exact, GATED OFF on real
+   440px clips — the postmortem that names the per-clip absolute floor.** SB's remaining
+   per-clip edge (0605 diagonal benches, SQ-3) = per-frame plate re-measurement. Our tier
+   (`depth_scale`: pos=−D·(cy−cy0)/d(t), anchored AT the rim-confirm frame `rim_t` —
+   median-anchoring re-scales the ruler, caught synthetically) is pinhole-exact in tests,
+   but BOTH 440px trace sources fail honestly: Hough traces hub/rim MODE-SWITCH (40% fake
+   swings, auto-abstained by a 25% physical range cap — it changed a rep count before the
+   cap); colour-mask traces are clean signals whose SHAPE conflates mask-fraction (arm
+   crossings; upper-envelope insufficient) with perspective — helps one bench, hurts
+   another, no shared gate separates them → default OFF (robust_scale precedent). One more
+   constant-rim win: BN-4 hex rim 110px (uniform −23% bias = oversized ruler, independently
+   flagged by the ROM prior) → 0.05. DL-2's rim attempt REGRESSED and was reverted —
+   front-quarter deadlift = real out-of-plane motion; no static rim fixes it. Final: abs
+   **0.055 vs SB 0.068** aggregate, per-rep RMSE 0.081 wtd, loss/counts untouched. The
+   named unlocks for per-clip parity: (a) **learned plate sizer (torch-gated — NOW the
+   single bottleneck)**, (b) HD/closer capture, (c) both-plates footage → bilateral d(t)
+   cross-check. Don't re-attempt classical per-frame sizing at 440px.
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip
