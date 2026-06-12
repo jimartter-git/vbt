@@ -48,6 +48,36 @@ diverged, terminal rep diverged most** (Stance 0.20 / Metric 0.32 / SmartBarbell
 missed). Every source is fallible and the fatigue-critical last reps are where
 measurement is least reliable → confidence-weighted fusion + a rep-shape prior.
 
+## 2b. Stance build 1.9.15 intel *(lifter-supplied WhatsApp/TestFlight captures, 2026-06-12)*
+
+Stance (on-bar sensor) is shipping **sensor + video fusion with a human-in-the-loop tap**
+— massive convergent validation of this project's architecture, from the device company:
+
+- **Tap UX**: "Tap the inside of the plate (where the bar enters the plate) in the first
+  frame… Pinch to zoom for a more precise tap" — the HUB tap + zoom, independently
+  converging on our learning #18. Their dev overlay shows a point cloud ("pts=17") seeded
+  at a hub marker + a height(t) chart with phase-shaded segmentation ≈ our FlowTracker
+  architecture almost exactly.
+- **Per-rep fusion, human-arbitrated**: "Matched rep — Current (ML) mean 0.41/peak 0.77 →
+  Video mean 0.40/peak 0.71 — [Replace rep]" — sensor and video matched rep-by-rep,
+  disagreement SURFACED, user replaces per rep. A manual version of our per-primitive
+  fusion design (and our guardrail #3, in production).
+- **Their stated motivation = our thesis**: "the current algorithm struggles most on slow
+  reps — an accelerometer can't detect…" (IMU weak exactly where video is strong; they're
+  fusing for the grindy terminal reps).
+- **Capture guidance** (annotated photo): plate in full view through the rep; film ~45°;
+  don't walk in front; **no touch-and-go / stiff-leg deadlifts** (their segmentation
+  limit — same family as Vitruve's TnG row failure); sensor strap position; "zero rep
+  issue" acknowledged (their static-seed analog). Edit window: 2 h post-set.
+
+**Where we're already ahead of this build**: their tap is FIRST-FRAME-ONLY (the
+constraint we proved fatal on RDL/dark-iron clips and removed with tap-on-any-frame +
+bidirectional tracking, learning #18); their fusion is fully manual per-rep replacement
+vs our designed confidence-weighted auto-fusion with flag-on-disagreement; and they
+explicitly exclude touch-and-go, which our relative gate handles (SQ-3 exact). Where
+they're ahead: it's SHIPPED, sensor-grade absolute velocity comes free from the device,
+and video is positioned as the *correction* channel — pragmatic sequencing worth noting.
+
 ## 3. Metric definitions (the derivable feature set from one trace + load)
 
 - **Mean (concentric) velocity** (m/s) — avg bar speed over concentric. Primary; most reliable (r²≈0.94 with peak).
