@@ -623,14 +623,19 @@ hub/rim ambiguity. Classical options are exhausted honestly (Hough mode-switches
 masks shape-shift; both now self-abstain). The named unlocks, pick any: **(a) a learned
 plate sizer — torch-gated in this container** (roadmap #6, now THE bottleneck for per-clip
 absolute parity); **(b) capture quality — HD or closer framing** (the 0609 sets prove the
-pipeline is device-grade when the plate is ~100px-sharp); **(c) both-plates-in-frame
-footage WITH Vitruve running** → bilateral d(t) cross-checking (the machinery is built and
-waiting). Corpus check (2026-06-12, lifter-prompted): exactly ONE existing clip has both
-plates fully in frame — DL-1-2024 (1080p, coloured bumpers) — but it has NO velocity GT
-(2-rep count from an SB screenshot only), so it can validate bilateral machinery in the
-positive case but can't be scored. The 0605 sets have the truth but not the geometry;
-DL-1-2024 has the geometry but not the truth. Until a set has both, the honest answer on
-diagonal low-res clips is the constant confirmed rim ± its documented perspective bias.
+pipeline is device-grade when the plate is ~100px-sharp); **(c) both-plates footage** → bilateral d(t) cross-checking (built and waiting).
+⚠ CORRECTED (lifter-annotated screenshots, 2026-06-12): my single-frame visibility checks
+were wrong — the 0609 benches AND 0610 squats/RDLs DO have both plates in frame (the right
+end is post-grazed only at some frames, which tap-on-ANY-frame handles; one bad second tap
+≠ untrackable — the learning-#18 fallacy, almost repeated). **First SCORED bilateral run**
+(BN-2-0609, right tap (305,312,105,105)@12.5 + the registered left): both ends conf 1.0,
+10/10, ZERO lr_disagree — the per-rep L/R residual (2.5–5.7 cm) is a measured bar-tilt
+signal; the positive case is validated on GT footage. BUT fused abs was slightly WORSE
+than the device-grade single end (rRMSE 0.037 vs 0.02; MV 0.439 vs 0.39, Vit 0.407):
+the second end's auto-measured ruler runs hot — **bilateral needs a rim confirm PER END**
+(the ruler lesson, third appearance). Bilateral's near-term value on already-good clips is
+redundancy + the tilt/disagreement signal, not accuracy; its accuracy case is clips where
+the single end fails, plus per-end rims.
 
 ## Roadmap — to genuinely best-in-class
 
