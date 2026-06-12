@@ -132,6 +132,16 @@ CLIPS = {
 }
 
 
+# HUMAN-CONFIRMED plate rim diameters (px) — the "plate confirm/adjust" surface
+# (learning #10; measured 2026-06-12 by circle-overlay confirmation on sharp frames,
+# like WL Analysis's manual circle). Scale-only override; fixes the hub-vs-rim
+# mismeasure that made diagonal bumpers read ~2×. A per-clip human measurement,
+# never auto-fitted.
+RIM_PX = {
+    "20260605-BN-1": 210, "20260605-BN-2": 205, "20260605-BN-3": 207,
+    "20260604-SQ-1": 115, "20260604-SQ-3": 122,
+}
+
 # Reference trust order: Vitruve (ground truth) > on-bar BLE apps. The highest-priority
 # vendor present is the GT reference; the next is shown as the competitor to beat.
 _REF_PRIORITY = ["vitruve", "stance", "smartbarbell", "metric"]

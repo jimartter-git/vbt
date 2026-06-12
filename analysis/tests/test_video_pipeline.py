@@ -536,6 +536,34 @@ def test_replay_source_windows_and_reversal():
     assert all(b.t > a.t for a, b in zip(back, back[1:]))   # still increasing
 
 
+def test_rim_px_overrides_measured_ruler():
+    # The human-confirmed rim (plate confirm/adjust surface) sets the px→m ruler;
+    # tracking is untouched. Confirming 2× the true diameter halves every velocity/ROM.
+    src = lambda: ArrayFrameSource(_frames(), FPS)
+    reps0, m0 = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="csrt",
+                                                rep_gate="relative")).estimate(
+        src(), seed_bbox=_seed())
+    cfg = VideoConfig(plate_m=PLATE_M, tracker="csrt", rim_px=4 * R, rep_gate="relative")
+    reps2, m2 = VideoVelocitySource(cfg).estimate(src(), seed_bbox=_seed())
+    assert m2["scale_source"] == "rim_confirmed"
+    assert m2["m_per_px"] == pytest.approx(PLATE_M / (4 * R))
+    assert len(reps2) == len(reps0)                       # counts: scale-invariant
+    assert reps2[0]["mean_velocity"] == pytest.approx(reps0[0]["mean_velocity"] / 2, rel=0.05)
+
+
+def test_rom_prior_flags_but_never_gates():
+    # An advisory band that excludes every rep must FLAG all of them and change nothing else.
+    src = lambda: ArrayFrameSource(_frames(), FPS)
+    reps0, _ = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="csrt")).estimate(
+        src(), seed_bbox=_seed())
+    cfg = VideoConfig(plate_m=PLATE_M, tracker="csrt", rom_prior_cm=(10, 20))   # reps are ~50 cm
+    reps1, m1 = VideoVelocitySource(cfg).estimate(src(), seed_bbox=_seed())
+    assert len(reps1) == len(reps0)                       # never gates
+    assert m1["rom_prior_outliers"] == len(reps1)
+    assert all(r.get("rom_outlier") for r in reps1)
+    assert [r["mean_velocity"] for r in reps1] == [r["mean_velocity"] for r in reps0]
+
+
 def test_plausibility_gate_abstains_on_incoherent_positions():
     # When start positions are all over the place relative to ROM (a jittery /
     # resonating track — dark-iron rows), set statistics mean nothing: the gate

@@ -80,6 +80,19 @@ class VideoConfig:
     # learned/profile tracker (tracker='profile'): the working bumper colour for this gym/session
     # ('blue'/'red'/'green'/'yellow' or an (hsv_lo,hsv_hi) tuple). Reliable colour detect+size.
     plate_color: object = None
+    # ADVISORY per-lift ROM prior band (lo_cm, hi_cm) — from dataset/priors/{lift}_rom.csv
+    # (derived from Vitruve GT rows, dataset/tools/derive_rom_priors.py). Reps outside the
+    # band get `rom_outlier: True` + a meta count. FLAG ONLY, never gates counts or
+    # velocity (learning #16: priors advise, measurements decide). A whole-set outlier
+    # pattern is a SCALE-error tell (the uncorrected diagonal benches read ~60 cm vs the
+    # 32–42 cm bench band).
+    rom_prior_cm: tuple = None
+    # HUMAN-CONFIRMED plate rim diameter (px) — the "plate confirm/adjust" surface
+    # (learning #10; WL Analysis precedent in dataset/INGESTION.md). Overrides the
+    # tracker's measured target size for the px→m RULER only; tracking is untouched.
+    # The fix for hub-vs-rim mismeasure (diagonal bumpers read ~2× without it). A
+    # per-clip human MEASUREMENT like the tap seed — never auto-fitted.
+    rim_px: float = None
 
 
 # Which two landmarks bound each scale segment (their pixel distance = the metric ruler).
@@ -158,14 +171,21 @@ class VideoVelocitySource:
                 }
             # pose found no scale segment — degrade to the plate ruler (flagged below)
         # Plate-diameter scale: real-world diameter from the user's spec (largest plate +
-        # bumper/iron) if given, else the configured default. Pixel diameter from the tracker.
+        # bumper/iron) if given, else the configured default. Pixel diameter from the
+        # tracker — or from the HUMAN-CONFIRMED rim (cfg.rim_px), which outranks any
+        # measurement (the plate confirm/adjust surface, learning #10).
         plate_m = spec.plate_m() if spec is not None else self.cfg.plate_m
         meta = {"scale_source": "plate_spec" if spec is not None else "implement"}
         if spec is not None:
             meta["scale_confidence"] = round(spec.scale_confidence(), 3)
             meta["camera_angle"] = spec.angle
             meta["scale_valid"] = spec.policy["valid"]
-        return PlateDiameterScaler(plate_m).m_per_px(track.target_px), meta
+        target_px = track.target_px
+        if self.cfg.rim_px:
+            target_px = float(self.cfg.rim_px)
+            meta["scale_source"] = "rim_confirmed"
+            meta["scale_confidence"] = max(meta.get("scale_confidence", 0.9), 0.9)
+        return PlateDiameterScaler(plate_m).m_per_px(target_px), meta
 
     # Bar speeds above this (m/s, mean concentric) are physically implausible for a loaded
     # lift — a near-certain sign of an inflated px→m scale (wrong/clipped plate, low-res
@@ -183,7 +203,8 @@ class VideoVelocitySource:
         # plate_spec carries plate-certainty × angle factor; plain implement starts at 1.0
         conf = float(scale_meta.get("scale_confidence", 1.0))
         cv = getattr(track, "size_cv", 0.0)
-        if cv > 0:                                   # penalise a jittery plate radius
+        # a jittery MEASURED radius doesn't taint a HUMAN-CONFIRMED ruler
+        if cv > 0 and scale_meta.get("scale_source") != "rim_confirmed":
             conf = min(conf, max(0.0, 1.0 - cv / self._SIZE_CV_SUSPECT * 0.5))
         mvs = [r["mean_velocity"] for r in reps]
         implausible = bool(mvs) and float(np.median(mvs)) > self._MAX_PLAUSIBLE_MEAN_VEL
@@ -191,7 +212,9 @@ class VideoVelocitySource:
             conf = min(conf, 0.3)
         # head-on with no anthro fallback → plate scale is invalid; don't report a real m/s
         invalid_angle = scale_meta.get("scale_valid", True) is False
-        suspect = implausible or cv > self._SIZE_CV_SUSPECT or invalid_angle
+        size_jitter = (cv > self._SIZE_CV_SUSPECT
+                       and scale_meta.get("scale_source") != "rim_confirmed")
+        suspect = implausible or size_jitter or invalid_angle
         return round(conf, 3), suspect
 
     def _estimate_auto(self, src):
@@ -311,6 +334,13 @@ class VideoVelocitySource:
         # healthy confidence (and few/no reps) means: re-seed onto the WORKING (moving) plate
         # and re-run. (The 2026-06-05 bench lesson made programmatic — see
         # analysis/CV_ONBOARDING.md.)
+        n_rom_outliers = 0
+        if self.cfg.rom_prior_cm and reps:
+            lo, hi = self.cfg.rom_prior_cm
+            for r in reps:
+                if not (lo <= r["rom"] <= hi):
+                    r["rom_outlier"] = True          # advisory only — never gates
+                    n_rom_outliers += 1
         y_span_px = float(np.ptp(track.traj[:, 2])) if len(track.traj) else 0.0
         static_track_suspect = bool(track.confidence >= 0.75 and track.target_px > 0
                                     and y_span_px < 0.30 * track.target_px)
@@ -327,6 +357,7 @@ class VideoVelocitySource:
             "fps": round(src.fps, 2),
             "seed_bbox": tuple(int(v) for v in seed_bbox) if seed_bbox else None,
             "seed_time": (round(float(seed_time), 3) if seed_time is not None else None),
+            "rom_prior_outliers": n_rom_outliers,
             **scale_meta,
         }
         return reps, meta
