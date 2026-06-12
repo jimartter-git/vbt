@@ -62,9 +62,19 @@ Stance (on-bar sensor) is shipping **sensor + video fusion with a human-in-the-l
   Video mean 0.40/peak 0.71 — [Replace rep]" — sensor and video matched rep-by-rep,
   disagreement SURFACED, user replaces per rep. A manual version of our per-primitive
   fusion design (and our guardrail #3, in production).
-- **Their stated motivation = our thesis**: "the current algorithm struggles most on slow
-  reps — an accelerometer can't detect…" (IMU weak exactly where video is strong; they're
-  fusing for the grindy terminal reps).
+- **Their stated motivation = our thesis, and their MECHANISM = our turnaround consensus**
+  (full announcement text, 2026-06-12): "The current algorithm struggles most on slow reps
+  — an accelerometer can't detect much when you're barely accelerating — so the camera now
+  tracks the plate in space, **giving the algorithm a second pair of eyes on where each
+  rep starts and ends**. Sensor alone handles fast reps; sensor + video handles slow reps.
+  Together: accurate data at every speed." Read carefully: their video contributes
+  **BOUNDARIES to the IMU algorithm**, not a second velocity — which is verbatim the
+  turnaround-consensus primitive in `sources-and-fusion.md` (video boundaries = the IMU's
+  zero-velocity anchors), i.e. the exact architecture of OUR watch path. Their
+  speed-conditional weighting (sensor fast / +video slow) is one half of the
+  complementarity table; our docs hold the other half (high-rate IMU arbitrates fast-TnG
+  boundaries where video aliases). They also chose DEADLIFT as the beta lift (= our
+  learning #8 first-lift choice, for the same reasons).
 - **Capture guidance** (annotated photo): plate in full view through the rep; film ~45°;
   don't walk in front; **no touch-and-go / stiff-leg deadlifts** (their segmentation
   limit — same family as Vitruve's TnG row failure); sensor strap position; "zero rep
