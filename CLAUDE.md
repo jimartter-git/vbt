@@ -33,10 +33,10 @@ and `docs/sources-and-fusion.md`.
 - **⚑ CV milestone (2026-06-12): ALL THREE product metrics now beat SmartBarbell.** Scoreboard:
   **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-12)"**. Human-grade tap path: reps
   **0.12** (wtd 0.07, 24/26 exact) vs SB 2.57 · velocity-loss **2.2pp** vs 9.0 · **absolute m/s
-  0.057 vs 0.068 — the open metric, closed by the human-confirmed rim** (`rim_px`, learning #19).
+  0.055 vs 0.068 — the open metric, closed by the human-confirmed rim** (`rim_px`, #19–#20).
   Auto/no-tap: 0.31/0.24, loss 6.0pp. ONE canonical loss everywhere (`vbt_analysis/metrics.py`).
   Bilateral fusion built+validated, gated on both-plates-in-frame footage. ROM priors derived
-  (`dataset/priors/*_rom.csv`). Key rules: learnings #16–#19.
+  (`dataset/priors/*_rom.csv`). Key rules: learnings #16–#20.
 
 ## Repo map
 
