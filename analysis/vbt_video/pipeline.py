@@ -12,7 +12,7 @@ import numpy as np
 from .frames import FrameSource, PyAVDecoder
 from .track import (CSRTTracker, PlateTracker, FlowTracker, PoseTracker, DetectTracker,
                     ColorPlateTracker, PLATE_COLORS, Tracker, auto_seed_bbox, auto_seed_motion,
-                    seed_candidates, track_bidirectional)
+                    seed_candidates, track_bidirectional, color_size_trace)
 from .kinematics import PlateDiameterScaler, AnthropometricScaler, trajectory_to_reps
 from .plates import ScaleSpec
 
@@ -87,12 +87,22 @@ class VideoConfig:
     # pattern is a SCALE-error tell (the uncorrected diagonal benches read ~60 cm vs the
     # 32–42 cm bench band).
     rom_prior_cm: tuple = None
+    # CONTINUOUS ruler (single-end depth tier): re-derive metric position per frame as
+    # pos = −plate_m·(cy−cy0)/d(t), where d(t) is the rim-ANCHORED size trace (colour-mask
+    # ellipse for coloured plates via `plate_color`, else the tracker's Hough/ellipse
+    # samples). REQUIRES rim_px (the human anchor is mandatory — no anchor, no tier:
+    # the robust_scale lesson) and is quality-GATED (bilateral.anchored_trace): a noisy
+    # trace falls back to the constant rim ruler, visibly (scale_source). Captures the
+    # perspective change through the ROM that a constant ruler can't (SB's mechanism).
+    depth_scale: bool = False
     # HUMAN-CONFIRMED plate rim diameter (px) — the "plate confirm/adjust" surface
     # (learning #10; WL Analysis precedent in dataset/INGESTION.md). Overrides the
     # tracker's measured target size for the px→m RULER only; tracking is untouched.
     # The fix for hub-vs-rim mismeasure (diagonal bumpers read ~2× without it). A
-    # per-clip human MEASUREMENT like the tap seed — never auto-fitted.
+    # per-clip human MEASUREMENT like the tap seed — never auto-fitted. `rim_t` = the
+    # clip time (s) the rim was confirmed at — the depth tier anchors the trace THERE.
     rim_px: float = None
+    rim_t: float = None
 
 
 # Which two landmarks bound each scale segment (their pixel distance = the metric ruler).
@@ -204,7 +214,7 @@ class VideoVelocitySource:
         conf = float(scale_meta.get("scale_confidence", 1.0))
         cv = getattr(track, "size_cv", 0.0)
         # a jittery MEASURED radius doesn't taint a HUMAN-CONFIRMED ruler
-        if cv > 0 and scale_meta.get("scale_source") != "rim_confirmed":
+        if cv > 0 and not str(scale_meta.get("scale_source", "")).startswith("rim_confirmed"):
             conf = min(conf, max(0.0, 1.0 - cv / self._SIZE_CV_SUSPECT * 0.5))
         mvs = [r["mean_velocity"] for r in reps]
         implausible = bool(mvs) and float(np.median(mvs)) > self._MAX_PLAUSIBLE_MEAN_VEL
@@ -213,7 +223,7 @@ class VideoVelocitySource:
         # head-on with no anthro fallback → plate scale is invalid; don't report a real m/s
         invalid_angle = scale_meta.get("scale_valid", True) is False
         size_jitter = (cv > self._SIZE_CV_SUSPECT
-                       and scale_meta.get("scale_source") != "rim_confirmed")
+                       and not str(scale_meta.get("scale_source", "")).startswith("rim_confirmed"))
         suspect = implausible or size_jitter or invalid_angle
         return round(conf, 3), suspect
 
@@ -315,9 +325,32 @@ class VideoVelocitySource:
                 if alt.confidence > track.confidence:
                     track, used_occlusion = alt, True
         mpp, scale_meta = self._resolve_scale(src, track)
+        # --- CONTINUOUS ruler (single-end depth tier) ---
+        seg_traj, seg_mpp = track.traj, mpp
+        if (self.cfg.depth_scale and self.cfg.rim_px and self.cfg.tracker == "flow"
+                and len(track.traj) > 8):
+            from .bilateral import anchored_trace
+            sizes = track.sizes
+            if self.cfg.plate_color is not None:
+                rng = (PLATE_COLORS[self.cfg.plate_color]
+                       if isinstance(self.cfg.plate_color, str) else self.cfg.plate_color)
+                sizes = color_size_trace(src, track.traj, rng[0], rng[1],
+                                         r_hint=track.target_px / 2.0)
+            grid_t = track.traj[:, 0]
+            d_t, tq = anchored_trace(sizes, self.cfg.rim_px, grid_t,
+                                     rim_t=self.cfg.rim_t)
+            scale_meta.update(tq)
+            if d_t is not None:
+                plate_m = (self.cfg.scale_spec.plate_m() if self.cfg.scale_spec is not None
+                           else self.cfg.plate_m)
+                cy0 = src.first().img.shape[0] / 2.0   # optical centre ≈ frame middle
+                pos = -plate_m * (track.traj[:, 2] - cy0) / d_t
+                seg_traj = np.column_stack([grid_t, track.traj[:, 1], -pos])
+                seg_mpp = 1.0                          # positions already metric
+                scale_meta["scale_source"] = "rim_confirmed_trace"
         # the seed-free detect tracker has jittery per-frame centres -> default a ROM floor
         rom_floor = self.cfg.rom_floor_frac or (0.5 if self.cfg.tracker == "detect" else 0.0)
-        reps = trajectory_to_reps(track.traj, mpp, self.cfg.peak_min, self.cfg.rom_min,
+        reps = trajectory_to_reps(seg_traj, seg_mpp, self.cfg.peak_min, self.cfg.rom_min,
                                   rom_floor_frac=rom_floor,
                                   rep_gate=self.cfg.rep_gate,
                                   plausibility=self.cfg.plausibility_gate)

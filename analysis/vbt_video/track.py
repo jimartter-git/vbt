@@ -814,6 +814,57 @@ class ColorPlateTracker(Tracker):
                      confidence=round(len(ts) / n, 3))
 
 
+def color_size_trace(source, traj, hsv_lo, hsv_hi, r_hint, stride=2,
+                     min_area_frac=0.0008):
+    """Per-frame plate diameter samples (ellipse MAJOR axis, px) from an HSV colour
+    mask in an ROI around the TRACKED position — ColorPlateTracker's sizing applied
+    along an existing verified track (the continuous-ruler measurement for COLOURED
+    plates; validated reliable on blue bumpers 2026-06-10). Position stays with the
+    verified track; this measures SIZE only. Returns an M×2 (t, diameter_px) array;
+    frames with no plate-sized blob in the ROI are skipped."""
+    lo, hi = tuple(hsv_lo), tuple(hsv_hi)
+    t_tr, cy_tr = traj[:, 0], traj[:, 2]
+    cx_tr = traj[:, 1]
+    out = []
+    for i, f in enumerate(source):
+        if i % stride:
+            continue
+        H, W = f.img.shape[:2]
+        cx = float(np.interp(f.t, t_tr, cx_tr))
+        cy = float(np.interp(f.t, t_tr, cy_tr))
+        half = 1.7 * r_hint
+        x0, x1 = max(0, int(cx - half)), min(W, int(cx + half))
+        y0, y1 = max(0, int(cy - half)), min(H, int(cy + half))
+        if x1 - x0 < 8 or y1 - y0 < 8:
+            continue
+        hsv = cv2.cvtColor(f.img[y0:y1, x0:x1], cv2.COLOR_BGR2HSV)
+        m = cv2.inRange(hsv, lo, hi)
+        m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+        m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+        cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = [c for c in cnts if cv2.contourArea(c) > min_area_frac * H * W and len(c) >= 5]
+        if not cnts:
+            continue
+        c = max(cnts, key=cv2.contourArea)
+        (_, _), (a1, a2), _ = cv2.fitEllipse(c)
+        out.append((f.t, float(max(a1, a2))))
+    if not out:
+        return None
+    arr = np.asarray(out, dtype=float)
+    # OCCLUSION envelope: an arm/bar crossing the plate only ever SHRINKS the colour
+    # mask, while true perspective change is slow — so take a rolling MAX over
+    # `envelope_s` before any smoothing. Dips are occlusion; the envelope is the plate.
+    envelope_s = 0.7
+    t = arr[:, 0]
+    d = arr[:, 1].copy()
+    env = d.copy()
+    for i in range(len(d)):
+        m = np.abs(t - t[i]) <= envelope_s / 2.0
+        env[i] = d[m].max()
+    arr[:, 1] = env
+    return arr
+
+
 # Common bumper-plate colours (HSV ranges) — the profile picks one. Extend per gym as needed.
 PLATE_COLORS = {
     "blue":   ((95, 80, 40), (130, 255, 255)),

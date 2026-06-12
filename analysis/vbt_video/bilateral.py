@@ -52,6 +52,59 @@ def _smooth_diameter(sizes, grid_t, lp_cut=1.2):
     return di
 
 
+def anchored_trace(sizes, rim_px, grid_t, rim_t=None,
+                   min_samples=12, max_noise_frac=0.04, max_range_frac=0.25):
+    """Rim-ANCHORED continuous diameter trace for the single-end depth tier.
+
+    The HUMAN-confirmed rim sets the absolute level (never auto-fitted — the
+    robust_scale lesson); the measured trace contributes only the RELATIVE
+    variation through the ROM. The anchor is applied AT THE FRAME the human
+    confirmed (`rim_t`): d(t) = smooth(d_raw)(t) · rim_px / smooth(d_raw)(rim_t)
+    — anchoring to the median instead would silently re-scale the ruler whenever
+    the confirm frame isn't at the median depth (falls back to median anchoring
+    when rim_t is unknown). Quality-GATED: ≥ `min_samples` raw samples and sample
+    JITTER (median |successive diff| of the clipped raw samples, robust at sparse
+    sampling where a low-pass residual under-reports) ≤ `max_noise_frac` of the
+    median. Smooth rep-band variation is SIGNAL; jitter is NOISE → abstain.
+    Returns (d_on_grid or None, quality_meta)."""
+    meta = {"n_size_samples": 0, "trace_noise_frac": None}
+    if sizes is None or rim_px is None:
+        return None, meta
+    s = np.asarray(sizes, dtype=float)
+    if s.ndim != 2 or len(s) < min_samples:
+        meta["n_size_samples"] = 0 if s.ndim != 2 else int(len(s))
+        return None, meta
+    meta["n_size_samples"] = int(len(s))
+    med = float(np.median(s[:, 1]))
+    if med <= 1:
+        return None, meta
+    clipped = np.clip(s[:, 1], 0.8 * med, 1.2 * med)
+    noise = float(np.median(np.abs(clipped - medfilt(clipped, 3)))) / med
+    meta["trace_noise_frac"] = round(noise, 4)
+    if noise > max_noise_frac:
+        return None, meta
+    smooth = _smooth_diameter(s, grid_t)
+    if smooth is None:
+        return None, meta
+    # PHYSICAL plausibility: a real perspective swing at lifting framings is bounded;
+    # a smooth trace whose range exceeds `max_range_frac` of its mean is hub/rim
+    # MODE-SWITCHING smoothed into a fake depth signal (the 0604 squat failure) → abstain.
+    rng = float(np.ptp(smooth)) / float(np.mean(smooth))
+    meta["trace_range_frac"] = round(rng, 3)
+    if rng > max_range_frac:
+        return None, meta
+    if rim_t is not None:
+        # anchor on the RAW clipped sample nearest the confirm frame — that is what the
+        # human actually measured, and it avoids the low-pass edge transient at clip ends
+        j = int(np.argmin(np.abs(s[:, 0] - rim_t)))
+        anchor_at = float(clipped[j])
+    else:
+        anchor_at = med
+    if anchor_at <= 1:
+        return None, meta
+    return smooth * (float(rim_px) / anchor_at), meta
+
+
 def _end_position(track, plate_m, cy0, grid_t, depth_correct):
     """One end's metric vertical position (up-positive) on the common grid."""
     t, cy = track.traj[:, 0], track.traj[:, 2]

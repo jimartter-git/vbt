@@ -604,3 +604,75 @@ def test_hybrid_falls_back_to_implement_when_pose_finds_no_segment():
     reps, meta = src.estimate(ArrayFrameSource(_frames(), FPS), seed_bbox=_seed())
     assert meta["scale_source"] == "implement"                     # fell back to the plate
     _assert_reps(reps)
+
+
+def _depth_change_frames(F=600.0, Z0=3.0, ZARC=0.7, n_reps=3):
+    """Textured disc rendered under a REAL pinhole projection with the bar moving
+    toward the camera through each rep (Z: Z0→Z0+ZARC, phase-locked) — the
+    diagonal-clip physics, with the rim "human-confirmed" at t=0 (the bottom,
+    where the plate is closest/largest). Returns (frames, true_mean_velocity,
+    rim_px_at_t0)."""
+    rng = np.random.default_rng(2)
+    base_tex = rng.integers(0, 255, (200, 200, 3), dtype=np.uint8)
+    cy0 = H / 2.0
+    imgs = []
+    rim0 = None
+    for i in range(int(n_reps * T * FPS)):
+        t = i / FPS
+        Y = -A * np.cos(2 * np.pi * t / T)
+        phase = (1 - np.cos(2 * np.pi * t / T)) / 2.0
+        Z = Z0 + ZARC * phase
+        cy = int(round(cy0 - F * Y / Z))
+        r = int(round(F * PLATE_M / Z / 2.0))
+        if rim0 is None:
+            rim0 = 2.0 * r
+        im = np.full((H, W, 3), 230, np.uint8)
+        tex = cv2.resize(base_tex, (2 * r, 2 * r))
+        mask = np.zeros((2 * r, 2 * r), np.uint8)
+        cv2.circle(mask, (r, r), r, 255, -1)
+        y0c, x0c = cy - r, W // 2 - r
+        sub = im[y0c:y0c + 2 * r, x0c:x0c + 2 * r]
+        sub[mask > 0] = tex[mask > 0]
+        imgs.append(im)
+    return imgs, 4 * A / T, rim0
+
+
+def test_depth_tier_recovers_perspective_velocity():
+    # The continuous (rim-anchored-at-the-confirm-frame) ruler must recover true
+    # velocity where the constant rim ruler is biased by the through-rep depth
+    # change — and it must be gate-engaged, visible in scale_source, count-neutral.
+    frames, true_mv, rim0 = _depth_change_frames()
+    seed_cy = int(H / 2.0 + 600.0 * A / 3.0)         # disc centre at t=0 (bottom)
+    r0 = int(rim0 / 2)
+    seed = (W // 2 - r0, seed_cy - r0, int(rim0), int(rim0))
+    base = dict(plate_m=PLATE_M, tracker="flow", rep_gate="relative",
+                rim_px=rim0, rim_t=0.0)
+    reps_c, m_c = VideoVelocitySource(VideoConfig(**base)).estimate(
+        ArrayFrameSource(frames, FPS), seed_bbox=seed)
+    reps_d, m_d = VideoVelocitySource(VideoConfig(**base, depth_scale=True)).estimate(
+        ArrayFrameSource(frames, FPS), seed_bbox=seed)
+    assert m_d["scale_source"] == "rim_confirmed_trace"   # tier engaged (gate passed)
+    assert abs(len(reps_d) - len(reps_c)) <= 0            # counts neutral
+    err_c = abs(np.mean([r["mean_velocity"] for r in reps_c]) - true_mv)
+    err_d = abs(np.mean([r["mean_velocity"] for r in reps_d]) - true_mv)
+    assert err_d < 0.05                                   # near-truth
+    assert err_d < 0.5 * err_c                            # clearly better than constant
+
+
+def test_depth_tier_abstains_without_rim_or_on_noise():
+    # No human rim anchor -> the tier must NOT engage (the robust_scale lesson).
+    frames, _, rim0 = _depth_change_frames()
+    seed_cy = int(H / 2.0 + 600.0 * A / 3.0)
+    r0 = int(rim0 / 2)
+    seed = (W // 2 - r0, seed_cy - r0, int(rim0), int(rim0))
+    _, m = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow",
+                                           rep_gate="relative", depth_scale=True)).estimate(
+        ArrayFrameSource(frames, FPS), seed_bbox=seed)
+    assert m["scale_source"] != "rim_confirmed_trace"
+    # And a jittery trace must fall back visibly even WITH the anchor.
+    from vbt_video.bilateral import anchored_trace
+    rng = np.random.default_rng(3)
+    ts = np.arange(0, 6, 0.3)
+    noisy = np.column_stack([ts, 100 + rng.normal(0, 18, len(ts))])
+    d, q = anchored_trace(noisy, 210, np.arange(0, 6, 1 / 30))
+    assert d is None and q["trace_noise_frac"] > 0.06
