@@ -1,0 +1,2 @@
+lift,n_reps,n_sets,median_cm,q25_cm,q75_cm,lo_cm,hi_cm,source
+skull_crushers,11,1,37.0,35.5,38.0,35.0,38.5,derived from vitruve rep_metrics (derive_rom_priors.py)
