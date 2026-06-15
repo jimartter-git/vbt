@@ -41,10 +41,20 @@ and `docs/sources-and-fusion.md`.
   (local→cache→download). **Don't commit HD video to git** — upload to R2, add a manifest row.
   New **CV-training corpus**: `dataset/clips.csv` (wide human annotations, `dataset/ANNOTATIONS.md`
   vocab) + `tools/ingest_clips.py` (probe + seed-free CV prefill; `--from-manifest` pulls from R2).
-  Full design + next-session runbook: `docs/video-storage.md`. **⚑ PENDING: CV-score the 06-13 HD
-  deadlifts** (6× 4K120, dark-iron diagonal round-iron) — needs read-only R2 creds in-env, then
-  `ingest_clips.py --from-manifest`; a test of whether 4K rescues dark-iron tracking + the absolute
-  -velocity scale on slow heavy 275s (SmartBarbell already nailed all 6 counts there).
+  Full design + next-session runbook: `docs/video-storage.md`. **⚑ 06-13 HD deadlifts CV-scored
+  2026-06-15 — AUTO (seed-free) FAILS on dark-iron round-iron; one-tap is the next step.** Probe
+  corrected the manifest: DL-1..5 are 4K 3840x2160 **~80fps HEVC** (not "4K120" as user-stated),
+  **DL-6 is PORTRAIT 2160x3840 20fps h264** (a different capture). Native 4K is impractical to flow
+  over directly (repeated full-res decode/candidate ≈ hours/clip), so the count pass runs on a
+  720p h264 PROXY (`tools/_dl0613_proxy_cv.py`: pay the 4K decode once, true metadata+sha from the
+  master) — count is resolution-tolerant (auto works at 256px internally). Result: AUTO over-counts
+  **every** clip — reps_cv vs GT **6/5, 10/3, 7/2, 7/2, 17/8, 15/8** (mean |err| **5.7** vs
+  SmartBarbell **0** — SB nailed all 6). The short warmup clips inflate on setup/sway motion; the
+  8-rep working sets over-segment ~2×. So **4K does NOT rescue the dark-iron AUTO count** — this is
+  the dark-iron-round-iron flow-texture wall (learnings #12/#14), and the fix is the **tap-on-any-
+  frame one-tap path** (#18) per clip (heavier, needs the workbench), NOT seed-free auto. Absolute-
+  velocity / 4K-scale scoring (the slow-heavy-275 test) still pending on native res. Drafts in
+  `clips.csv`/`manifest.csv`/`sets.csv` notes.
 - **⚑ CV milestone (2026-06-12): ALL THREE product metrics now beat SmartBarbell.** Scoreboard:
   **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-12)"**. Human-grade tap path: reps
   **0.12** (wtd 0.07, 24/26 exact) vs SB 2.57 · velocity-loss **2.2pp** vs 9.0 · **absolute m/s
