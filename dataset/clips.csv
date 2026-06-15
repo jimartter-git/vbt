@@ -1,1 +1,6 @@
 clip,lift,load_kg,load_unit,gym,equipment,angle_kind,angle_quality,background_clutter,occlusion,lighting,velocity_regime,tempo_notes,reps_cv,reps_true,mean_vel_cv,cv_conf,cv_flags,has_gt,set_id,notes
+20260613-DL-1.mov,deadlift,,,,,,,,,,,,,,,,pending_cv,,20260613-DL-1,
+20260613-DL-2.mov,deadlift,,,,,,,,,,,,,,,,pending_cv,,20260613-DL-2,
+20260613-DL-3.mov,deadlift,,,,,,,,,,,,,,,,pending_cv,,20260613-DL-3,
+20260613-DL-4.mov,deadlift,,,,,,,,,,,,,,,,pending_cv,,20260613-DL-4,
+20260613-DL-5.mov,deadlift,,,,,,,,,,,,,,,,pending_cv,,20260613-DL-5,

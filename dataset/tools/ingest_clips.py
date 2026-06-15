@@ -178,8 +178,7 @@ def main():
                             sha256=(sha256(path) if args.sha else ""),
                             bytes=os.path.getsize(path), url="", key=fn, note="", **info))
         draft = dict.fromkeys(CLIPS_COLS, "")
-        draft.update(clip=fn, gym=args.gym, lift=args.lift, set_id=sid,
-                     has_gt=("true" if sid else ""))
+        draft.update(clip=fn, gym=args.gym, lift=args.lift, set_id=sid)
         if not args.no_cv:
             try:
                 draft.update(cv_prefill(path))
