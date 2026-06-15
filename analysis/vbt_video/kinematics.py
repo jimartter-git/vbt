@@ -71,6 +71,67 @@ def _candidate_concentrics(t, v, pos, fs):
     return cands
 
 
+def _merge_subrep_runs(cands, pos, sep_frac=0.2, overtop_frac=1.0):
+    """Coalesce consecutive positive-velocity runs that belong to ONE rep.
+
+    A real rep boundary requires the bar to RETURN toward the bottom between
+    concentrics (bench→chest, squat→depth, deadlift→floor). A deadlift's
+    knee/sticking-point velocity dip, though, creates a spurious sign-change
+    MID-rep where the bar barely descends — splitting one pull into 2–3 runs (the
+    ~2× over-count seen on the 06-13 deadlifts: a cleanly-tracked 8-rep set
+    segmented into 17–21). Merge a run pair only when BOTH:
+      (a) the intervening DESCENT is under `sep_frac` of a rep ROM — the bar didn't
+          return to the bottom (a stall, not a real eccentric), AND
+      (b) the next run doesn't rise more than `overtop_frac` of a rep ROM ABOVE the
+          current rep's top — a sticking-point hump completes the SAME rep's range,
+          whereas a rack-in / put-up phantom shoots well above lockout. Without (b)
+          the merge would swallow a terminal rack-lift into the last real rep, whose
+          now-inflated top makes the plausibility gate drop it → a lost real rep
+          (caught by test_plausibility_gate_drops_rack_phantoms).
+    Lifts that fully reset between reps are untouched: their inter-rep descents are
+    ~full ROM, far above (a)'s threshold. Lift-agnostic — it keys on bar return, not
+    on knowing it's a deadlift.
+
+    `sep_frac=0.2` was set from the corpus: measured inter-run descents cleanly
+    separate into mid-rep DIPS (≤0.04·ROM — the bar stalls without reversing) and
+    real ECCENTRICS (≥0.32·ROM, even SQ-1's noisy low-res mirror clip and SQ-3's
+    fast touch-and-go); 0.2 sits in that gap, biased toward the eccentric side so a
+    real rep is never merged away (a main-lift regression is the line we don't
+    cross — CLAUDE.md learning #15). 0.4 over-merged SQ-1's 0.32 eccentrics. Both
+    thresholds are fractions of a PHANTOM-ROBUST rep ROM (median of the real
+    eccentric descents, not the raw position range a single rack-lift would inflate).
+    """
+    if len(cands) < 2:
+        return cands
+
+    def _valley_drop(end_i, start_j):    # how far the bar fell from run-i's top into the gap
+        hi = max(int(start_j), int(end_i))
+        return float(pos[int(end_i)] - pos[int(end_i):hi + 1].min())
+
+    span = float(np.percentile(pos, 95) - np.percentile(pos, 5))    # rough rep scale (for thresh)
+    if span <= 0:
+        return cands
+    thresh = sep_frac * span
+    # Phantom-robust rep ROM: the median of the *real* (≥thresh) inter-run descents —
+    # those are true floor returns ≈ one rep ROM; a lone rack-lift can't move a median.
+    descents = [_valley_drop(a[1], b[0]) for a, b in zip(cands, cands[1:])]
+    real = [d for d in descents if d >= thresh]
+    rep_rom = float(np.median(real)) if real else span
+    overtop = overtop_frac * rep_rom
+    merged = [list(cands[0])]
+    for c in cands[1:]:
+        prev = merged[-1]
+        descent = _valley_drop(prev[1], c[0])
+        overshoot = float(pos[int(c[1])] - pos[int(prev[1])])   # rise ABOVE the rep's current top
+        if descent < thresh and overshoot <= overtop:           # stall within the rep → same rep
+            prev[1] = c[1]
+            prev[2] = max(prev[2], c[2])                # keep the stronger hump's peak
+            prev[3] = float(pos[int(prev[1])] - pos[int(prev[0])])   # full up-travel
+        else:
+            merged.append(list(c))
+    return [tuple(m) for m in merged]
+
+
 def _segment_concentric(t, v, pos, peak_min, rom_min, fs, rep_gate="absolute",
                         rel_rom_frac=0.5, rel_peak_frac=0.25,
                         rom_floor=0.04, peak_floor=0.05):
@@ -90,6 +151,7 @@ def _segment_concentric(t, v, pos, peak_min, rom_min, fs, rep_gate="absolute",
       "Tempo-invariance".
     """
     cands = _candidate_concentrics(t, v, pos, fs)
+    cands = _merge_subrep_runs(cands, pos)   # fuse deadlift double-bump sub-reps (see helper)
     if rep_gate == "absolute":
         return [(s, e) for (s, e, peak, rom) in cands
                 if peak >= peak_min and rom >= rom_min]

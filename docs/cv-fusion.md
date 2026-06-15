@@ -128,6 +128,29 @@ plate stacked in a moving column still fails. Remaining gaps, each with a named 
 Net: **counts are production-ready behind a one-tap UX and ~9/14 fully hands-off; absolute
 velocity is the remaining gap** (#2). Re-run the honest number any time with `cv_eval.py --auto`.
 
+## Deadlift double-bump — a segmentation fix, not a tracking one (2026-06-15)
+
+The 06-13 4K deadlifts AUTO-over-counted ~2× (DL-6's clean 8-rep working set read 15-21) and at
+first looked like "CV can't see dark round iron." The trajectory said otherwise: flow rides the
+bar **311 px ≈ a full plate, conf 1.0, with 8 clean position cycles = ground truth**. The bug was
+in `trajectory_to_reps`, which segments reps on velocity ZERO-CROSSINGS — and a deadlift's
+**double-humped pull** (the bar decelerates through the knee/sticking point, then re-accelerates)
+fakes a turnaround, splitting each rep into 2-3. The corpus that won was bench/squat = single-hump.
+
+Fix: `kinematics._merge_subrep_runs` coalesces consecutive positive-velocity runs **not separated
+by a real bar RETURN toward the bottom** (bench→chest, squat→depth, deadlift→floor all reset; a
+sticking-point dip doesn't). It's lift-agnostic and gated so it never eats a real rep: a descent
+threshold (`sep_frac=0.2`) sits in the measured gap between mid-rep dips (≤0.04×ROM) and real
+eccentrics (≥0.32×ROM), and an overtop guard stops a terminal rack-lift from fusing into the last
+rep (both thresholds use a phantom-robust rep-ROM = median of real eccentric descents). A full
+merge-ON-vs-OFF diff over the whole corpus showed **0 regressions** (only ROW-2-0608 improved
+7→6); all 50 tests pass. FLOW-tracked deadlifts are now near-exact (DL-1 5/5, DL-5 9/8, DL-6 9/8).
+The short warm-up clips (DL-2/3/4) still over-count — flow can't lock dark iron *at rest* and falls
+to the DETECT path (setup-motion over-count), which the one-tap path, not segmentation, fixes.
+
+**Lesson:** when an AUTO count comes in ~2× and the bar visibly tracks, suspect the SEGMENTER
+before the tracker — dump the trajectory and count position cycles before concluding "CV can't."
+
 ## Zero-tap rebuild — track-by-detection (2026-06-09)
 
 The old zero-tap path (flow + a single auto-seed) was **8.5 mean rep-count error** on the
