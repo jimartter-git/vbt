@@ -42,21 +42,18 @@ and `docs/sources-and-fusion.md`.
   New **CV-training corpus**: `dataset/clips.csv` (wide human annotations, `dataset/ANNOTATIONS.md`
   vocab) + `tools/ingest_clips.py` (probe + seed-free CV prefill; `--from-manifest` pulls from R2).
   Full design + next-session runbook: `docs/video-storage.md`. **⚑ 06-13 HD deadlifts CV-scored
-  2026-06-15 — the ~2× over-count was a SEGMENTATION bug (deadlift double-bump), now FIXED; see
-  learning #21.** Probe corrected the manifest: DL-1..5 are 4K 3840x2160 **~80fps HEVC** (not
-  "4K120" as user-stated), **DL-6 is PORTRAIT 2160x3840 20fps h264** (a different capture). Native
-  4K is impractical to flow over directly (repeated full-res decode/candidate ≈ hours/clip), so the
-  count pass runs on a 720p h264 PROXY (`tools/_dl0613_proxy_cv.py`: pay the 4K decode once, true
-  metadata+sha from the master) — count is resolution-tolerant (auto works at 256px internally).
-  The flow tracker rides the dark round-iron bar PERFECTLY (DL-6: 311px travel ≈ a full plate, conf
-  1.0, 8 clean cycles) — but `trajectory_to_reps` over-split each pull at the sticking-point velocity
-  dip, reading **6/10/7/7/17/15** (mean |err| 5.7). The **double-bump merge** (#21) fixes the
-  flow-tracked clips: reps_cv vs GT now **5/5✓, 8/3, 7/2, 7/2, 9/8, 9/8** (FLOW clips DL-1/5/6
-  mean|err| ~0.7; overall 2.83). The 3 short WARMUP clips (DL-2/3/4) still over-count — flow can't
-  lock the dark iron *at rest* and falls to the DETECT path (setup-motion over-count, learnings
-  #13/#18; the one-tap path is the fix, not segmentation). Absolute-velocity / 4K-native scale
-  scoring (the slow-heavy-275 test) still pending on native res — the 720p-proxy velocity is
-  scale-suspect. Records in `clips.csv`/`manifest.csv`/`sets.csv`.
+  2026-06-15 — ALL SIX EXACT (reps_cv 5/3/2/2/8/8 = GT) after fixing TWO bugs: iPhone display
+  ROTATION (#22) + the deadlift double-bump SEGMENTER (#21).** The over-count *looked* like
+  "CV can't see dark iron"; it was two mechanical bugs. (a) DL-1..5 are iPhone `frame.rotation=-90`
+  clips — `PyAVDecoder` decoded them sideways so the bar moved along image-X while the segmenter
+  read Y (track looked static, count garbage); now `PyAVDecoder._apply_rotation` decodes upright.
+  (b) the deadlift double-humped pull (knee/sticking-point dip) faked a turnaround → ~2× over-split;
+  the double-bump merge fixes it. Counts: DL-1/2/3/4/6 zero-tap auto-seed, DL-5 one-tap on the
+  yellow-hub plate (auto grabbed a floor decoy). **Velocity-LOSS — the fatigue signal — matches
+  Vitruve: 17.8 vs 17.1, 29.0 vs 29.7, 11.9 vs 9.4 pp.** Absolute MV reads a consistent ~1.2× high
+  (active-region vs full-concentric mean DEFINITION gap, correctable — not a tracking error). Native
+  4K is impractical to flow over (hours/clip) so scoring uses an UPRIGHT 720p proxy
+  (`tools/_dl0613_proxy_cv.py`, rotation-aware). Records in `clips.csv`/`manifest.csv`/`sets.csv`.
 - **⚑ CV milestone (2026-06-12): ALL THREE product metrics now beat SmartBarbell.** Scoreboard:
   **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-12)"**. Human-grade tap path: reps
   **0.12** (wtd 0.07, 24/26 exact) vs SB 2.57 · velocity-loss **2.2pp** vs 9.0 · **absolute m/s
@@ -341,12 +338,28 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    `test_plausibility_gate_drops_rack_phantoms`); ROM here is the **median of real eccentric
    descents** (phantom-robust, not the raw range a rack-lift inflates). **Validated: a full
    merge-ON-vs-OFF diff over the whole corpus = 0 regressions (only ROW-2-0608 *improved* 7→6);
-   all 50 tests pass.** FLOW-tracked deadlifts now near-exact (DL-1 5/5, DL-5 9/8, DL-6 9/8; flow
-   mean|err| ~0.7, was ~10). The 3 short WARMUP clips (DL-2/3/4) still over-count — flow can't lock
-   the dark iron *at rest*, falls to the DETECT path which catches setup/sway motion (a *separate*
-   pre-existing issue, learnings #13/#18 — the one-tap path is the fix, NOT segmentation). Method:
-   when an AUTO count is ~2× and the bar visibly tracks, suspect the SEGMENTER, not the tracker —
-   dump the trajectory and count position cycles before concluding "CV can't."
+   all 50 tests pass.** This was ONE of two bugs behind the 06-13 over-count; the other was
+   rotation (#22). Method: when an AUTO count is ~2× and the bar visibly tracks, suspect the
+   SEGMENTER, not the tracker — dump the trajectory and count position cycles before concluding
+   "CV can't."
+
+22. **The OTHER 06-13 bug: iPhone display ROTATION, ignored at the decode seam → ALL 6 deadlifts
+   now EXACT (2026-06-15).** After the double-bump fix, DL-1..5 still mis-counted while DL-6 was
+   perfect. Root cause: **DL-1..5 are iPhone clips with `frame.rotation = -90`** (landscape sensor
+   + a portrait display matrix); DL-6 has rotation 0. `PyAVDecoder` decoded the RAW (sideways)
+   frames, so the bar travelled along the image **X-axis** while `trajectory_to_reps` reads **Y** —
+   the track looked STATIC (yspan 17px) and the count was garbage. This *masqueraded* as the
+   dark-iron "wrong-seed" / detect-fallback problem (it is NOT — that diagnosis in #21 was wrong
+   for these clips). Fix: `PyAVDecoder._apply_rotation` honours `frame.rotation` (`np.rot90`,
+   k=r//90; verified -90→k=3=clockwise=upright) so EVERY downstream consumer gets upright frames —
+   a real product bug (any portrait phone clip would have failed). Result with rotation+double-bump
+   both fixed: **reps_cv 5/3/2/2/8/8 = GT, ALL SIX EXACT** (DL-1/2/3/4/6 zero-tap auto-seed; DL-5
+   one-tap on the yellow-hub plate, auto grabbed a floor decoy). **Velocity-LOSS — the fatigue
+   signal — matches Vitruve: DL-1 17.8 vs 17.1, DL-5 29.0 vs 29.7, DL-6 11.9 vs 9.4 pp.** Absolute
+   MV reads a *consistent* ~1.2× high — a velocity-DEFINITION gap (our active-region mean vs
+   Vitruve's full-concentric mean), correctable, NOT a tracking error. To SEE rotation: read
+   `frame.rotation` (or render a frame and look) before trusting any "static track" on phone video.
+   Tooling: `dataset/tools/_dl0613_proxy_cv.py` transcode now rotates upright too.
 
 ## ⚑ Video trigger — READ THIS
 

@@ -44,28 +44,41 @@ def sha256(path):
 
 
 def transcode(src, dst, target_w=PROXY_W):
-    """Decode master, spatially downscale to target_w (keep aspect+fps), re-encode h264."""
+    """Decode master UPRIGHT (apply display rotation), downscale to target_w, re-encode h264.
+
+    iPhone portrait clips carry a display rotation (frame.rotation, e.g. -90); the proxy
+    must be upright or the bar moves along the image X-axis and the rep segmenter (Y-axis)
+    sees a static track. We rotate via PyAVDecoder's verified mapping, then size to the
+    ROTATED width."""
+    import cv2
+    from vbt_video.frames import PyAVDecoder
     t0 = time.time()
     with av.open(src) as ic:
         ivs = ic.streams.video[0]
-        sc = target_w / ivs.codec_context.width
-        ow = target_w
-        oh = int(round(ivs.codec_context.height * sc)) // 2 * 2
         fps_out = int(round(float(ivs.average_rate or 30)))
         tb = Fraction(1, fps_out)
-        with av.open(dst, "w") as oc:
-            ovs = oc.add_stream("libx264", rate=fps_out)
-            ovs.width, ovs.height, ovs.pix_fmt = ow, oh, "yuv420p"
-            ovs.options = {"crf": "20", "preset": "veryfast"}
-            n = 0
-            for frame in ic.decode(ivs):
-                rf = frame.reformat(width=ow, height=oh, format="yuv420p")
-                rf.pts, rf.time_base = n, tb       # CFR pts in the output time_base
-                for pkt in ovs.encode(rf):
-                    oc.mux(pkt)
-                n += 1
-            for pkt in ovs.encode():
+        oc = ow = oh = ovs = None
+        n = 0
+        for frame in ic.decode(ivs):
+            img = PyAVDecoder._apply_rotation(frame.to_ndarray(format="bgr24"), frame.rotation)
+            if oc is None:                            # size from the first UPRIGHT frame
+                h0, w0 = img.shape[:2]
+                ow = target_w if w0 > target_w else w0
+                oh = int(round(h0 * ow / w0)) // 2 * 2
+                ow = ow // 2 * 2
+                oc = av.open(dst, "w")
+                ovs = oc.add_stream("libx264", rate=fps_out)
+                ovs.width, ovs.height, ovs.pix_fmt = ow, oh, "yuv420p"
+                ovs.options = {"crf": "20", "preset": "veryfast"}
+            small = cv2.resize(img, (ow, oh))
+            of = av.VideoFrame.from_ndarray(small, format="bgr24")
+            of.pts, of.time_base = n, tb
+            for pkt in ovs.encode(of):
                 oc.mux(pkt)
+            n += 1
+        for pkt in ovs.encode():
+            oc.mux(pkt)
+        oc.close()
     print(f"    transcoded {n} frames -> {ow}x{oh} @{fps_out}fps in {time.time()-t0:.0f}s", flush=True)
 
 
