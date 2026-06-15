@@ -24,6 +24,8 @@ Lift codes: `SQ` squat · `BN` bench · `DL` deadlift (extend as needed).
 | `sets.csv` | one row per real set | date, lift, load (kg canonical + as-entered), your rep count + **subjective RPE** (the prior's label) |
 | `rep_metrics.csv` | one row per (set, vendor, rep, metric) | long/tidy — gaps are free; `flag` carries imputed/missed/phantom/low_confidence. Two rep keys: `rep_index` (vendor's own count) + `true_rep` (physical rep — the alignment key) |
 | `raw_files.csv` | pointers | to bulk time-series in `raw/` (WL txt, watch/AirPods) |
+| `clips.csv` | one wide row per CV-corpus clip | human annotations (angle/clutter/regime…) + CV-prefilled draft count; edit in a spreadsheet. Vocab: `ANNOTATIONS.md`. Bytes live in R2 |
+| `raw/manifest.csv` | one row per clip | storage pointer (sha/bytes/res/fps/codec + R2 key); machine-filled by `tools/ingest_clips.py`. See `../docs/video-storage.md` |
 | `priors/{lift}_rpe_velocity.csv` | per RPE | your hand-built velocity→RPE curves (hardcode/min/avg/max), **SmartBarbell-frame** |
 | `schema.sql` | — | SQLite DDL (the DB is a rebuilt artifact, gitignored) |
 

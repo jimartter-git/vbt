@@ -16,6 +16,8 @@ TABLES = {
     "sets": "sets.csv",
     "rep_metrics": "rep_metrics.csv",
     "raw_files": "raw_files.csv",
+    "clip_manifest": os.path.join("raw", "manifest.csv"),
+    "clips": "clips.csv",
 }
 
 def load_csv(path):
@@ -47,8 +49,9 @@ def main():
     conn.commit()
     n_sets = conn.execute("SELECT COUNT(*) FROM sets").fetchone()[0]
     n_vendors = conn.execute("SELECT COUNT(DISTINCT vendor) FROM rep_metrics").fetchone()[0]
+    n_clips = conn.execute("SELECT COUNT(*) FROM clips").fetchone()[0]
     conn.close()
-    print(f"Built {DB}: {total} rows, {n_sets} sets, {n_vendors} vendors.")
+    print(f"Built {DB}: {total} rows, {n_sets} sets, {n_vendors} vendors, {n_clips} clips.")
 
 if __name__ == "__main__":
     main()
