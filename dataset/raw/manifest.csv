@@ -1,7 +1,7 @@
 filename,set_id,sha256,bytes,resolution,fps,codec,duration_s,url,key,note
-20260613-DL-1.mov,20260613-DL-1,,293338519,,,,,,20260613-DL-1.mov,
-20260613-DL-2.mov,20260613-DL-2,,221112619,,,,,,20260613-DL-2.mov,
-20260613-DL-3.mov,20260613-DL-3,,226860781,,,,,,20260613-DL-3.mov,
-20260613-DL-4.mov,20260613-DL-4,,209050973,,,,,,20260613-DL-4.mov,
-20260613-DL-5.mov,20260613-DL-5,,527110220,,,,,,20260613-DL-5.mov,
-20260613-DL-6.mov,20260613-DL-6,,116676857,,,,,,20260613-DL-6.mov,
+20260613-DL-1.mov,20260613-DL-1,,293338519,3840x2160,120,,,,20260613-DL-1.mov,4K120 (user-stated; codec/dur pending probe)
+20260613-DL-2.mov,20260613-DL-2,,221112619,3840x2160,120,,,,20260613-DL-2.mov,4K120 (user-stated; codec/dur pending probe)
+20260613-DL-3.mov,20260613-DL-3,,226860781,3840x2160,120,,,,20260613-DL-3.mov,4K120 (user-stated; codec/dur pending probe)
+20260613-DL-4.mov,20260613-DL-4,,209050973,3840x2160,120,,,,20260613-DL-4.mov,4K120 (user-stated; codec/dur pending probe)
+20260613-DL-5.mov,20260613-DL-5,,527110220,3840x2160,120,,,,20260613-DL-5.mov,4K120 (user-stated; codec/dur pending probe)
+20260613-DL-6.mov,20260613-DL-6,,116676857,3840x2160,120,,,,20260613-DL-6.mov,4K120 (user-stated; codec/dur pending probe)
