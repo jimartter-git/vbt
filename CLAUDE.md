@@ -17,10 +17,15 @@ and `docs/sources-and-fusion.md`.
 
 ## Status
 
-- **PoC scaffold** (compiles on a Mac, not yet device-tested): watchOS app
-  (HKWorkoutSession + CMBatchedSensorManager → CSV → phone), iOS companion,
-  shared `VBTCore` Swift package, Python ZUPT analysis pipeline (`analysis/`,
-  tests green).
+- **PoC scaffold — now DEVICE-VALIDATED (2026-06-15, Apple Watch Ultra, watchOS
+  26.5):** watchOS app (HKWorkoutSession + CMBatchedSensorManager → CSV → phone),
+  iOS companion, shared `VBTCore` Swift package, Python ZUPT analysis pipeline
+  (`analysis/`, tests green). **⚑ The riskiest assumption is answered YES:** the
+  scaffold built/signed/ran on a real Ultra unmodified, `CMBatchedSensorManager`
+  sustained **~200 Hz continuously (5,317 samples ≈ 27 s)** inside an
+  `HKWorkoutSession`, and the CSV transferred watch→phone intact (`transferFile` →
+  `VBTPhone` list). Validated on a SINGLE ~27 s set; multi-set thermal/battery
+  endurance and signal *accuracy* vs Vitruve are still untested (next).
 - **Active phase = data + calibration.** Building a personal multi-vendor
   measurement database (`dataset/`) to quantify cross-tool agreement, calibrate,
   and seed the app's per-user prior. **Vitruve is the established ground-truth
@@ -30,13 +35,13 @@ and `docs/sources-and-fusion.md`.
   06-09 bench, 06-10 squats/RDLs all in `sets.csv`/`rep_metrics.csv`. (06-10 filed as set-level
   Vitruve averages — the app crashed before per-rep export.) Next upload → follow the ingestion
   + video triggers below.
-- **⚑ CV milestone (2026-06-11): the near-failure over-count is FIXED — reps AND velocity-loss
-  tightened together; absolute m/s still open.** Current scoreboard lives in
-  **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-11)"**. Headlines: auto/no-tap reps
-  **0.32** (lift-weighted **0.25**) vs SB 2.57/2.54, 21/22 within ±1, every bench+squat exact;
-  velocity-loss **3.2pp** vs SB **9.0pp** (common clips). Loss now has ONE canonical definition
-  everywhere (`vbt_analysis/metrics.py`). Absolute velocity unchanged (SB wins ~0.07; gated —
-  see #14). Gate design rules: learning #16.
+- **⚑ CV milestone (2026-06-12): ALL THREE product metrics now beat SmartBarbell.** Scoreboard:
+  **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-12)"**. Human-grade tap path: reps
+  **0.12** (wtd 0.07, 24/26 exact) vs SB 2.57 · velocity-loss **2.2pp** vs 9.0 · **absolute m/s
+  0.055 vs 0.068 — the open metric, closed by the human-confirmed rim** (`rim_px`, #19–#20).
+  Auto/no-tap: 0.31/0.24, loss 6.0pp. ONE canonical loss everywhere (`vbt_analysis/metrics.py`).
+  Bilateral fusion built+validated, gated on both-plates-in-frame footage. ROM priors derived
+  (`dataset/priors/*_rom.csv`). Key rules: learnings #16–#20.
 
 ## Repo map
 
@@ -242,6 +247,59 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    floor/background mis-taps live; matte plates need the tap on the textured HUB/logo (flow needs
    corners); ROW-4 untappable (#12). Corpus now 26 clips (06-10 Equinox registered); valid tap
    seeds in `cv_eval.py` CLIPS (RDL taps removed — body-tracks), reproduce with `--gate`.
+
+18. **Tap-on-ANY-frame made the one-tap path HUMAN-GRADE (2026-06-11): reps 0.12/0.07 (24/26
+   exact, every tappable clip exact), velocity-loss 2.4pp vs Vitruve — beats auto (0.31/0.24,
+   6.0pp) and SB (2.57, 9.0pp) decisively, with every track VISUALLY verified riding the plate.**
+   The frame-0 constraint was the real enemy, not tap judgment: `seed_time` + `track.
+   ReplaySource`/`track_bidirectional` seed at the plate's clearest frame and track BOTH ways
+   (drift halves; the RDL body-fusion and dark-iron at-rest texturelessness dissolve). CLIPS
+   seeds may be `(x,y,w,h,t)`; reproduce with `--gate`; the loop is tooling:
+   `analysis/scripts/tap_workbench.py` (motion heatmap → scrub → zoom → tap → tracked-overlay
+   verify). Validated tap rules: seed at a SHARP PAUSE (mid-rep blur = bad corners); tight box
+   on the textured HUB excluding background (background corners outvote a textureless plate —
+   rim box static, hub box 10/10 on ROW-2-0608); mid-set seeds beat early ones; overlay
+   verification is non-negotiable (every failure mode is visible there and nowhere else).
+   Dark-iron any-frame taps read near device-grade ABSOLUTE m/s (BN-1-0609 0.43→0.24 vs Vitruve
+   0.49→0.26). Honest floors that remain: RDL-1 7/8 (segmentation, dead-on track, auto agrees),
+   ROW-4 dead-front (edge-on sliver, untrackable for every tool), BN-3-0605 loss 11.5pp
+   (diagonal-bumper perspective scale varies through the ROM — physics). Product UX = scrub →
+   tap → watch the box track → accept/re-tap.
+
+19. **Absolute velocity WON via the human-confirmed RIM, not better auto-measurement (2026-06-12):
+   tap 0.057 vs SB 0.068 set-MV |err| (common 11) — all three product metrics now beat SB.** The
+   new abs-velocity harness (`vel_eval.py --tap`, also per-rep RMSE) localized ALL remaining
+   error in 5 clips with ONE mechanism: the ruler measured the ~113px HUB, not the ~210px RIM
+   (diagonal bumpers ~2×, hex squats ~1.25×). Fix = learning #10's confirm/adjust surface made
+   real: `VideoConfig.rim_px` (+ `cv_eval.RIM_PX`), a per-clip human circle-confirm — scale-only,
+   tracking untouched, loss unchanged (scale-invariant ✓). Any-frame taps alone were ALREADY
+   device-grade on dark iron + deadlifts (rRMSE 0.01–0.10). Same session: **bilateral fusion
+   built + validated** (`vbt_video/bilateral.py`: tilt cancellation; f-free depth tier
+   pos=−D·(cy−cy0)/d(t); per-rep `lr_disagree` flags — a deliberately bad second end got 10/10
+   reps flagged, guardrail #3 proven) but **productively GATED**: clips needing scale help have
+   the far plate OFF-frame; capture ask = both plates in frame, side-on, Vitruve running. ROM
+   priors now derived from Vitruve rows (`derive_rom_priors.py`, advisory `rom_prior_cm` —
+   flags, never gates; a whole-set outlier = scale-error tell). Residuals, named: BN-2/3-0605
+   0.14/0.11 (perspective-through-ROM → the depth tier fed by rim-anchored size traces), SC-1
+   (accessory, not chased). Thin margin — honest: we edge SB on abs, not crush it.
+
+20. **Continuous-ruler campaign (2026-06-12): built, synthetically exact, GATED OFF on real
+   440px clips — the postmortem that names the per-clip absolute floor.** SB's remaining
+   per-clip edge (0605 diagonal benches, SQ-3) = per-frame plate re-measurement. Our tier
+   (`depth_scale`: pos=−D·(cy−cy0)/d(t), anchored AT the rim-confirm frame `rim_t` —
+   median-anchoring re-scales the ruler, caught synthetically) is pinhole-exact in tests,
+   but BOTH 440px trace sources fail honestly: Hough traces hub/rim MODE-SWITCH (40% fake
+   swings, auto-abstained by a 25% physical range cap — it changed a rep count before the
+   cap); colour-mask traces are clean signals whose SHAPE conflates mask-fraction (arm
+   crossings; upper-envelope insufficient) with perspective — helps one bench, hurts
+   another, no shared gate separates them → default OFF (robust_scale precedent). One more
+   constant-rim win: BN-4 hex rim 110px (uniform −23% bias = oversized ruler, independently
+   flagged by the ROM prior) → 0.05. DL-2's rim attempt REGRESSED and was reverted —
+   front-quarter deadlift = real out-of-plane motion; no static rim fixes it. Final: abs
+   **0.055 vs SB 0.068** aggregate, per-rep RMSE 0.081 wtd, loss/counts untouched. The
+   named unlocks for per-clip parity: (a) **learned plate sizer (torch-gated — NOW the
+   single bottleneck)**, (b) HD/closer capture, (c) both-plates footage → bilateral d(t)
+   cross-check. Don't re-attempt classical per-frame sizing at 440px.
 
 ## ⚑ Video trigger — READ THIS
 

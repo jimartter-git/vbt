@@ -441,6 +441,202 @@ tap-only, including the invalid taps: 0.27/0.18 with two body-sourced counts —
    late-set DRIFT off the dumbbell (~t=20s), which also explains its corrupted loss
    (51% vs 27%): drift, not segmentation, is SC-1's real problem.
 
+### ⚑ HUMAN-GRADE ACHIEVED — tap-on-any-frame (2026-06-11, same day, after the audit)
+
+The audit's failures all traced to one constraint and one missing loop, so both were built:
+
+1. **`seed_time` / tap-on-ANY-frame** (`track.ReplaySource` + `track_bidirectional`, wired
+   through `VideoVelocitySource.estimate(seed_bbox, seed_time)`; CLIPS seeds may now be
+   `(x,y,w,h,t)`): seed the tracker at the frame where the plate is CLEAREST, track forward
+   AND backward, stitch. Dissolves the frame-0 constraint (the RDL body-fusion, the
+   dark-iron at-rest texturelessness) and **halves drift** (it accumulates outward from the
+   seed — the SC-1 fix).
+2. **The human tap loop, as tooling** (`analysis/scripts/tap_workbench.py`): motion
+   heatmaps (SEE what moves), frame scrubbing (seed at a SHARP pause), zoomed placement,
+   and an instant tracked-overlay strip after every tap that MUST be visually verified.
+
+**Final one-tap board (registered seeds, `--gate`, all tracks visually verified riding
+the plate):**
+
+| | SmartBarbell | Auto | tap, frame-0 era | **tap, any-frame** |
+|---|---|---|---|---|
+| reps mean\|err\| (unweighted) | 2.57 | 0.31 | 0.23 | **0.12** |
+| reps mean\|err\| (lift-weighted) | 2.54 | 0.24 | 0.16 | **0.07** |
+| exact / within ±1 (of 26) | 7 / 13 (21) | 19 / 24 | 21 / 25 | **24 / 25** |
+| velocity-loss \|err\| (13 Vitruve clips) | — | 6.0pp | 7.7pp | **2.4pp** |
+
+Every tappable clip is EXACT. The only residuals: RDL-1 −1 (a verified dead-on plate
+track still reads 7 — the 8th rep is segmentation; auto agrees) and dead-front ROW-4 −2
+(auto fallback; the plate is an edge-on sliver with per-rep scale change — 2 reps on a
+direct sliver tap; untrackable for every tool). Velocity-loss 2.4pp ≈ the level of
+SB-vs-Vitruve agreement on SB's BEST clips; 11/13 within 3.7pp, SQ-3 (adversarial TnG)
+at 0.3pp; the one outlier is BN-3-0605 (11.5pp) where diagonal-bumper perspective scale
+varies through the ROM — physics, not tracking. Dark-iron any-frame taps read near
+device-grade ABSOLUTE m/s (BN-1-0609 0.43→0.24 vs Vitruve 0.49→0.26; BN-2-0609 0.44→0.32
+vs 0.41→0.33) — a correct hub-centred box on a 45 iron plate is a good ruler even at 440px.
+
+**The validated tap lessons (encode in the product UI):**
+- **Seed at a sharp PAUSE** (lockout / standing / rep bottom) — mid-rep motion blur gives
+  flow bad corners (SC-1 blurred-lockout tap collapsed to 15 jitter reps; the sharp one
+  is perfect).
+- **Tight box on the textured HUB, excluding background** — on dark iron a rim-sized box
+  admits static background corners that outvote the textureless plate (ROW-2-0608: rim
+  box static, hub box 10/10 verified).
+- **Mid/late-set seeds beat early seeds** when drift is the risk (bidirectional splits
+  the accumulation).
+- **The overlay-verification step is non-negotiable** — every failure mode (body-lock,
+  decoy, drift, jitter) is visible in a 6-frame tracked strip and in nothing else.
+- Product UX = scrub → tap → watch the box track → accept/re-tap; this experiment is
+  the end-to-end proof it reaches human-grade, and the gate/guards handle the racking
+  tail (BN-4's track follows the plate into the rack; the gate drops those moves).
+
+## Signal fusion — the tier ABOVE selection (design, 2026-06-11, lifter-directed)
+
+Everything scored so far tracks ONE target; "fusion" in the auto path means *selection*
+(candidate-gen + verification picks a single winner). That was correct, and the record
+explains why: until the tracks were human-grade, the dominant error was CATEGORICAL —
+wrong-object identity (decoy/body-lock). Categorical errors don't average out; they
+poison blends. **Selection resolves identity; only then is there anything worth fusing.**
+
+With verified-on-target tracks (learning #18), the residual errors are exactly
+fusion-shaped — independent and complementary across signals we already have:
+
+| residual error | fixing signal pair | mechanism |
+|---|---|---|
+| bar tilt / whip | the TWO bar-end plates | errors anti-correlated → averaging cancels |
+| perspective scale through ROM (BN-3-0605, the OPEN absolute m/s) | plate ruler × forearm ruler × known 2.2 m bar length | complementary failure modes + a geometric constraint |
+| per-rep occlusion (RDL-2's post-clipped bottoms) | plate track × body/wrist track | patch ONLY the flagged frame-span from the healthy signal |
+| boundary ties (RDL-1's 8th rep) | any second independent witness (eventually the watch — highest-rate arbitrates) | consensus breaks the coin-flip |
+
+**Architecture: per-PRIMITIVE, per-REP repair — never set-level votes.** Every signal
+emits the `VelocitySource` shape (boundaries, velocity, ROM) + per-rep/per-metric
+confidence and failure flags; fusion operates at the primitive × rep granularity (count
+from boundary consensus; each rep's velocity from the most trustworthy ruler FOR THAT
+REP; flagged spans patched). Venn framing: union for coverage, intersection for trust.
+
+**Non-negotiable guardrails (each one is a paid-for lesson):**
+1. Identity before blending — every signal, INCLUDING the human tap and any body track,
+   enters as a candidate through verification scoring, never an override (#17).
+2. Abstention propagates — a rep-level suspect signal contributes zero to that rep, not
+   "a little" (the honest-velocity rule, applied per rep).
+3. Disagreement beyond tolerance is INFORMATION → flag for the manual editor (the
+   active-learning flywheel; L/R plate disagreement is the same signal generalized).
+
+This CV-internal fusion (two plates × forearm × body, one shared camera clock) is the
+cheapest proving ground for the grand multi-source fusion (watch/AirPods/BLE/prior/human)
+— same algebra, more clocks. Validation order, by what the velocity board can measure:
+(1) bilateral plates (tilt-cancel + bar-length perspective scale → absolute m/s);
+(2) per-rep ruler arbitration (plate vs forearm — the "forearm fixes one rep" case);
+(3) occlusion patching; (4) boundary consensus. Counts are saturated (0.07 weighted) —
+judge all of this on the VELOCITY board.
+
+## Full scoreboard snapshot (2026-06-12) — ABSOLUTE VELOCITY WON: all three product metrics now beat SmartBarbell
+
+Regenerate: `vel_eval.py --tap` (the human-grade path) / `vel_eval.py` (auto). The
+absolute-velocity board is new this session (`vel_eval` now scores set-MV |err| + per-rep
+RMSE vs Vitruve, unweighted + lift-weighted, alongside loss).
+
+| metric (vs Vitruve GT) | SmartBarbell | human-grade tap | status |
+|---|---|---|---|
+| reps mean\|err\| (26 clips) | 2.57 | **0.12** (0.07 wtd) | WON (06-11) |
+| velocity-loss \|err\| (11 common) | 9.0pp | **2.2pp** | WON (06-11) |
+| **ABSOLUTE set-MV \|err\| (11 common)** | 0.068 | **0.057** | **WON (06-12)** |
+
+### What closed the absolute gap: the HUMAN-CONFIRMED RIM (`rim_px`), not bilateral
+The baseline harness localized ALL remaining absolute error in 5 clips (0605 benches ~2×,
+0604 squats ~1.25×) with one mechanism: the ruler had measured the ~113px HUB instead of
+the ~210px RIM. The fix is learning #10's plate confirm/adjust surface, implemented:
+`VideoConfig.rim_px` (human circle-overlay confirmation on a sharp frame, one per clip —
+the WL Analysis manual-circle precedent) overrides the ruler only; tracking untouched.
+Per-clip: SQ-1 err 0.20→**0.02**, SQ-3 →0.08, BN-1 0.63→**0.10**, BN-2 →0.14, BN-3 →0.11.
+The 0609 dark-iron benches + 0605 deadlifts were ALREADY device-grade from the any-frame
+taps alone (rRMSE 0.01–0.10). Confirmed rims live in `cv_eval.RIM_PX`.
+
+**Honest caveats:** the margin is thin (0.057 vs 0.068 — we edge SB, not crush it); it
+costs one human confirm on 5/11 clips (= the designed product UX, but SB does it
+auto); the residuals (BN-2/3-0605 0.14/0.11) are perspective-scale-through-ROM — the
+named follow-up is the bilateral DEPTH tier fed by rim-anchored size traces. SC-1 (0.58,
+accessory, no plate ruler) deliberately not chased per lift-priority law.
+
+### Bilateral fusion: BUILT + validated, productively GATED on footage
+`vbt_video/bilateral.py` (+ `Track.sizes` per-frame ruler traces): tilt/whip cancellation
+(`avg`), a focal-length-FREE depth tier (`depth`: pos = −D·(cy−cy0)/d(t), pinhole-exact —
+captures out-of-plane motion), and per-rep L/R disagreement flags. Validated on analytic
+pinhole fixtures (exact depth recovery where a constant ruler is biased) and a real-clip
+smoke test where guardrail #3 proved itself: a deliberately post-occluded second end got
+**all 10 reps flagged `lr_disagree`** instead of silently corrupting velocity. Corpus
+reach is the honest blocker: the clips needing scale help have the far plate OFF-FRAME;
+the marginal-second-end clips are already device-grade. **Unlocking footage: both plates
+fully in frame, side-on-ish, Vitruve running, main lifts.**
+
+### ROM priors: derived, advisory, already useful
+`dataset/tools/derive_rom_priors.py` → `priors/{lift}_rom.csv` from the Vitruve rows
+(bench 37cm [32–42] n=91 · deadlift 56 [49.5–62] · squat 74 [71–77] · SC 37). Wired as
+`VideoConfig.rom_prior_cm` → `rom_outlier` flags + meta count, NEVER gating. A whole-set
+outlier pattern is a scale-error tell: the band would have auto-flagged the uncorrected
+2× benches. Re-derive after each ingestion.
+
+### Not attempted, and why (goal items 2/4)
+Forearm-ruler arbitration and occlusion patching were below the line once the objective
+(absolute m/s) was won — remaining residuals are perspective-shaped (the depth tier's
+job), not ruler-disagreement-shaped. The personal-forearm calibration idea (solve the
+fraction against device-grade clips, record in anthropometry.csv) remains the right
+first step whenever pose work starts.
+
+## The continuous-ruler campaign (2026-06-12, same day) — built, gated, POSTMORTEM
+
+**Goal:** match SmartBarbell per-clip on absolute velocity by re-measuring the plate every
+frame (their visible mechanism). **Outcome: the machinery is built and synthetically exact,
+but BOTH 440px trace sources fail the honesty gates on the residual clips — constant rim
+stays production. Stop rule fired after two attempts per mechanism.**
+
+**What shipped (all default-off/experimental except the gates and one rim):**
+- `VideoConfig.depth_scale` — the single-end continuous ruler, pos = −D·(cy−cy0)/d(t),
+  anchored AT the human's confirm frame (`rim_t`; anchoring at the median silently
+  re-scales the ruler — caught by the synthetic). Pinhole-exact on the rendered fixture
+  (recovers truth where the constant ruler is biased; 2 e2e tests).
+- `bilateral.anchored_trace` quality gates, each catching a REAL failure: jitter =
+  MAD-vs-rolling-median-of-3 (rate-independent — successive-diff falsely rejected fast
+  real swings); a PHYSICAL range cap (25%) that auto-abstains on hub/rim **mode-switching**
+  (the 0604 squat Hough traces "swing" 40% — that's bimodal detection smoothed into a fake
+  depth signal, and it CHANGED A REP COUNT before the cap existed).
+- `color_size_trace` (+ occlusion upper-envelope: a crossing arm only ever SHRINKS a
+  colour mask) — clean as a signal (noise 0.3–0.6%) but its SHAPE conflates mask-fraction
+  variation with true perspective: attempt 1 corrupted BN-3 (+0.11 abs), attempt 2 (with
+  envelope) still traded BN-2's loss (+8.3pp) for its abs. No shared gate separates the
+  bench it helps from the bench it hurts → per-outcome enabling would be board-fitting →
+  default OFF.
+- One more constant-rim win: BN-4-0609 rim-confirmed (110px hex; its uniform −23% bias was
+  an over-sized ruler — flagged independently by the new ROM prior, 23 cm vs the 32–42 cm
+  bench band) → abs err 0.07→0.05. A DL-2 rim attempt REGRESSED (0.08→0.21) and was
+  reverted: DL-2's error is real out-of-plane motion (front-quarter pull), not a ruler
+  constant — no static rim can fix it.
+
+**Final state (vel_eval --tap, per-clip W/L column now on every run):** aggregate abs
+**0.055 vs SB 0.068** (common-11), loss 2.2pp, counts untouched, 50 tests green.
+Per-clip vs SB: we win 6 mains outright; SB still wins the 0605 benches (0.10–0.14 vs
+0.00–0.03), SQ-3 (0.08 vs 0.01), BN-4 (0.05 vs 0.01), DL-2 (no SB).
+
+**THE FLOOR, NAMED (the stop rule's deliverable):** closing the per-clip gap on those five
+requires a plate sizer that stays accurate per-frame at 440px under arm-crossing and
+hub/rim ambiguity. Classical options are exhausted honestly (Hough mode-switches; colour
+masks shape-shift; both now self-abstain). The named unlocks, pick any: **(a) a learned
+plate sizer — torch-gated in this container** (roadmap #6, now THE bottleneck for per-clip
+absolute parity); **(b) capture quality — HD or closer framing** (the 0609 sets prove the
+pipeline is device-grade when the plate is ~100px-sharp); **(c) both-plates footage** → bilateral d(t) cross-checking (built and waiting).
+⚠ CORRECTED (lifter-annotated screenshots, 2026-06-12): my single-frame visibility checks
+were wrong — the 0609 benches AND 0610 squats/RDLs DO have both plates in frame (the right
+end is post-grazed only at some frames, which tap-on-ANY-frame handles; one bad second tap
+≠ untrackable — the learning-#18 fallacy, almost repeated). **First SCORED bilateral run**
+(BN-2-0609, right tap (305,312,105,105)@12.5 + the registered left): both ends conf 1.0,
+10/10, ZERO lr_disagree — the per-rep L/R residual (2.5–5.7 cm) is a measured bar-tilt
+signal; the positive case is validated on GT footage. BUT fused abs was slightly WORSE
+than the device-grade single end (rRMSE 0.037 vs 0.02; MV 0.439 vs 0.39, Vit 0.407):
+the second end's auto-measured ruler runs hot — **bilateral needs a rim confirm PER END**
+(the ruler lesson, third appearance). Bilateral's near-term value on already-good clips is
+redundancy + the tilt/disagreement signal, not accuracy; its accuracy case is clips where
+the single end fails, plus per-end rims.
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.

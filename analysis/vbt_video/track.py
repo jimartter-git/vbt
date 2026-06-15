@@ -17,7 +17,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from .frames import FrameSource
+from .frames import Frame, FrameSource
 
 
 @dataclass
@@ -27,6 +27,8 @@ class Track:
     confidence: float         # 0..1  (fraction of frames the tracker held lock)
     size_cv: float = 0.0      # coeff. of variation of the size samples — a scale-quality
     #   signal (a jittery plate radius = unreliable px→m). 0 = unknown/stable.
+    sizes: np.ndarray = None  # optional M x 2 (t, diameter_px) raw size samples — the
+    #   per-frame ruler trace bilateral depth correction needs (None = not recorded)
 
 
 class Tracker(ABC):
@@ -413,7 +415,7 @@ class FlowTracker(Tracker):
                 d = _detect_plate(f.img, x0b, x1b, rmed, near=(cx, cy))
                 if d is not None and (d[0] - cx) ** 2 + (d[1] - cy) ** 2 < (1.2 * rmed) ** 2:
                     cx, cy, rmed = d[0], d[1], d[2]
-                    radii.append(d[2])
+                    radii.append((f.t, d[2]))
                 pts = self._seed(g, cx, cy, rmed)
             else:
                 if pts is None or pts.shape[0] < 4:
@@ -449,7 +451,7 @@ class FlowTracker(Tracker):
                             and abs(d[2] - rmed) / max(rmed, 1.0) < 0.40):
                         cx, cy, rmed = d[0], d[1], d[2]      # re-acquired — re-seed the cloud
                         pts = self._seed(g, cx, cy, rmed)
-                        radii.append(d[2]); healthy += 1; fails = 0; last_v = np.zeros(2)
+                        radii.append((f.t, d[2])); healthy += 1; fails = 0; last_v = np.zeros(2)
                     elif fails <= self.coast_frames:         # bridge a short gap on last velocity
                         cx += float(last_v[0]) * self.coast_decay ** fails
                         cy += float(last_v[1]) * self.coast_decay ** fails
@@ -467,7 +469,7 @@ class FlowTracker(Tracker):
                             em = _ellipse_radius(f.img, d[0], d[1], d[2])
                             if em is not None:
                                 rr = em
-                        radii.append(rr)
+                        radii.append((f.t, rr))
                         # slow position correction toward the rim centre (see __init__).
                         if self.anchor_alpha > 0.0 and abs(d[2] - rmed) / max(rmed, 1.0) < 0.20:
                             cx += self.anchor_alpha * (d[0] - cx)
@@ -479,12 +481,16 @@ class FlowTracker(Tracker):
             n += 1
         if n == 0:
             raise ValueError("no frames decoded")
-        rmed = float(np.median(radii)) if radii else r0
-        size_cv = (float(np.std(radii) / np.mean(radii))
-                   if len(radii) >= 3 and np.mean(radii) > 0 else 0.0)
+        rs = [r for _, r in radii]
+        rmed = float(np.median(rs)) if rs else r0
+        size_cv = (float(np.std(rs) / np.mean(rs))
+                   if len(rs) >= 3 and np.mean(rs) > 0 else 0.0)
         traj = np.column_stack([np.asarray(ts, float), np.asarray(xs), np.asarray(ys)])
+        sizes = (np.array([(t, 2.0 * r) for t, r in radii], dtype=float)
+                 if radii else None)
         return Track(traj=traj, target_px=2.0 * rmed,
-                     confidence=round(healthy / max(1, n - 1), 3), size_cv=round(size_cv, 3))
+                     confidence=round(healthy / max(1, n - 1), 3), size_cv=round(size_cv, 3),
+                     sizes=sizes)
 
 
 # ---- Pose front-end: the equipment-free, universal tracker ----
@@ -808,6 +814,57 @@ class ColorPlateTracker(Tracker):
                      confidence=round(len(ts) / n, 3))
 
 
+def color_size_trace(source, traj, hsv_lo, hsv_hi, r_hint, stride=2,
+                     min_area_frac=0.0008):
+    """Per-frame plate diameter samples (ellipse MAJOR axis, px) from an HSV colour
+    mask in an ROI around the TRACKED position — ColorPlateTracker's sizing applied
+    along an existing verified track (the continuous-ruler measurement for COLOURED
+    plates; validated reliable on blue bumpers 2026-06-10). Position stays with the
+    verified track; this measures SIZE only. Returns an M×2 (t, diameter_px) array;
+    frames with no plate-sized blob in the ROI are skipped."""
+    lo, hi = tuple(hsv_lo), tuple(hsv_hi)
+    t_tr, cy_tr = traj[:, 0], traj[:, 2]
+    cx_tr = traj[:, 1]
+    out = []
+    for i, f in enumerate(source):
+        if i % stride:
+            continue
+        H, W = f.img.shape[:2]
+        cx = float(np.interp(f.t, t_tr, cx_tr))
+        cy = float(np.interp(f.t, t_tr, cy_tr))
+        half = 1.7 * r_hint
+        x0, x1 = max(0, int(cx - half)), min(W, int(cx + half))
+        y0, y1 = max(0, int(cy - half)), min(H, int(cy + half))
+        if x1 - x0 < 8 or y1 - y0 < 8:
+            continue
+        hsv = cv2.cvtColor(f.img[y0:y1, x0:x1], cv2.COLOR_BGR2HSV)
+        m = cv2.inRange(hsv, lo, hi)
+        m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+        m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+        cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = [c for c in cnts if cv2.contourArea(c) > min_area_frac * H * W and len(c) >= 5]
+        if not cnts:
+            continue
+        c = max(cnts, key=cv2.contourArea)
+        (_, _), (a1, a2), _ = cv2.fitEllipse(c)
+        out.append((f.t, float(max(a1, a2))))
+    if not out:
+        return None
+    arr = np.asarray(out, dtype=float)
+    # OCCLUSION envelope: an arm/bar crossing the plate only ever SHRINKS the colour
+    # mask, while true perspective change is slow — so take a rolling MAX over
+    # `envelope_s` before any smoothing. Dips are occlusion; the envelope is the plate.
+    envelope_s = 0.7
+    t = arr[:, 0]
+    d = arr[:, 1].copy()
+    env = d.copy()
+    for i in range(len(d)):
+        m = np.abs(t - t[i]) <= envelope_s / 2.0
+        env[i] = d[m].max()
+    arr[:, 1] = env
+    return arr
+
+
 # Common bumper-plate colours (HSV ranges) — the profile picks one. Extend per gym as needed.
 PLATE_COLORS = {
     "blue":   ((95, 80, 40), (130, 255, 255)),
@@ -976,3 +1033,103 @@ def auto_seed_bbox(img, min_area_frac: float = 0.004) -> tuple:
         raise ValueError("auto_seed_bbox: largest blob too small — pass --seed")
     x, y, w, h = cv2.boundingRect(best)
     return (x, y, w, h)
+
+
+# ---- Tap-on-ANY-frame: bidirectional tracking from a mid-clip seed ----
+#
+# The one-tap UX was frame-0-only, which makes real clips untappable when the plate is
+# occluded / fused with the lifter / textureless at t=0 yet perfectly clear mid-set
+# (docs/cv-fusion.md finding 6a: the RDLs, the dark-iron rows). The human answer is to
+# tap the plate at its CLEAREST moment — so: seed at any frame, track FORWARD from it,
+# track BACKWARD over the preceding frames (time-reversed), stitch the full trajectory.
+# Bonus: tracker drift accumulates outward from the seed instead of across the whole
+# set, so a mid-set seed roughly halves worst-case drift (the SC-1 late-set drift case).
+
+
+class ReplaySource(FrameSource):
+    """Decode once, hold JPEG-compressed frames in memory, then serve arbitrary
+    sub-windows forward or TIME-REVERSED — the substrate for tap-on-any-frame.
+    (JPEG q92 ≈ 50 KB/frame: a 30 s phone clip is ~45 MB, and the recompression
+    is far below the corner-texture scale flow tracks on.)"""
+
+    def __init__(self, source: FrameSource):
+        self._fps = source.fps
+        self._frames = []
+        for f in source:
+            ok, buf = cv2.imencode(".jpg", f.img, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+            if not ok:
+                raise ValueError("ReplaySource: JPEG encode failed")
+            self._frames.append((float(f.t), buf))
+        if not self._frames:
+            raise ValueError("no frames decoded")
+
+    @property
+    def fps(self) -> float:
+        return self._fps
+
+    def __iter__(self):
+        for t, buf in self._frames:
+            yield Frame(t, cv2.imdecode(buf, cv2.IMREAD_COLOR))
+
+    def nearest_time(self, t: float) -> float:
+        return min(self._frames, key=lambda x: abs(x[0] - t))[0]
+
+    def window(self, t0=None, t1=None, reverse=False) -> "FrameSource":
+        return _WindowView(self, t0, t1, reverse)
+
+
+class _WindowView(FrameSource):
+    """A re-iterable sub-window of a ReplaySource. When `reverse`, frames are served
+    last-to-first with timestamps remapped to t' = t_end − t (still increasing, so
+    the tracker and kinematics are direction-agnostic)."""
+
+    def __init__(self, rep: ReplaySource, t0, t1, reverse):
+        self._rep, self._t0, self._t1, self._rev = rep, t0, t1, reverse
+
+    @property
+    def fps(self) -> float:
+        return self._rep.fps
+
+    def __iter__(self):
+        fr = [x for x in self._rep._frames
+              if (self._t0 is None or x[0] >= self._t0 - 1e-9)
+              and (self._t1 is None or x[0] <= self._t1 + 1e-9)]
+        if self._rev:
+            T = fr[-1][0]
+            for t, buf in reversed(fr):
+                yield Frame(T - t, cv2.imdecode(buf, cv2.IMREAD_COLOR))
+        else:
+            for t, buf in fr:
+                yield Frame(t, cv2.imdecode(buf, cv2.IMREAD_COLOR))
+
+
+def track_bidirectional(source: FrameSource, seed_bbox, seed_time: float,
+                        tracker_factory=None) -> Track:
+    """Tap-on-any-frame: seed `seed_bbox` at (the frame nearest) `seed_time`, run the
+    tracker forward from there and backward over the preceding frames, and stitch one
+    full-clip trajectory. Confidence/size are duration-weighted across the two legs."""
+    make = tracker_factory or (lambda: FlowTracker(ellipse_scale=True))
+    rep = source if isinstance(source, ReplaySource) else ReplaySource(source)
+    t0 = rep.nearest_time(float(seed_time))
+    fwd = make().track(rep.window(t0, None), seed_bbox)
+    n_before = sum(1 for x in rep._frames if x[0] < t0 - 1e-9)
+    if n_before < 2:
+        return fwd                                  # seed at/near frame 0 → plain forward
+    bwd = make().track(rep.window(None, t0, reverse=True), seed_bbox)
+    bt = t0 - bwd.traj[:, 0]                        # reversed-leg times → absolute
+    back = np.column_stack([bt, bwd.traj[:, 1], bwd.traj[:, 2]])[::-1]
+    traj = np.vstack([back[:-1], fwd.traj])         # drop the duplicated seed frame
+    n_f, n_b = len(fwd.traj), len(bwd.traj)
+    conf = (fwd.confidence * n_f + bwd.confidence * n_b) / (n_f + n_b)
+    tpx = (fwd.target_px * n_f + bwd.target_px * n_b) / (n_f + n_b)
+    sizes = None
+    chunks = []
+    if bwd.sizes is not None and len(bwd.sizes):
+        chunks.append(np.column_stack([t0 - bwd.sizes[:, 0], bwd.sizes[:, 1]]))
+    if fwd.sizes is not None and len(fwd.sizes):
+        chunks.append(fwd.sizes)
+    if chunks:
+        sizes = np.vstack(chunks)
+        sizes = sizes[np.argsort(sizes[:, 0])]
+    return Track(traj=traj, target_px=float(tpx), confidence=round(float(conf), 3),
+                 size_cv=max(fwd.size_cv, bwd.size_cv), sizes=sizes)

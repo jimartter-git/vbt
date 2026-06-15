@@ -72,6 +72,25 @@ not "CV can't do it":**
 The pipeline emits `meta["static_track_suspect"]` — it is the programmatic version of
 this gate (added after the 2026-06-05 bench mis-seed; see learning #12 in `CLAUDE.md`).
 
+## Step 3.5 — if a frame-0 tap fails: tap-on-ANY-frame (the human-grade loop)
+
+A frame-0 seed is impossible on some real clips (plate fused with the lifter at the start,
+dark iron textureless at rest, plate occluded by a rack post). Use the workbench loop
+(`analysis/scripts/tap_workbench.py`, learning #18):
+
+```bash
+python analysis/scripts/tap_workbench.py motion CLIP 8.0       # SEE what moves
+python analysis/scripts/tap_workbench.py scrub  CLIP 8 10 12   # find a SHARP pause frame
+python analysis/scripts/tap_workbench.py zoom   CLIP 10.5 0 300 260 520   # place precisely
+python analysis/scripts/tap_workbench.py tap    CLIP 28 285 100 100 10.5  # tap + VERIFY strip
+```
+
+Rules that are validated, not folklore: seed at a sharp PAUSE (lockout/turnaround — never
+mid-rep blur); on dark/matte plates a TIGHT box on the textured hub/logo, excluding static
+background; ALWAYS view the tracked-overlay strip before trusting any number (body-locks and
+decoys are visible there and nowhere else). Register the working seed as `(x,y,w,h,t)` in
+`cv_eval.py` CLIPS; the board runs it via `--gate`.
+
 ## Step 4 — tracker & scale decision tree
 
 **Tracker (position):**

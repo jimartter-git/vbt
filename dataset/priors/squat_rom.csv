@@ -1,0 +1,2 @@
+lift,n_reps,n_sets,median_cm,q25_cm,q75_cm,lo_cm,hi_cm,source
+squat,25,3,74.0,72.0,76.0,71.0,77.0,derived from vitruve rep_metrics (derive_rom_priors.py)

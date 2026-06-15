@@ -48,6 +48,46 @@ diverged, terminal rep diverged most** (Stance 0.20 / Metric 0.32 / SmartBarbell
 missed). Every source is fallible and the fatigue-critical last reps are where
 measurement is least reliable → confidence-weighted fusion + a rep-shape prior.
 
+## 2b. Stance build 1.9.15 intel *(lifter-supplied WhatsApp/TestFlight captures, 2026-06-12)*
+
+Stance (on-bar sensor) is shipping **sensor + video fusion with a human-in-the-loop tap**
+— massive convergent validation of this project's architecture, from the device company:
+
+- **Tap UX**: "Tap the inside of the plate (where the bar enters the plate) in the first
+  frame… Pinch to zoom for a more precise tap" — the HUB tap + zoom, independently
+  converging on our learning #18. Their dev overlay shows a point cloud ("pts=17") seeded
+  at a hub marker + a height(t) chart with phase-shaded segmentation ≈ our FlowTracker
+  architecture almost exactly.
+- **Per-rep fusion, human-arbitrated**: "Matched rep — Current (ML) mean 0.41/peak 0.77 →
+  Video mean 0.40/peak 0.71 — [Replace rep]" — sensor and video matched rep-by-rep,
+  disagreement SURFACED, user replaces per rep. A manual version of our per-primitive
+  fusion design (and our guardrail #3, in production).
+- **Their stated motivation = our thesis, and their MECHANISM = our turnaround consensus**
+  (full announcement text, 2026-06-12): "The current algorithm struggles most on slow reps
+  — an accelerometer can't detect much when you're barely accelerating — so the camera now
+  tracks the plate in space, **giving the algorithm a second pair of eyes on where each
+  rep starts and ends**. Sensor alone handles fast reps; sensor + video handles slow reps.
+  Together: accurate data at every speed." Read carefully: their video contributes
+  **BOUNDARIES to the IMU algorithm**, not a second velocity — which is verbatim the
+  turnaround-consensus primitive in `sources-and-fusion.md` (video boundaries = the IMU's
+  zero-velocity anchors), i.e. the exact architecture of OUR watch path. Their
+  speed-conditional weighting (sensor fast / +video slow) is one half of the
+  complementarity table; our docs hold the other half (high-rate IMU arbitrates fast-TnG
+  boundaries where video aliases). They also chose DEADLIFT as the beta lift (= our
+  learning #8 first-lift choice, for the same reasons).
+- **Capture guidance** (annotated photo): plate in full view through the rep; film ~45°;
+  don't walk in front; **no touch-and-go / stiff-leg deadlifts** (their segmentation
+  limit — same family as Vitruve's TnG row failure); sensor strap position; "zero rep
+  issue" acknowledged (their static-seed analog). Edit window: 2 h post-set.
+
+**Where we're already ahead of this build**: their tap is FIRST-FRAME-ONLY (the
+constraint we proved fatal on RDL/dark-iron clips and removed with tap-on-any-frame +
+bidirectional tracking, learning #18); their fusion is fully manual per-rep replacement
+vs our designed confidence-weighted auto-fusion with flag-on-disagreement; and they
+explicitly exclude touch-and-go, which our relative gate handles (SQ-3 exact). Where
+they're ahead: it's SHIPPED, sensor-grade absolute velocity comes free from the device,
+and video is positioned as the *correction* channel — pragmatic sequencing worth noting.
+
 ## 3. Metric definitions (the derivable feature set from one trace + load)
 
 - **Mean (concentric) velocity** (m/s) — avg bar speed over concentric. Primary; most reliable (r²≈0.94 with peak).
@@ -99,6 +139,37 @@ Metric's own stated table (mean velocity; Novice / Intermediate / Advanced):
 **Correction:** earlier we held "deadlift MVT ≈ 0.25" — that's actually *back-squat*
 advanced. Deadlift MVT is ~**0.15–0.20**. Lift- & lifter-specific; set once and
 keep it.
+
+## 7b. OVR Performance conversion charts *(vendor ad graphics, 2026-06-12 — UNVERIFIED weak priors)*
+
+OVR Performance (bar-mounted VBT device, Vitruve-style) publishes two conversion tables
+(lifter-supplied screenshots; OVR's own fine print: "estimates — each athlete will have a
+unique load-velocity profile"):
+
+**%1RM → mean velocity (m/s):**
+
+| %1RM | Squat | Bench | Deadlift |
+|---|---|---|---|
+| 40% | 1.20 | 1.05 | – |
+| 50% | 1.05 | 0.90 | – |
+| 60% | 0.90 | 0.75 | 0.60 |
+| 70% | 0.75 | 0.60 | 0.50 |
+| 80% | 0.60 | 0.45 | 0.45 |
+| 90% | 0.45 | 0.30 | 0.30 |
+| 100% | **0.30** | **0.18** | **0.18** |
+
+**RPE ↔ RIR ↔ velocity-loss ↔ last-rep velocity:** RPE 5.5→10 ↔ RIR 4→0 ↔
+VL 5→45% ↔ last-rep 0.55→0.25 m/s (generic, lift-unspecified frame).
+
+**Why filed (cross-vendor convergence — strengthens, doesn't replace, §6/§7):**
+- OVR's 100%-1RM row sits inside Metric's MVT bands and independently re-confirms
+  **deadlift MVT ≈ 0.18, not 0.25** (learning #6). Two vendors, same answer.
+- OVR RPE 8 ↔ ~20–25% VL = exactly Metric's strength anchor (§6); RPE 10 ↔ 40–45% ≈
+  "failure ~40%". The VL→RPE mapping is now double-sourced.
+- vs the PERSONAL curves (`dataset/priors/`): the lifter's grind velocities sit BELOW
+  OVR's generic floors on all three lifts (SQ 0.22 vs 0.30, BN 0.10 vs 0.18, DL 0.12 vs
+  0.18) — an "advanced" profile, and a concrete demonstration of why personal priors
+  must override universal ones (§5). Use OVR/Metric tables as cold-start bounds only.
 
 ## 8. Product/UX ideas worth stealing
 
