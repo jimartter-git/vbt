@@ -41,6 +41,30 @@ for that, separate from the phone's read-write upload token).
 To let a fresh container fetch a private master, export the read-only creds and
 run the board normally; `resolve_clip()` downloads to `dataset/.clipcache/` once.
 
+## Running the CV pass on R2 clips (the corpus enrichment)
+
+Once a batch is uploaded + manifested, a CV-equipped session fills the technical
+metadata and the provisional rep count straight from R2:
+
+```bash
+# 1. read-only R2 creds in the environment (env vars, never committed):
+#    R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY   (endpoint/bucket have defaults)
+# 2. deps: pip install boto3  +  the CV stack (analysis/requirements.txt: PyAV, OpenCV)
+# 3. pull every manifest clip from R2, probe it, run the seed-free CV count:
+python dataset/tools/ingest_clips.py --from-manifest --sha
+python dataset/tools/build_db.py
+```
+
+`--from-manifest` resolves each clip (download → `dataset/.clipcache/`), runs
+`ffprobe`/PyAV for codec/duration, and the shipped AUTO estimator for a draft
+`reps_cv`, upserting into `manifest.csv` + `clips.csv` (existing human annotations
+preserved). It's idempotent — re-run adds only new/unenriched clips (`--force` to
+redo). Then **score against ground truth**: `reps_cv` vs `reps_true` (the filed
+Vitruve count) is the count check; for velocity, add the clip to `cv_eval.py`
+`CLIPS` on its **HD track** (not the low-fi aggregate board — learning #14) or use
+`vel_eval.py`. Keep the masters off the default `cv_eval --auto` run so a bare
+board doesn't pull gigabytes.
+
 ## Uploading from phone / iPad
 
 R2 has no consumer upload app and does **no** transcoding — bytes are stored

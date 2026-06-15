@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """Ingest CV-corpus video clips into the metadata store.
 
-R2 holds the bytes; git holds the queryable metadata. For each clip this writes:
+R2 holds the bytes; git holds the queryable metadata. This writes/updates:
   - dataset/raw/manifest.csv : storage/technical facts (sha/bytes/res/fps/codec/duration)
   - dataset/clips.csv        : a DRAFT human-annotation row, CV-prefilled with a
                                provisional rep count + a rough velocity-regime hint.
 You then correct the subjective columns (angle/clutter/...) in a spreadsheet and
-run build_db.py. Idempotent: clips already in manifest.csv are skipped.
+run build_db.py. Upserts by filename, so re-running enriches existing rows
+(human annotations are preserved; only the CV draft + technical fields update).
 
 Technical metadata comes from PyAV (a CV dep) or ffprobe, whichever is present.
 The CV prefill runs our shipped seed-free AUTO estimator (no tap, no gym hint).
 
 Usage:
-  python dataset/tools/ingest_clips.py ~/Desktop/vbt                 # a folder
-  python dataset/tools/ingest_clips.py a.mov b.mov --gym Equinox     # explicit files
-  python dataset/tools/ingest_clips.py <dir> --no-cv --sha           # fast / with checksum
+  # local clips on disk:
+  python dataset/tools/ingest_clips.py ~/Desktop/vbt --gym MaxFit
+  # already-uploaded clips: pull each from R2 and enrich its manifest/clips row
+  # (needs R2 read creds in the env: R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY)
+  python dataset/tools/ingest_clips.py --from-manifest
+  python dataset/tools/ingest_clips.py --from-manifest --only 20260613-DL-5.mov --sha
 """
 from __future__ import annotations
 
@@ -44,11 +48,24 @@ CLIPS_COLS = ["clip", "lift", "load_kg", "load_unit", "gym", "equipment", "angle
               "cv_conf", "cv_flags", "has_gt", "set_id", "notes"]
 
 
-def _existing(path, key):
-    if not os.path.exists(path):
-        return set()
-    with open(path, newline="") as f:
-        return {r[key].strip() for r in csv.DictReader(f) if r.get(key, "").strip()}
+def _load(path, key):
+    """Read a CSV into an ordered {key_value: row} dict (empty if absent)."""
+    out = {}
+    if os.path.exists(path):
+        with open(path, newline="") as f:
+            for r in csv.DictReader(f):
+                k = (r.get(key) or "").strip()
+                if k:
+                    out[k] = r
+    return out
+
+
+def _write(path, cols, rows_by_key):
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        for k in sorted(rows_by_key):
+            w.writerow({c: rows_by_key[k].get(c, "") for c in cols})
 
 
 def _probe_av(path):
@@ -125,77 +142,98 @@ def cv_prefill(path):
                 cv_flags="|".join(flags), velocity_regime=regime)
 
 
-def _append(path, cols, rows):
-    if not rows:
-        return
-    if not os.path.exists(path):
-        with open(path, "w", newline="") as f:
-            csv.writer(f).writerow(cols)
-    with open(path) as f:
-        tail = f.read()
-    with open(path, "a", newline="") as f:
-        if tail and not tail.endswith("\n"):
-            f.write("\n")
-        w = csv.DictWriter(f, fieldnames=cols)
-        for r in rows:
-            w.writerow({k: r.get(k, "") for k in cols})
+def _enrich(local_path, fn, man, clips, do_cv, do_sha):
+    """Probe + (optional) CV-prefill one clip, upserting manifest + clips rows.
+    Preserves existing human annotations; only fills technical + CV-draft fields."""
+    sid = infer_set_id(fn)
+    info = probe(local_path)
+    m = man.setdefault(fn, dict.fromkeys(MANIFEST_COLS, ""))
+    m.update(filename=fn, key=(m.get("key") or fn), bytes=os.path.getsize(local_path), **info)
+    if not m.get("set_id"):
+        m["set_id"] = sid
+    if do_sha:
+        m["sha256"] = sha256(local_path)
+
+    c = clips.setdefault(fn, dict.fromkeys(CLIPS_COLS, ""))
+    if not c.get("clip"):
+        c.update(clip=fn, set_id=sid)
+    if do_cv:
+        try:
+            d = cv_prefill(local_path)
+            c["reps_cv"] = d["reps_cv"]; c["mean_vel_cv"] = d["mean_vel_cv"]
+            c["cv_conf"] = d["cv_conf"]; c["cv_flags"] = d["cv_flags"]
+            if not (c.get("velocity_regime") or "").strip():   # don't clobber a human label
+                c["velocity_regime"] = d["velocity_regime"]
+            print(f"  cv {fn}: {d['reps_cv']} reps (conf {d['cv_conf']})")
+        except Exception as e:                                 # noqa: BLE001 — record, never abort
+            c["cv_flags"] = f"cv_error:{type(e).__name__}"
+            print(f"  cv FAILED {fn}: {e}")
+    print(f"+ {fn}  {info['resolution']} {info['fps']}fps {info['codec']} "
+          f"{m['bytes'] // (1 << 20) if str(m['bytes']).isdigit() else '?'}MB")
 
 
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("paths", nargs="+", help="clip files and/or directories")
+    ap.add_argument("paths", nargs="*", help="clip files and/or directories (local mode)")
+    ap.add_argument("--from-manifest", action="store_true",
+                    help="enrich clips already listed in manifest.csv by pulling them from R2 "
+                         "(resolve_clip); needs R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY in env")
+    ap.add_argument("--only", default="", help="with --from-manifest: limit to one filename")
     ap.add_argument("--no-cv", action="store_true", help="skip the CV rep-count prefill")
     ap.add_argument("--sha", action="store_true", help="compute sha256 (slow on big files)")
-    ap.add_argument("--gym", default="", help="prefill the gym column for this batch")
-    ap.add_argument("--lift", default="", help="prefill the lift column for this batch")
-    ap.add_argument("--force", action="store_true", help="re-probe clips already in manifest")
+    ap.add_argument("--gym", default="", help="prefill the gym column for new clips")
+    ap.add_argument("--lift", default="", help="prefill the lift column for new clips")
+    ap.add_argument("--force", action="store_true",
+                    help="re-probe/re-CV even if the row already has data")
     args = ap.parse_args()
 
-    files = []
-    for p in args.paths:
-        if os.path.isdir(p):
-            for ext in VIDEO_EXT:
-                files += glob.glob(os.path.join(p, f"*{ext}"))
-                files += glob.glob(os.path.join(p, f"*{ext.upper()}"))
-        elif os.path.isfile(p):
-            files.append(p)
-    files = sorted(set(files))
-    if not files:
-        print("no video files found")
-        return
+    man = _load(MANIFEST, "filename")
+    clips = _load(CLIPS, "clip")
+    do_cv = not args.no_cv
 
-    have = set() if args.force else _existing(MANIFEST, "filename")
-    man_new, clip_new = [], []
-    for path in files:
-        fn = os.path.basename(path)
-        if fn in have:
-            print(f"skip (already in manifest): {fn}")
-            continue
-        info = probe(path)
-        sid = infer_set_id(fn)
-        man_new.append(dict(filename=fn, set_id=sid,
-                            sha256=(sha256(path) if args.sha else ""),
-                            bytes=os.path.getsize(path), url="", key=fn, note="", **info))
-        draft = dict.fromkeys(CLIPS_COLS, "")
-        draft.update(clip=fn, gym=args.gym, lift=args.lift, set_id=sid)
-        if not args.no_cv:
+    if args.from_manifest:
+        from vbt_video.clip_store import resolve_clip
+        targets = [args.only] if args.only else list(man)
+        for fn in targets:
+            if fn not in man:
+                print(f"not in manifest: {fn}"); continue
+            row = clips.get(fn, {})
+            done = (str(row.get("reps_cv") or "").strip()
+                    and (man[fn].get("codec") or "").strip())
+            if done and not args.force:
+                print(f"skip (already enriched): {fn}"); continue
             try:
-                draft.update(cv_prefill(path))
-                print(f"  cv {fn}: {draft['reps_cv']} reps (conf {draft['cv_conf']})")
-            except Exception as e:                       # noqa: BLE001 — record, never abort the batch
-                draft["cv_flags"] = f"cv_error:{type(e).__name__}"
-                print(f"  cv FAILED {fn}: {e}")
-        clip_new.append(draft)
-        print(f"+ {fn}  {info['resolution']} {info['fps']}fps {info['codec']} "
-              f"{man_new[-1]['bytes'] // (1 << 20)}MB")
+                local = resolve_clip(os.path.join("dataset", "raw", fn), REPO)
+            except Exception as e:                              # noqa: BLE001
+                print(f"resolve FAILED {fn}: {e}"); continue
+            _enrich(local, fn, man, clips, do_cv, args.sha)
+    else:
+        files = []
+        for p in args.paths:
+            if os.path.isdir(p):
+                for ext in VIDEO_EXT:
+                    files += glob.glob(os.path.join(p, f"*{ext}"))
+                    files += glob.glob(os.path.join(p, f"*{ext.upper()}"))
+            elif os.path.isfile(p):
+                files.append(p)
+        files = sorted(set(files))
+        if not files:
+            print("no video files found (give paths, or use --from-manifest)"); return
+        for path in files:
+            fn = os.path.basename(path)
+            if fn in man and not args.force:
+                print(f"skip (already in manifest): {fn}"); continue
+            _enrich(path, fn, man, clips, do_cv, args.sha)
+            if args.gym:
+                clips[fn]["gym"] = args.gym
+            if args.lift and not clips[fn].get("lift"):
+                clips[fn]["lift"] = args.lift
 
-    _append(MANIFEST, MANIFEST_COLS, man_new)
-    _append(CLIPS, CLIPS_COLS, clip_new)
-    print(f"\nmanifest += {len(man_new)} | clips += {len(clip_new)}")
-    if clip_new:
-        print("Next: edit dataset/clips.csv (angle/clutter/regime/load...), "
-              "then python dataset/tools/build_db.py")
+    _write(MANIFEST, MANIFEST_COLS, man)
+    _write(CLIPS, CLIPS_COLS, clips)
+    print(f"\nmanifest: {len(man)} clips | clips.csv: {len(clips)} rows")
+    print("Next: review dataset/clips.csv, then python dataset/tools/build_db.py")
 
 
 if __name__ == "__main__":

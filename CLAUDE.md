@@ -31,10 +31,20 @@ and `docs/sources-and-fusion.md`.
   and seed the app's per-user prior. **Vitruve is the established ground-truth
   reference** (since 2026-06-02; `compare.py` auto-prefers it — ~392 rep rows across
   bench/squat/skull-crushers, etc.).
-- **⚑ Data ingested through 2026-06-10** (no known backlog): 06-05 BN/DL, 06-08 rows,
-  06-09 bench, 06-10 squats/RDLs all in `sets.csv`/`rep_metrics.csv`. (06-10 filed as set-level
+- **⚑ Data ingested through 2026-06-13** (no known backlog): 06-05 BN/DL, 06-08 rows,
+  06-09 bench, 06-10 squats/RDLs, **06-11 incline bench (Vitruve+SB), 06-13 deadlifts (6 sets,
+  full Vitruve+SmartBarbell GT)** all in `sets.csv`/`rep_metrics.csv`. (06-10 filed as set-level
   Vitruve averages — the app crashed before per-rep export.) Next upload → follow the ingestion
   + video triggers below.
+- **⚑ Video storage built (2026-06-15): HD masters live in Cloudflare R2** (bucket `vbt-video`),
+  repo keeps only `dataset/raw/manifest.csv` pointer + `vbt_video/clip_store.py::resolve_clip()`
+  (local→cache→download). **Don't commit HD video to git** — upload to R2, add a manifest row.
+  New **CV-training corpus**: `dataset/clips.csv` (wide human annotations, `dataset/ANNOTATIONS.md`
+  vocab) + `tools/ingest_clips.py` (probe + seed-free CV prefill; `--from-manifest` pulls from R2).
+  Full design + next-session runbook: `docs/video-storage.md`. **⚑ PENDING: CV-score the 06-13 HD
+  deadlifts** (6× 4K120, dark-iron diagonal round-iron) — needs read-only R2 creds in-env, then
+  `ingest_clips.py --from-manifest`; a test of whether 4K rescues dark-iron tracking + the absolute
+  -velocity scale on slow heavy 275s (SmartBarbell already nailed all 6 counts there).
 - **⚑ CV milestone (2026-06-12): ALL THREE product metrics now beat SmartBarbell.** Scoreboard:
   **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-12)"**. Human-grade tap path: reps
   **0.12** (wtd 0.07, 24/26 exact) vs SB 2.57 · velocity-loss **2.2pp** vs 9.0 · **absolute m/s
