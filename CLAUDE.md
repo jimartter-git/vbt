@@ -17,10 +17,15 @@ and `docs/sources-and-fusion.md`.
 
 ## Status
 
-- **PoC scaffold** (compiles on a Mac, not yet device-tested): watchOS app
-  (HKWorkoutSession + CMBatchedSensorManager → CSV → phone), iOS companion,
-  shared `VBTCore` Swift package, Python ZUPT analysis pipeline (`analysis/`,
-  tests green).
+- **PoC scaffold — now DEVICE-VALIDATED (2026-06-15, Apple Watch Ultra, watchOS
+  26.5):** watchOS app (HKWorkoutSession + CMBatchedSensorManager → CSV → phone),
+  iOS companion, shared `VBTCore` Swift package, Python ZUPT analysis pipeline
+  (`analysis/`, tests green). **⚑ The riskiest assumption is answered YES:** the
+  scaffold built/signed/ran on a real Ultra unmodified, `CMBatchedSensorManager`
+  sustained **~200 Hz continuously (5,317 samples ≈ 27 s)** inside an
+  `HKWorkoutSession`, and the CSV transferred watch→phone intact (`transferFile` →
+  `VBTPhone` list). Validated on a SINGLE ~27 s set; multi-set thermal/battery
+  endurance and signal *accuracy* vs Vitruve are still untested (next).
 - **Active phase = data + calibration.** Building a personal multi-vendor
   measurement database (`dataset/`) to quantify cross-tool agreement, calibrate,
   and seed the app's per-user prior. **Vitruve is the established ground-truth

@@ -7,6 +7,13 @@ watch well enough to be useful, validated against a Vitruve?** Everything here
 is scoped to that question. The full multi-source platform below is documented
 intent, not yet built.
 
+**Device-validated (2026-06-15, Apple Watch Ultra, watchOS 26.5):** the capture
+path below ran end-to-end on real hardware on first build — `CMBatchedSensorManager`
+inside an `HKWorkoutSession` sustained **~200 Hz continuously (5,317 samples ≈
+27 s)** and the CSV transferred watch→phone intact. So the *transport* half of the
+question is answered yes; the *accuracy* half (ZUPT velocity vs Vitruve) and
+multi-set thermal/battery endurance are the open work.
+
 ## Target abstraction: `VelocitySource`
 
 The product is multimodal — phone video, BLE VBT devices (Vitruve, Stance,
