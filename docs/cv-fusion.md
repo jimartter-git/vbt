@@ -637,6 +637,49 @@ the second end's auto-measured ruler runs hot — **bilateral needs a rim confir
 redundancy + the tilt/disagreement signal, not accuracy; its accuracy case is clips where
 the single end fails, plus per-end rims.
 
+## The learned-sizer plan ("torch"), three horizons (2026-06-12)
+
+Roadmap #6, promoted by learning #20 to THE bottleneck for per-clip absolute parity.
+"Torch" = the training stack for a small learned plate detector/sizer: crop around the
+tracked position → rim ellipse (centre + axes) + confidence, per frame — robust to the
+hub/rim ambiguity and arm-crossings that defeat classical sizing at 440px (both classical
+trace sources now self-abstain; SB's per-clip edge is almost certainly such a model).
+
+**NOW — what's actually blocked, and what isn't:**
+- **Training needs torch; INFERENCE doesn't.** An exported ONNX (a few MB, committable)
+  runs in this container via `cv2.dnn`/onnxruntime — the scoring boards can judge a
+  learned sizer with no environment change. The bottleneck is purely a training venue
+  (a torch-enabled session environment, a laptop, or Colab).
+- **The labels already exist and extracting them is torch-free**: every verified track +
+  rim confirm = (frame, position, diameter) labels — thousands of Vitruve-validated
+  frames. A label-extraction script over the registered seeds/rims is a ready first task
+  for any session, today.
+
+**MEDIUM — the model joins the flywheel, judged like everything else:**
+- Slots behind the existing Tracker/Scaler seams; scored on the same boards under the
+  same laws (lift-weighted, no main-lift regression, abstain-with-confidence). One model
+  unlocks four things: trustworthy d(t) (the depth tier revives), auto-seeding, decoy
+  rejection, and the `no_plate_at_lock` body-lock guard.
+- The product's human-in-the-loop surfaces ARE the labeling machine (tap, rim confirm,
+  rep edit), and the disagreement flags (`lr_disagree`, `rom_outlier`, `scale_suspect`)
+  are the active-learning selector for which frames to label next.
+
+**LONG — in-app, fully in flight:**
+- The app never ships torch: train server-side, convert to **Core ML**, run on the
+  Neural Engine (real-time at 60fps is comfortable for models this small). Runtime =
+  detector proposes → flow tracks → verification scores → human confirms. The model is
+  one more confidence-emitting citizen; it abstains, never overrides.
+- It is the **generalization vehicle** (object classes plate/DB/KB + per-object geometry
+  → kettlebells, Turkish get-ups, the non-barbell future with no architecture change)
+  and the **moat mechanism** (a model compounding from user confirms — proprietary,
+  uncopyable by feature-shipping incumbents; see porters-five-forces).
+
+**Ladder:** (1) any torch venue → (2) torch-free label extraction from verified
+tracks/rims (ready now) → (3) first model = the rim sizer, scored vs the 0605 benches
+on the existing boards → (4) ONNX into the container, Core ML into the app. Honest bar
+for v1: beat Hough at not confusing hubs with rims at 440px — a low bar for a small
+fine-tuned model.
+
 ## Roadmap — to genuinely best-in-class
 
 Ranked by user-visible failure. Each is additive behind the existing seams.
