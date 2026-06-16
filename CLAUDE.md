@@ -376,17 +376,20 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    velocity) so the high cutoff doesn't phase-shift anchors inward and inflate MV (a naive 0.25 Hz
    pushed synthetic 0.51→0.575; decoupled stays 0.52). **decouple is OFF by default** — on this data
    it's a wash (fixes ROW-4 9→10 but over-counts the clean ROW-3 10→11), reserved for genuinely
-   drift-merged signals. **ROW-5 is the honest hard case: the WRIST DECOUPLED from the BAR.** Vitruve
-   shows 10 clean bar reps, but the watch wrist shows only ~5-7 strong accel events in PAIRS with
-   ~4-5s quiet gaps — and it is NOT a capture defect (clean gap-free 201 Hz; orientation-free |accel|
-   agrees, so not a projection issue) and NOT classic TnG (that's denser, not sparser). Read: a
-   fatigued pull shifts from a crisp wrist/forearm snap to elbow/shoulder/body-english, so the wrist
-   stops tracking the bar on some reps. (My first call — "degraded recording, re-capture" — was too
-   hasty; the LINE GRAPH corrected it. Always plot the velocity/position trace before concluding a
-   set is unrecoverable.) The lesson: **wrist-IMU on rows can lose reps the bar clearly shows,
-   especially fatigued → argues for sensor FUSION (watch+video/bar), not wrist-alone on rows.** The
-   06-15 rows are now a 4-source set (Vitruve GT + watch + SmartBarbell + our CV 10/10 on all five
-   videos). Harnesses: `analysis/scripts/_watch_0615row.py`, `_watch_plot.py` (the line graphs).
+   drift-merged signals. **ROW-5 is an UNEXPLAINED WATCH ANOMALY — quarantined, cause unknown.** The
+   VIDEO proves 10 clean evenly-paced reps (1.57 s/rep, matches the lifter + Vitruve), but the watch
+   file holds only ~5 sparse accel bursts that DON'T match the bar: envelope cross-correlation peaks
+   at just **0.36** (same-motion would be ~0.7+), the watch active window (~5–24 s) doesn't even
+   overlap the bar reps (3–17 s), and it's not a projection issue (orientation-free |accel| agrees).
+   It is NOT timestamp gaps (clean 201 Hz), NOT fit/fatigue/TnG (the video cadence is even). I was
+   WRONG three times forcing an explanation ("degraded capture" → "wrist decoupled/fatigue") — each
+   killed by going to the tape. The honest call: a watch-side capture/CMDeviceMotion anomaly for this
+   one recording (ROW-1/2/3/4 captured cleanly); excluded from the watch-vs-Vitruve aggregate; to
+   resolve, reproduce on a fresh set. **Lessons: (1) the BAR (video/Vitruve) is ground truth — when
+   the watch disagrees with it, suspect the watch, not the lifter; (2) cross-correlate the watch
+   envelope against the bar before theorizing; (3) stop narrating a cause the data doesn't support.**
+   The 06-15 rows are a 4-source set (Vitruve GT + watch[4/5 usable] + SmartBarbell + our CV 10/10 on
+   all five videos). Harnesses: `analysis/scripts/_watch_0615row.py`, `_watch_plot.py`, `_row5_overlay.py`.
 
 ## ⚑ Video trigger — READ THIS
 
