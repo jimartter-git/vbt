@@ -38,8 +38,8 @@ and `docs/sources-and-fusion.md`.
   vs Vitruve; +5 row videos CV-scored EXACT), **06-16 bench (5×10, RPE 7.5/6.5/7/8/9.5, Vitruve GT + 5 Apple Watch IMU
   `dataset/raw/20260616-BN-*_watch.csv` + 5 R2 videos `20260616-BN_*.mov`) — CV AUTO zero-tap COUNTS
   10/10/10 EXACT (BN-1/2/3), 11 on BN-4/5 (real put-down cycle); CV VELOCITY UNRELIABLE on this
-  dark-iron diagonal end-ish view (count-only); bench watch IMU below the row bar (RMSE 0.091, r 0.59);
-  SmartBarbell pending. See learning #24.** (06-10 filed as set-level Vitruve averages — the app
+  dark-iron deep-dish head-on view (count-only); bench watch IMU below the row bar (RMSE 0.091, r 0.59);
+  SmartBarbell 10/10 EXACT all 5 + velocity RMSE 0.040 vs Vitruve = SB BEATS our CV this clean head-on day. See learning #24.** (06-10 filed as set-level Vitruve averages — the app
   crashed before per-rep export.) Next upload → follow the ingestion + video triggers below.
 - **⚑ Video storage built (2026-06-15): HD masters live in Cloudflare R2** (bucket `vbt-video`),
   repo keeps only `dataset/raw/manifest.csv` pointer + `vbt_video/clip_store.py::resolve_clip()`
@@ -412,7 +412,13 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    (42/24/30/40/59%) — VL is scale-invariant, so this is a flow velocity PROFILE-shape problem on
    dark iron at this angle, not just scale (abs m/s was also hub-vs-rim inflated ~3× from the small
    hub seed). **COUNT is the deliverable; the capture ask for bench velocity is a clean SIDE-ON
-   view.** (c) **THE ROTATION NON-BUG**: these iPhone clips carry `frame.rotation=-90`, which
+   view.** ⚑ **SmartBarbell WINS this bench day** (`_ingest_0616bn_sb.py`, Westwood Athletics
+   Richmond, Rogue DEEP-DISH plates — set 1 = 2×45, sets 2-5 = a 10+25 in front of one deep-dish
+   45): SB counts **10/10 EXACT on all 5** (beats our 0.4 mean|err|) AND its velocity tracks Vitruve
+   tightly (**bias +0.027, RMSE 0.040 m/s**, VL within a few pp on sets 1/4/5). The clean, well-lit,
+   head-on clip is exactly SB's strong case; our flow over-counted the put-down (BN-4/5) and read a
+   noisy velocity on the dark deep-dish iron. An honest loss — the kind to chase: a side-on capture +
+   a learned plate sizer are the named unlocks. (c) **THE ROTATION NON-BUG**: these iPhone clips carry `frame.rotation=-90`, which
    `PyAVDecoder` ALREADY honours → upright 1080×1920, bar vertical. I nearly "fixed" a non-problem:
    a probe misread the DISPLAYMATRIX side-data as 0 and a RAW-decode optical-flow test (without
    applying rotation) showed the bar on image-X → looked like learning #22. **Lesson: to test the
