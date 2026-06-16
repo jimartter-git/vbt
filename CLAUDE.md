@@ -31,11 +31,14 @@ and `docs/sources-and-fusion.md`.
   and seed the app's per-user prior. **Vitruve is the established ground-truth
   reference** (since 2026-06-02; `compare.py` auto-prefers it — ~392 rep rows across
   bench/squat/skull-crushers, etc.).
-- **⚑ Data ingested through 2026-06-13** (no known backlog): 06-05 BN/DL, 06-08 rows,
-  06-09 bench, 06-10 squats/RDLs, **06-11 incline bench (Vitruve+SB), 06-13 deadlifts (6 sets,
-  full Vitruve+SmartBarbell GT)** all in `sets.csv`/`rep_metrics.csv`. (06-10 filed as set-level
-  Vitruve averages — the app crashed before per-rep export.) Next upload → follow the ingestion
-  + video triggers below.
+- **⚑ Data ingested through 2026-06-15** (no known backlog): 06-05 BN/DL, 06-08 rows,
+  06-09 bench, 06-10 squats/RDLs, 06-11 incline bench (Vitruve+SB), 06-13 deadlifts (6 sets,
+  full Vitruve+SB GT, **all 6 CV counts EXACT**), **06-15 barbell rows (5 sets, Vitruve GT** —
+  set 1's first 2 reps dropped as leftover warmup per lifter; **+5 Apple Watch IMU files
+  `dataset/raw/20260615-ROW-*_watch.csv` = the FIRST real watch data, awaiting ZUPT analysis vs
+  Vitruve; +5 row videos in R2 awaiting manifest+CV; SmartBarbell pending**). (06-10 filed as
+  set-level Vitruve averages — the app crashed before per-rep export.) Next upload → follow the
+  ingestion + video triggers below.
 - **⚑ Video storage built (2026-06-15): HD masters live in Cloudflare R2** (bucket `vbt-video`),
   repo keeps only `dataset/raw/manifest.csv` pointer + `vbt_video/clip_store.py::resolve_clip()`
   (local→cache→download). **Don't commit HD video to git** — upload to R2, add a manifest row.
