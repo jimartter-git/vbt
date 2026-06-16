@@ -822,3 +822,70 @@ The Python side exposes proposals + editable boundaries; the app makes them corr
   auto-engaged, never a global default that taxes the easy case.
 - `pose` clips (e.g. SC-1, hex DB side-on) need MediaPipe + a one-time model
   download (network); they exercise the equipment-free path and the anthro scale.
+
+## Full scoreboard snapshot (2026-06-16) — the UN/RERACK fix: 06-16 bench reps EXACT + velocity tied with SmartBarbell
+
+The 06-16 bench (5×10, Westwood Athletics, dark Rogue **deep-dish** plates, head-on rack
+view, Vitruve GT + SmartBarbell + Apple Watch) was the first set with **all four inputs on
+every set** — the gold testbed. CV first failed it badly: AUTO over-counted BN-4/5 (11) and
+velocity was meaningless (velocity-loss pinned ~61% regardless of the true 24–59%; absolute
+m/s ~3× high). Both traced to the **bar un/rerack** (the lifter confirmed it) plus a
+hub-vs-rim scale error.
+
+### Root causes (two, both named by going to the trajectory)
+1. **Scale: the flow ruler measured the ~72px blue HUB, not the ~570px deep-dish rim** — a
+   7× error. ROM read an absurd 218 cm; and the tiny UNRACK bobble (≈5 cm real) passed the
+   absolute `rom_min` gate *because* the inflated scale made it look like 31 cm. So the scale
+   bug caused a count bug. Fixed with the human-confirmed rim (`RIM_PX`, the in-app
+   confirm/adjust surface — learning #19), ROM → ~28 cm.
+2. **Segmentation was vertical-only; the un/rerack is HORIZONTAL.** The unrack (lift off the
+   hooks, push forward) and the rerack (yank back to the hooks) travel more horizontally than
+   vertically. They leaked in as a leading +1 rep and — when the merge fused the rerack into
+   the last concentric — tanked that rep's velocity (BN-3 rep 10: a 3.9 s window spanning the
+   real rep + the rerack, MV 0.09 vs the true ~0.25). The trajectory proved it: during the
+   real concentric vy≫|vx|; during the rerack |vx| hit −392 px/s while vy was small.
+
+### The fix (`VideoConfig.transit_aware`, kinematics.py) — row-safe, gated
+- **Horizontal-aware merge guard**: `_merge_subrep_runs` never absorbs a run whose |Δx|>|Δy|
+  (a rerack), so the last rep stays a clean concentric.
+- **`_transit_gate`** (leading/trailing only): drops a leading tiny-ROM bobble (<0.3× the set
+  median — the unrack) or a leading/trailing horizontal-dominated run (the rerack). Mid-set
+  reps are never touched, so a horizontal-moving **row** is safe; real partial-lockout reps
+  (≥0.4×) are kept (the SQ-3 lesson).
+- **DEFAULT OFF.** The seed-free AUTO track can be jittery enough that leading/trailing reps
+  read as transit and cascade (BN-3 auto went 10→5 when this ran on auto). So `transit_aware`
+  is enabled only on the **seeded/tap path** (a clean, visually-verified track):
+  `cv_eval --gate`, `vel_eval --tap`. Every existing/auto path is byte-identical (53 tests
+  pass; auto BN-3 still 10; deadlift double-bump untouched by construction).
+
+### Result — 06-16 bench, tap path (one hub tap + confirmed rim)
+| set | reps (GT 10) | abs MV RMSE vs Vitruve | SB RMSE | VL ours / Vit |
+|---|---|---|---|---|
+| BN-1 | **10** ✓ | 0.071 | 0.027 | 39 / 42 |
+| BN-2 | **10** ✓ | **0.027** | 0.044 | 31 / 24 |
+| BN-3 | **10** ✓ | **0.035** | 0.056 | 42 / 30 |
+| BN-4 | **10** ✓ | 0.042 | 0.033 | 44 / 40 |
+| BN-5 | **10** ✓ | **0.023** | 0.033 | 55 / 59 |
+| **mean** | **10/10 all** | **0.040** | **0.039** | — |
+
+**Reps EXACT on all 5** (was 11 on BN-4/5). **Absolute velocity 0.040 ≈ SmartBarbell 0.039 —
+TIED** (was meaningless); we beat SB on 3/5. Velocity-loss within ~4 pp on 3/5 (BN-2 7 pp,
+BN-3 12 pp — residual per-rep noise, the remaining gap). On a clean head-on day this is the
+case SB is built for; closing it to a tie with one tap + a rim-confirm is the win.
+
+### Watch IMU on the same sets — diagnosed, not yet closed
+Bench is slow/paused/supine → low velocity → low SNR for single-integration; the PoC
+velocity-crossing `detect_turnarounds` over-segments the pauses (per-rep r 0.59, RMSE 0.091).
+ROM is already good (~0.31 vs 0.33 m). A **position-cycle** detector that *exploits* the
+pauses (find chest minima / lockout maxima, integrate the drift-removed velocity between)
+reaches per-rep **r 0.82–0.95** on the sets it segments cleanly (BN-3 r=0.95) — proving the
+lever is segmentation, not the hardware (Achermann hit r>0.97). But no single automatic
+prominence robustly hits exact-10 AND high-r across all five (loose→noisy, tight→misses), so
+it's not production-ready here. Next unlocks: Madgwick orientation fusion for cleaner
+world-vertical accel, a learned rep detector, or the Achermann 100 Hz protocol. The watch is
+already at target on FASTER lifts (06-15 rows: RMSE 0.069). Harness: `_watch_0616bn.py`.
+
+### Fusion on bench: CV-led
+With all four inputs, the count is unanimous (Vitruve = SmartBarbell = our CV = 10; watch
+≈10) and CV supplies device-grade velocity (0.040). The watch's role here is count/ROM
+cross-check + the no-camera fallback; on faster lifts the weighting flips toward the watch.

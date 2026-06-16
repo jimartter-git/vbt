@@ -36,10 +36,12 @@ and `docs/sources-and-fusion.md`.
   full Vitruve+SB GT, **all 6 CV counts EXACT**), 06-15 barbell rows (5 sets, Vitruve GT — set 1's
   first 2 reps dropped as leftover warmup; +5 Apple Watch IMU = the FIRST real watch data, analyzed
   vs Vitruve; +5 row videos CV-scored EXACT), **06-16 bench (5×10, RPE 7.5/6.5/7/8/9.5, Vitruve GT + 5 Apple Watch IMU
-  `dataset/raw/20260616-BN-*_watch.csv` + 5 R2 videos `20260616-BN_*.mov`) — CV AUTO zero-tap COUNTS
-  10/10/10 EXACT (BN-1/2/3), 11 on BN-4/5 (real put-down cycle); CV VELOCITY UNRELIABLE on this
-  dark-iron deep-dish head-on view (count-only); bench watch IMU below the row bar (RMSE 0.091, r 0.59);
-  SmartBarbell 10/10 EXACT all 5 + velocity RMSE 0.040 vs Vitruve = SB BEATS our CV this clean head-on day. See learning #24.** (06-10 filed as set-level Vitruve averages — the app
+  `dataset/raw/20260616-BN-*_watch.csv` + 5 R2 videos `20260616-BN_*.mov`) — the FIRST all-four-inputs
+  testbed. After the UN/RERACK fix (learning #25, `transit_aware` + confirmed deep-dish rim): CV tap
+  path **reps 10/10 EXACT all 5**, **abs MV RMSE 0.040 ≈ SmartBarbell 0.039 (TIED)**, VL within ~4pp
+  on 3/5 (SB also 10/10, RMSE 0.039). Watch bench DIAGNOSED (slow/paused/supine → detector over-
+  segments; position-cycle reaches r 0.82-0.95 per-set but not yet robust; ROM good ~0.31). See
+  learnings #24 (ingest) + #25 (the fix).** (06-10 filed as set-level Vitruve averages — the app
   crashed before per-rep export.) Next upload → follow the ingestion + video triggers below.
 - **⚑ Video storage built (2026-06-15): HD masters live in Cloudflare R2** (bucket `vbt-video`),
   repo keeps only `dataset/raw/manifest.csv` pointer + `vbt_video/clip_store.py::resolve_clip()`
@@ -431,6 +433,34 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    the rows' 0.069 and the SEE<0.07 target), fatigue-decline shape muted. `gate_reps`'s row-tuned
    absolute thresholds (mv>0.45) don't fit bench (MV 0.19-0.42) — gated inline. A detector gap, not
    a sensor limit. Records: `clips.csv` (5), `sets.csv`/`manifest.csv` notes, `_record_0616bn_cv.py`.
+
+25. **The UN/RERACK fix — 06-16 bench CV reps EXACT + velocity tied with SmartBarbell (2026-06-16).**
+   The 06-16 bench (the FIRST all-four-inputs testbed: watch+CV+Vitruve+SB on every set) first
+   FAILED CV: AUTO over-counted BN-4/5 (11) and velocity was meaningless (VL pinned ~61% vs true
+   24-59%, abs m/s ~3× high). Two root causes, both found by dumping the trajectory (not theorizing):
+   (a) **scale read the ~72px blue HUB, not the ~570px deep-dish RIM** (7× error) → ROM 218cm, and
+   the tiny UNRACK bobble passed `rom_min` *because* the inflated scale made it look like 31cm (a
+   scale bug causing a count bug). Fixed with the human-confirmed rim (`RIM_PX`, learning #19).
+   (b) **segmentation was vertical-only; the un/rerack is HORIZONTAL** (lift off / yank back to the
+   hooks). It leaked in as a leading +1 and, when the merge fused the rerack into the last rep,
+   tanked that rep's velocity (BN-3 rep10: vy≫vx in the real rep, then vx hit −392px/s in the
+   rerack). Fix (`VideoConfig.transit_aware`, kinematics.py): a horizontal-aware merge guard (never
+   fuse a |Δx|>|Δy| run) + `_transit_gate` (leading/trailing: drop tiny-ROM unrack <0.3×median or a
+   horizontal-dominated rerack). **Row-safe** (rows are vertical-dominated; mid-set reps untouched;
+   partials ≥0.4× kept). **DEFAULT OFF** — the jittery seed-free AUTO track cascades (BN-3 auto
+   10→5), so it's enabled ONLY on the seeded/tap path (`cv_eval --gate`, `vel_eval --tap`); every
+   auto/validated path is byte-identical (53 tests pass, auto BN-3 still 10, deadlift double-bump
+   untouched). **Result (tap path): 06-16 bench reps 10/10 EXACT all 5; abs MV RMSE mean 0.040 ≈ SB
+   0.039 (TIED, was meaningless; beats SB on 3/5); VL within ~4pp on 3/5.** ⚑ **Watch on the same
+   sets: DIAGNOSED, not closed.** Bench is slow/paused/supine → low single-integration SNR; the PoC
+   velocity-crossing detector over-segments the pauses (r 0.59). A **position-cycle** detector that
+   exploits the pauses (chest minima / lockout maxima) reaches per-rep **r 0.82-0.95** where it
+   segments cleanly (BN-3 r=0.95) — the lever is SEGMENTATION, not the hardware (Achermann r>0.97) —
+   but no single auto prominence robustly hits exact-10 AND high-r across all 5 (not production-ready;
+   `_watch_0616bn_poscycle.py`). Next unlocks: Madgwick orientation fusion, a learned rep detector,
+   the Achermann 100Hz protocol. Watch is already at target on FASTER lifts (rows RMSE 0.069). Method:
+   when a velocity is "meaningless," DUMP THE TRAJECTORY (x AND y) before blaming the sensor — both
+   bugs here were visible there and nowhere else. Snapshot: `docs/cv-fusion.md` 2026-06-16.
 
 ## ⚑ Video trigger — READ THIS
 
