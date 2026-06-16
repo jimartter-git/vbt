@@ -41,10 +41,19 @@ and `docs/sources-and-fusion.md`.
   (local→cache→download). **Don't commit HD video to git** — upload to R2, add a manifest row.
   New **CV-training corpus**: `dataset/clips.csv` (wide human annotations, `dataset/ANNOTATIONS.md`
   vocab) + `tools/ingest_clips.py` (probe + seed-free CV prefill; `--from-manifest` pulls from R2).
-  Full design + next-session runbook: `docs/video-storage.md`. **⚑ PENDING: CV-score the 06-13 HD
-  deadlifts** (6× 4K120, dark-iron diagonal round-iron) — needs read-only R2 creds in-env, then
-  `ingest_clips.py --from-manifest`; a test of whether 4K rescues dark-iron tracking + the absolute
-  -velocity scale on slow heavy 275s (SmartBarbell already nailed all 6 counts there).
+  Full design + next-session runbook: `docs/video-storage.md`. **⚑ 06-13 HD deadlifts CV-scored
+  2026-06-15 — ALL SIX EXACT (reps_cv 5/3/2/2/8/8 = GT) after fixing TWO bugs: iPhone display
+  ROTATION (#22) + the deadlift double-bump SEGMENTER (#21).** The over-count *looked* like
+  "CV can't see dark iron"; it was two mechanical bugs. (a) DL-1..5 are iPhone `frame.rotation=-90`
+  clips — `PyAVDecoder` decoded them sideways so the bar moved along image-X while the segmenter
+  read Y (track looked static, count garbage); now `PyAVDecoder._apply_rotation` decodes upright.
+  (b) the deadlift double-humped pull (knee/sticking-point dip) faked a turnaround → ~2× over-split;
+  the double-bump merge fixes it. Counts: DL-1/2/3/4/6 zero-tap auto-seed, DL-5 one-tap on the
+  yellow-hub plate (auto grabbed a floor decoy). **Velocity-LOSS — the fatigue signal — matches
+  Vitruve: 17.8 vs 17.1, 29.0 vs 29.7, 11.9 vs 9.4 pp.** Absolute MV reads a consistent ~1.2× high
+  (active-region vs full-concentric mean DEFINITION gap, correctable — not a tracking error). Native
+  4K is impractical to flow over (hours/clip) so scoring uses an UPRIGHT 720p proxy
+  (`tools/_dl0613_proxy_cv.py`, rotation-aware). Records in `clips.csv`/`manifest.csv`/`sets.csv`.
 - **⚑ CV milestone (2026-06-12): ALL THREE product metrics now beat SmartBarbell.** Scoreboard:
   **`docs/cv-fusion.md` → "Full scoreboard snapshot (2026-06-12)"**. Human-grade tap path: reps
   **0.12** (wtd 0.07, 24/26 exact) vs SB 2.57 · velocity-loss **2.2pp** vs 9.0 · **absolute m/s
@@ -310,6 +319,47 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    named unlocks for per-clip parity: (a) **learned plate sizer (torch-gated — NOW the
    single bottleneck)**, (b) HD/closer capture, (c) both-plates footage → bilateral d(t)
    cross-check. Don't re-attempt classical per-frame sizing at 440px.
+
+21. **The 06-13 deadlift "failure" was SEGMENTATION, not tracking — the double-bump merge
+   (2026-06-15).** The dark round-iron 4K deadlifts AUTO-over-counted ~2× (DL-6 8-rep set read
+   15-21), which *looked* like "CV can't see dark iron." It wasn't: flow rides the bar perfectly
+   (DL-6: **311px travel ≈ a full plate, conf 1.0, 8 clean position cycles = GT**) — but
+   `trajectory_to_reps` segments on velocity ZERO-CROSSINGS, and a deadlift's **double-humped pull
+   (the knee/sticking-point velocity DIP)** fakes a turnaround, splitting each rep into 2-3. The
+   corpus that "won" was bench/squat = single-humped. Fix: `kinematics._merge_subrep_runs` (in
+   `_segment_concentric`) coalesces consecutive positive-velocity runs **not separated by a real
+   bar RETURN toward the bottom** (bench→chest/squat→depth/deadlift→floor all reset fully; a
+   sticking-point dip doesn't). Lift-agnostic; two guards keep it from eating real reps:
+   (a) **`sep_frac=0.2`** sits in the *measured* gap between mid-rep dips (≤0.04×ROM) and real
+   eccentrics (≥0.32×ROM — even SQ-1 low-res / SQ-3 fast-TnG); **0.4 over-merged SQ-1** (a main-lift
+   regression, learning #15 — the line we don't cross). (b) an **overtop guard** (don't absorb a
+   run rising >1.0×ROM ABOVE the rep top) stops a terminal rack-lift from fusing into the last real
+   rep, which would then make the plausibility gate drop it (caught by
+   `test_plausibility_gate_drops_rack_phantoms`); ROM here is the **median of real eccentric
+   descents** (phantom-robust, not the raw range a rack-lift inflates). **Validated: a full
+   merge-ON-vs-OFF diff over the whole corpus = 0 regressions (only ROW-2-0608 *improved* 7→6);
+   all 50 tests pass.** This was ONE of two bugs behind the 06-13 over-count; the other was
+   rotation (#22). Method: when an AUTO count is ~2× and the bar visibly tracks, suspect the
+   SEGMENTER, not the tracker — dump the trajectory and count position cycles before concluding
+   "CV can't."
+
+22. **The OTHER 06-13 bug: iPhone display ROTATION, ignored at the decode seam → ALL 6 deadlifts
+   now EXACT (2026-06-15).** After the double-bump fix, DL-1..5 still mis-counted while DL-6 was
+   perfect. Root cause: **DL-1..5 are iPhone clips with `frame.rotation = -90`** (landscape sensor
+   + a portrait display matrix); DL-6 has rotation 0. `PyAVDecoder` decoded the RAW (sideways)
+   frames, so the bar travelled along the image **X-axis** while `trajectory_to_reps` reads **Y** —
+   the track looked STATIC (yspan 17px) and the count was garbage. This *masqueraded* as the
+   dark-iron "wrong-seed" / detect-fallback problem (it is NOT — that diagnosis in #21 was wrong
+   for these clips). Fix: `PyAVDecoder._apply_rotation` honours `frame.rotation` (`np.rot90`,
+   k=r//90; verified -90→k=3=clockwise=upright) so EVERY downstream consumer gets upright frames —
+   a real product bug (any portrait phone clip would have failed). Result with rotation+double-bump
+   both fixed: **reps_cv 5/3/2/2/8/8 = GT, ALL SIX EXACT** (DL-1/2/3/4/6 zero-tap auto-seed; DL-5
+   one-tap on the yellow-hub plate, auto grabbed a floor decoy). **Velocity-LOSS — the fatigue
+   signal — matches Vitruve: DL-1 17.8 vs 17.1, DL-5 29.0 vs 29.7, DL-6 11.9 vs 9.4 pp.** Absolute
+   MV reads a *consistent* ~1.2× high — a velocity-DEFINITION gap (our active-region mean vs
+   Vitruve's full-concentric mean), correctable, NOT a tracking error. To SEE rotation: read
+   `frame.rotation` (or render a frame and look) before trusting any "static track" on phone video.
+   Tooling: `dataset/tools/_dl0613_proxy_cv.py` transcode now rotates upright too.
 
 ## ⚑ Video trigger — READ THIS
 

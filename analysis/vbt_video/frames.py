@@ -50,7 +50,14 @@ class ArrayFrameSource(FrameSource):
 
 class PyAVDecoder(FrameSource):
     """Frame-accurate decode via PyAV. Uses real per-frame timestamps and tolerates
-    variable frame rate (phone video) — the decode layer we won't have to replace."""
+    variable frame rate (phone video) — the decode layer we won't have to replace.
+
+    Applies the stream's DISPLAY ROTATION (`frame.rotation`) so portrait phone clips
+    decode UPRIGHT. iPhone stores the landscape sensor frame plus a display matrix
+    (e.g. rotation=-90 for a portrait capture); without honouring it the bar moves
+    along the image X-axis while the rep segmenter reads Y → the track looks static and
+    the count collapses (the 06-13 DL-1..5 failure). Rotating here fixes it once for
+    every downstream consumer (tracker, scale, segmenter)."""
     def __init__(self, path: str):
         self.path = str(path)
         self._fps = self._probe_fps()
@@ -66,6 +73,17 @@ class PyAVDecoder(FrameSource):
     def fps(self) -> float:
         return self._fps
 
+    @staticmethod
+    def _apply_rotation(img: np.ndarray, rotation) -> np.ndarray:
+        """Rotate a decoded BGR frame upright given `frame.rotation` (degrees).
+        ffmpeg/PyAV convention: rotation -90 (=270) → rotate clockwise to display."""
+        r = int(round(rotation or 0)) % 360
+        if r % 90 != 0 or r == 0:
+            return img
+        # np.rot90 k is COUNTER-clockwise. Verified empirically: rotation -90 (=270)
+        # → k=3 reproduces a clockwise display rotation (upright). So k = r // 90.
+        return np.ascontiguousarray(np.rot90(img, (r // 90) % 4))
+
     def __iter__(self) -> Iterator[Frame]:
         import av
         dt = 1.0 / self._fps
@@ -75,4 +93,6 @@ class PyAVDecoder(FrameSource):
                 t = frame.time
                 if t is None:                 # rare: rebuild from index
                     t = i * dt
-                yield Frame(float(t), frame.to_ndarray(format="bgr24"))
+                img = self._apply_rotation(frame.to_ndarray(format="bgr24"),
+                                           getattr(frame, "rotation", 0))
+                yield Frame(float(t), img)

@@ -676,3 +676,18 @@ def test_depth_tier_abstains_without_rim_or_on_noise():
     noisy = np.column_stack([ts, 100 + rng.normal(0, 18, len(ts))])
     d, q = anchored_trace(noisy, 210, np.arange(0, 6, 1 / 30))
     assert d is None and q["trace_noise_frac"] > 0.06
+
+
+def test_pyav_decoder_apply_rotation():
+    # iPhone portrait clips carry frame.rotation=-90 (landscape sensor + display matrix).
+    # The decoder must rotate frames upright or the bar moves along image-X while the
+    # segmenter reads Y (the 06-13 DL-1..5 "static track" bug). See CLAUDE.md learning #22.
+    from vbt_video.frames import PyAVDecoder
+    img = np.zeros((4, 6, 3), np.uint8)
+    img[0, 0] = 255                                  # top-left marker
+    assert np.array_equal(PyAVDecoder._apply_rotation(img, 0), img)        # identity
+    assert np.array_equal(PyAVDecoder._apply_rotation(img, None), img)     # missing → identity
+    r = PyAVDecoder._apply_rotation(img, -90)        # -90 (=270) → clockwise → upright
+    assert r.shape == (6, 4, 3)                       # H/W swap
+    assert np.array_equal(r, np.rot90(img, 3))        # verified mapping (k = r//90)
+    assert r[0, -1, 0] == 255                          # top-left marker → top-right (clockwise)

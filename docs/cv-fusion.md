@@ -128,6 +128,45 @@ plate stacked in a moving column still fails. Remaining gaps, each with a named 
 Net: **counts are production-ready behind a one-tap UX and ~9/14 fully hands-off; absolute
 velocity is the remaining gap** (#2). Re-run the honest number any time with `cv_eval.py --auto`.
 
+## Deadlift double-bump — a segmentation fix, not a tracking one (2026-06-15)
+
+The 06-13 4K deadlifts AUTO-over-counted ~2× (DL-6's clean 8-rep working set read 15-21) and at
+first looked like "CV can't see dark round iron." The trajectory said otherwise: flow rides the
+bar **311 px ≈ a full plate, conf 1.0, with 8 clean position cycles = ground truth**. The bug was
+in `trajectory_to_reps`, which segments reps on velocity ZERO-CROSSINGS — and a deadlift's
+**double-humped pull** (the bar decelerates through the knee/sticking point, then re-accelerates)
+fakes a turnaround, splitting each rep into 2-3. The corpus that won was bench/squat = single-hump.
+
+Fix: `kinematics._merge_subrep_runs` coalesces consecutive positive-velocity runs **not separated
+by a real bar RETURN toward the bottom** (bench→chest, squat→depth, deadlift→floor all reset; a
+sticking-point dip doesn't). It's lift-agnostic and gated so it never eats a real rep: a descent
+threshold (`sep_frac=0.2`) sits in the measured gap between mid-rep dips (≤0.04×ROM) and real
+eccentrics (≥0.32×ROM), and an overtop guard stops a terminal rack-lift from fusing into the last
+rep (both thresholds use a phantom-robust rep-ROM = median of real eccentric descents). A full
+merge-ON-vs-OFF diff over the whole corpus showed **0 regressions** (only ROW-2-0608 improved
+7→6); all 50 tests pass. This was the first of TWO bugs.
+
+### …and the second: iPhone display rotation (2026-06-15)
+
+After the merge, DL-1..5 still mis-counted while DL-6 was perfect. Cause: **DL-1..5 are iPhone
+clips with `frame.rotation = -90`** (landscape sensor + a portrait display matrix); DL-6 is 0.
+`PyAVDecoder` decoded the raw sideways frames, so the bar travelled along the image **X-axis**
+while `trajectory_to_reps` reads **Y** — the track looked static (yspan 17px) and the count was
+garbage. It *masqueraded* as a dark-iron wrong-seed problem. Fix: `PyAVDecoder._apply_rotation`
+honours `frame.rotation` so every downstream consumer gets upright frames — a real product bug
+(any portrait phone clip would have failed).
+
+**Result, both bugs fixed: all six 06-13 deadlifts EXACT** — reps_cv 5/3/2/2/8/8 = GT (DL-1/2/3/4/6
+zero-tap, DL-5 one-tap on the yellow-hub plate; auto grabbed a floor decoy there). And the
+**velocity-LOSS matches Vitruve** — DL-1 17.8 vs 17.1, DL-5 29.0 vs 29.7, DL-6 11.9 vs 9.4 pp — so
+the fatigue signal is right on the working sets. Absolute MV reads a consistent ~1.2× high: a
+velocity-*definition* gap (our active-region mean vs Vitruve's full-concentric mean), correctable,
+not a tracking error.
+
+**Lessons:** (1) when an AUTO count comes in ~2× and the bar visibly tracks, suspect the SEGMENTER
+before the tracker. (2) On phone video, check `frame.rotation` (or just render a frame and look)
+before trusting any "static track" — orientation bugs masquerade as tracking failures.
+
 ## Zero-tap rebuild — track-by-detection (2026-06-09)
 
 The old zero-tap path (flow + a single auto-seed) was **8.5 mean rep-count error** on the
