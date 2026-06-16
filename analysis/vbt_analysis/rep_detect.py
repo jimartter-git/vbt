@@ -20,18 +20,24 @@ from scipy.signal import butter, filtfilt
 def detect_turnarounds(
     t: np.ndarray,
     a_vert: np.ndarray,
-    min_separation_s: float = 0.25,
+    min_separation_s: float = 0.30,
     drift_cutoff_hz: float = 0.1,
     edge_margin_frac: float = 0.05,
+    amp_frac: float = 0.25,
 ) -> np.ndarray:
     """Return indices of velocity zero-crossings (rep turnarounds).
 
-    We roughly integrate acceleration to velocity, then high-pass filter
-    (zero-phase) to remove slow integration drift before taking zero-crossings.
-    A global linear de-trend tilts the signal and shifts the crossings; a
-    high-pass at `drift_cutoff_hz` (well below rep frequency) removes drift
-    without that bias. `edge_margin_frac` drops filter edge artifacts and
-    `min_separation_s` suppresses chattery double-crossings.
+    Roughly integrate acceleration to velocity, high-pass filter (zero-phase) to
+    remove slow integration drift, then take zero-crossings. A single fixed cutoff
+    can't win for every tempo: too LOW and a paused/slow set's reps merge with drift
+    (06-15 ROW-5 read 6 of 10); too HIGH and noise crossings split clean reps. We
+    therefore use a moderately HIGH cutoff (`drift_cutoff_hz`) for sensitivity and
+    then **amplitude-gate** the crossings: iteratively drop the crossing bounding the
+    weakest segment while that segment's peak |velocity| is under `amp_frac` of the
+    median segment amplitude — a real turnaround separates two substantial velocity
+    excursions, noise crossings bound tiny ones. This recovers the slow set's reps
+    without the high-cutoff over-split (06-15 rows 6/9-of-10 -> 9-10/10). `edge_margin
+    _frac` drops filter edge artifacts; `min_separation_s` suppresses chatter.
     """
     t = np.asarray(t, dtype=float)
     a_vert = np.asarray(a_vert, dtype=float)
@@ -49,15 +55,28 @@ def detect_turnarounds(
     sign = np.sign(v_hp)
     sign[sign == 0] = 1
     crossings = np.where(np.diff(sign) != 0)[0]
-
     margin = int(edge_margin_frac * len(t))
-    crossings = crossings[(crossings > margin) & (crossings < len(t) - margin)]
-    if len(crossings) == 0:
-        return crossings.astype(int)
+    cr = [int(c) for c in crossings if margin < c < len(t) - margin]
+
+    # Amplitude-gate: a real turnaround sits between two substantial velocity
+    # excursions; iteratively remove the crossing next to the weakest segment.
+    def seg_amp(lo, hi):
+        return float(np.max(np.abs(v_hp[lo:hi + 1]))) if hi > lo else 0.0
+    while len(cr) >= 2:
+        bounds = [0, *cr, len(t) - 1]
+        amps = [seg_amp(bounds[i], bounds[i + 1]) for i in range(len(bounds) - 1)]
+        pos = [x for x in amps if x > 0]
+        med = float(np.median(pos)) if pos else 1.0
+        worst = int(np.argmin(amps))
+        if amps[worst] >= amp_frac * med:
+            break
+        del cr[worst if worst < len(cr) else worst - 1]   # drop the inner crossing
+    if not cr:
+        return np.array([], dtype=int)
 
     min_gap = max(1, int(min_separation_s * fs))
-    kept = [int(crossings[0])]
-    for c in crossings[1:]:
+    kept = [cr[0]]
+    for c in cr[1:]:
         if c - kept[-1] >= min_gap:
-            kept.append(int(c))
+            kept.append(c)
     return np.array(kept, dtype=int)
