@@ -132,21 +132,28 @@ CLIPS = {
                        "trap, see RDL-1. --gate.", None),
     # --- 2026-06-16 bench press (5x10; set1 225lb top set, sets2-5 205lb back-offs).
     # 1080p60 h264, iPhone frame.rotation=-90 (PyAVDecoder auto-uprights -> 1080x1920; NOT a
-    # bug, despite the DISPLAYMATRIX side-data probing as 0). Dark Rogue iron + blue hub,
-    # diagonal end-ish view. Vitruve GT + Apple Watch IMU. AUTO zero-tap nails the COUNT;
-    # velocity is UNRELIABLE here (flow profile noise on dark iron; abs m/s hub-scale-inflated). ---
-    "20260616-BN-1": ("dataset/raw/20260616-BN_1.mov", {"detect": None},
-                      "bench 225lb top set x10, RPE 7.5 (NOT near-failure; VL 42% overstates RPE) - "
-                      "AUTO zero-tap 10/10 EXACT conf 1.0; velocity unreliable (VL 61% vs Vit 42%, "
-                      "count-only)", None),
-    "20260616-BN-2": ("dataset/raw/20260616-BN_2.mov", {"detect": None},
-                      "bench 205lb x10 - AUTO 10/10 EXACT (gate dropped the put-down; 1-tap kept 11)", None),
-    "20260616-BN-3": ("dataset/raw/20260616-BN_3.mov", {"detect": None},
-                      "bench 205lb x10 - AUTO 10/10 EXACT conf 1.0", None),
-    "20260616-BN-4": ("dataset/raw/20260616-BN_4.mov", {"detect": None},
-                      "bench 205lb x10 - AUTO 11 (+1): a put-down/rack cycle BOTH auto & 1-tap see", None),
-    "20260616-BN-5": ("dataset/raw/20260616-BN_5.mov", {"detect": None},
-                      "bench 205lb x10 - AUTO 11 (+1): put-down cycle, both paths", None),
+    # bug). Dark Rogue DEEP-DISH iron + blue hub, head-on rack view; lifter un/reracks the bar.
+    # Westwood Athletics. Vitruve GT + Apple Watch IMU + SmartBarbell. The un/rerack horizontal
+    # transit USED to over-count (BN-4/5 = 11) + tank the last-rep velocity; the horizontal-aware
+    # merge + transit gate (kinematics.py) fixed it -> AUTO 10/10 EXACT all 5. Velocity needs the
+    # human-confirmed RIM (deep-dish 45 ~570px, the hub is ~72px = 7x scale error; see RIM_PX);
+    # with it, --tap abs MV RMSE ~0.04 vs Vitruve (matches/beats SmartBarbell). Flow seed = the
+    # blue hub at a clear frame (x,y,w,h,t). ---
+    "20260616-BN-1": ("dataset/raw/20260616-BN_1.mov", {"flow": (156, 732, 60, 60, 0.3), "detect": None},
+                      "bench 225lb top set x10, RPE 7.5 - AUTO 10/10 EXACT; --tap+rim abs RMSE "
+                      "0.071, VL 39 vs Vit 42 (3pp)", None),
+    "20260616-BN-2": ("dataset/raw/20260616-BN_2.mov", {"flow": (144, 778, 60, 60, 27.3), "detect": None},
+                      "bench 205lb x10 - AUTO 10/10 EXACT (transit gate drops the unrack); "
+                      "--tap+rim abs RMSE 0.027 (beats SB 0.044), VL 31 vs 24", None),
+    "20260616-BN-3": ("dataset/raw/20260616-BN_3.mov", {"flow": (283, 800, 60, 60, 6.0), "detect": None},
+                      "bench 205lb x10 - AUTO 10/10 EXACT; --tap+rim abs RMSE 0.035 (beats SB "
+                      "0.056), VL 42 vs 30 (per-rep noise)", None),
+    "20260616-BN-4": ("dataset/raw/20260616-BN_4.mov", {"flow": (316, 780, 60, 60, 9.3), "detect": None},
+                      "bench 205lb x10 - AUTO 10/10 EXACT (was 11: leading unrack, now gated); "
+                      "--tap+rim abs RMSE 0.042, VL 44 vs 40 (4pp)", None),
+    "20260616-BN-5": ("dataset/raw/20260616-BN_5.mov", {"flow": (363, 927, 60, 60, 24.2), "detect": None},
+                      "bench 205lb x10 - AUTO 10/10 EXACT (was 11); --tap+rim abs RMSE 0.023 "
+                      "(beats SB 0.033), VL 55 vs 59 (4pp)", None),
 }
 
 
@@ -161,6 +168,12 @@ RIM_PX = {
     "20260605-BN-1": (210, 16.7), "20260605-BN-2": (205, 6.1), "20260605-BN-3": (207, 11.0),
     "20260604-SQ-1": (115, 0.5), "20260604-SQ-3": (122, 0.5),
     "20260609-BN-4": (110, 14.0),
+    # 06-16 bench: Rogue DEEP-DISH 45 rim ~570px (the working ruler), vs the blue HUB ~72px
+    # the flow seed sits on (a 7x scale error if used). Human-confirmed (Hough median over the
+    # set, consistent 565-573 across the 5 clips; the in-app circle-confirm surface). Fixed the
+    # absurd 218cm ROM -> ~28cm and made abs velocity ~0.04 RMSE vs Vitruve. (diameter_px, t).
+    "20260616-BN-1": (570, 0.3), "20260616-BN-2": (573, 27.3), "20260616-BN-3": (565, 6.0),
+    "20260616-BN-4": (570, 9.3), "20260616-BN-5": (570, 24.2),
 }
 
 # Working-plate colour per clip (for the colour-mask continuous size trace; the 0605
@@ -222,7 +235,7 @@ def run(clip, tracker, seed, adaptive, occlusion=False, band=None, scale=None, g
         seed, seed_time = tuple(seed[:4]), float(seed[4])
     cfg = VideoConfig(tracker=tracker, rep_gate=("relative" if adaptive else "absolute"),
                       occlusion_robust=(occlusion and tracker == "flow"), band=band,
-                      scale_spec=spec, plausibility_gate=gate)
+                      scale_spec=spec, plausibility_gate=gate, transit_aware=gate)
     reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed, seed_time=seed_time)
     mv = [r["mean_velocity"] for r in reps]
     return (len(reps), (sum(mv) / len(mv) if mv else float("nan")),

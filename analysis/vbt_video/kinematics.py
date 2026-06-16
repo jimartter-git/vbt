@@ -71,7 +71,7 @@ def _candidate_concentrics(t, v, pos, fs):
     return cands
 
 
-def _merge_subrep_runs(cands, pos, sep_frac=0.2, overtop_frac=1.0):
+def _merge_subrep_runs(cands, pos, sep_frac=0.2, overtop_frac=1.0, posx=None):
     """Coalesce consecutive positive-velocity runs that belong to ONE rep.
 
     A real rep boundary requires the bar to RETURN toward the bottom between
@@ -118,12 +118,24 @@ def _merge_subrep_runs(cands, pos, sep_frac=0.2, overtop_frac=1.0):
     real = [d for d in descents if d >= thresh]
     rep_rom = float(np.median(real)) if real else span
     overtop = overtop_frac * rep_rom
+    def _horizontal_dominated(c):
+        # A run whose HORIZONTAL travel exceeds its vertical = un/rerack/walkout, not a
+        # sticking-point hump. Merging it into the prior rep fuses the rerack into the
+        # last concentric and tanks that rep's velocity (06-16 bench BN-3: the bar is
+        # yanked sideways to the hooks after the last lockout). Real reps & rows are
+        # vertical-dominated, so this never fires on a true sub-rep dip.
+        if posx is None:
+            return False
+        dy = abs(float(pos[int(c[1])] - pos[int(c[0])]))
+        dx = abs(float(posx[int(c[1])] - posx[int(c[0])]))
+        return dx > dy
     merged = [list(cands[0])]
     for c in cands[1:]:
         prev = merged[-1]
         descent = _valley_drop(prev[1], c[0])
         overshoot = float(pos[int(c[1])] - pos[int(prev[1])])   # rise ABOVE the rep's current top
-        if descent < thresh and overshoot <= overtop:           # stall within the rep → same rep
+        if (descent < thresh and overshoot <= overtop      # stall within the rep → same rep
+                and not _horizontal_dominated(c)):          # …but never absorb a rerack/walkout
             prev[1] = c[1]
             prev[2] = max(prev[2], c[2])                # keep the stronger hump's peak
             prev[3] = float(pos[int(prev[1])] - pos[int(prev[0])])   # full up-travel
@@ -134,7 +146,7 @@ def _merge_subrep_runs(cands, pos, sep_frac=0.2, overtop_frac=1.0):
 
 def _segment_concentric(t, v, pos, peak_min, rom_min, fs, rep_gate="absolute",
                         rel_rom_frac=0.5, rel_peak_frac=0.25,
-                        rom_floor=0.04, peak_floor=0.05):
+                        rom_floor=0.04, peak_floor=0.05, posx=None):
     """Pick which candidate runs are real reps.
 
     - `rep_gate="absolute"` (default, validated): keep runs clearing fixed
@@ -151,7 +163,7 @@ def _segment_concentric(t, v, pos, peak_min, rom_min, fs, rep_gate="absolute",
       "Tempo-invariance".
     """
     cands = _candidate_concentrics(t, v, pos, fs)
-    cands = _merge_subrep_runs(cands, pos)   # fuse deadlift double-bump sub-reps (see helper)
+    cands = _merge_subrep_runs(cands, pos, posx=posx)   # fuse deadlift sub-reps; never a rerack
     if rep_gate == "absolute":
         return [(s, e) for (s, e, peak, rom) in cands
                 if peak >= peak_min and rom >= rom_min]
@@ -187,6 +199,43 @@ _MIN_REPS_FOR_GATE = 4      # need a meaningful median before trusting set stati
 _GATE_MAX_START_MAD = 0.25  # applicability: if MAD(start)/median ROM exceeds this, the
 #   trajectory's positions are too incoherent for position plausibility — gate abstains
 #   (trustworthy flow tracks measure ≤0.13; dark-iron resonators 0.5–2.6: huge margin)
+
+
+def _transit_gate(reps, tiny_frac=0.3):
+    """Strip LEADING/TRAILING un/rerack pseudo-reps before the position gate.
+
+    A racked lift (bench/squat) begins by lifting the bar off the hooks (a tiny
+    vertical bobble as it settles) and ends by yanking it back to the hooks (a
+    horizontal-dominated move). Either can segment as a spurious rep — a leading +1
+    the trailing-only `_plausibility_gate` can't see, or a horizontal pseudo-rep.
+    Two leading/trailing-only, scale-free discriminators (mid-set reps untouched, so
+    a horizontal-moving ROW is never cut — its reps are vertical-dominated anyway and
+    uniform, none anomalous):
+      - TINY: ROM < `tiny_frac` × the set median (the unrack bobble — 4-6 cm vs ~28,
+        i.e. ≤0.17×; `tiny_frac`=0.3 stays clear of real partial-lockout reps at ≥0.4×,
+        which `_plausibility_gate` keeps — the SQ-3 touch-and-go lesson).
+      - HORIZONTAL: |Δx| > ROM over the run (the rerack sideways yank).
+    Strip from each end until the first real (vertical, full-ROM) rep."""
+    if len(reps) < _MIN_REPS_FOR_GATE:
+        return reps
+    med_rom = float(np.median([r["rom"] for r in reps]))
+    if med_rom <= 0:
+        return reps
+
+    def _is_transit(r):
+        tiny = r["rom"] < tiny_frac * med_rom
+        horiz = r.get("_dx_cm", 0.0) > abs(r["rom"])
+        return tiny or horiz
+
+    lo, hi = 0, len(reps)
+    while hi - lo > _MIN_REPS_FOR_GATE and _is_transit(reps[lo]):
+        lo += 1
+    while hi - lo > _MIN_REPS_FOR_GATE and _is_transit(reps[hi - 1]):
+        hi -= 1
+    kept = reps[lo:hi]
+    for i, r in enumerate(kept, 1):
+        r["rep_index"] = i
+    return kept
 
 
 def _plausibility_gate(reps):
@@ -251,26 +300,35 @@ def apply_plausibility(reps):
 
 
 def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
-                       rep_gate="absolute", rom_floor_frac=0.0, plausibility=False):
+                       rep_gate="absolute", rom_floor_frac=0.0, plausibility=False,
+                       transit_aware=False):
     """`track_traj` = N x 3 (t, cx, cy) px. Returns list of per-rep dicts.
     `rep_gate`: "absolute" (fixed ROM/peak, validated) or "relative" (adaptive,
     tempo-invariant — see `_segment_concentric`). `plausibility`: apply the
     position-anchor rep-plausibility gate (see `_plausibility_gate`; default off —
-    the validated paths are unchanged; the auto path enables it)."""
+    the validated paths are unchanged; the auto path enables it).
+    `transit_aware`: use the HORIZONTAL trace to reject un/rerack transit — the
+    merge guard (`_merge_subrep_runs`) and `_transit_gate`. Default OFF: keeps every
+    existing path byte-identical (the seed-free AUTO track can be jittery enough that
+    leading/trailing reps look transit and cascade — 06-16 BN-3 auto 10→5). Enabled
+    by the SEEDED/tap path (a clean, visually-verified track), where it makes the
+    un/rerack-heavy racked lifts (06-16 bench) exact + restores last-rep velocity."""
     t = track_traj[:, 0].astype(float)
     y_px = track_traj[:, 2].astype(float)
+    x_px = track_traj[:, 1].astype(float)
     # image y grows DOWNWARD → bar up = y decreasing → vertical position (up +):
     pos = (-y_px) * m_per_px
 
     # de-duplicate / enforce increasing time, then resample to uniform dt (VFR-safe)
     keep = np.concatenate([[True], np.diff(t) > 1e-6])
-    t, pos = t[keep], pos[keep]
+    t, pos, x_m = t[keep], pos[keep], x_px[keep] * m_per_px
     if len(t) < 8:
         return []
     dt = float(np.median(np.diff(t)))
     fs = 1.0 / dt
     tu = np.arange(t[0], t[-1], dt)
     posu = np.interp(tu, t, pos)
+    posxu = np.interp(tu, t, x_m) if transit_aware else None   # horizontal trace (transit gate)
 
     win = max(5, int(round(0.10 * fs)) | 1)      # odd window ~100 ms
     win = min(win, (len(posu) // 2) * 2 - 1) if len(posu) > 7 else 5
@@ -281,7 +339,7 @@ def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
         posu_s = posu
         vel = np.gradient(posu, dt)
 
-    segs = _segment_concentric(tu, vel, posu_s, peak_min, rom_min, fs, rep_gate)
+    segs = _segment_concentric(tu, vel, posu_s, peak_min, rom_min, fs, rep_gate, posx=posxu)
     out = []
     for i, (s, e) in enumerate(segs, 1):
         seg_v = vel[s:e + 1]
@@ -295,6 +353,9 @@ def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
             "mean_velocity": round(float(seg_v[a0:a1 + 1].mean()), 3),
             "peak_velocity": round(peak, 3),
             "rom": round(float(posu_s[e] - posu_s[s]) * 100, 1),   # cm
+            # horizontal travel over the run (cm) — the un/rerack discriminator (transit
+            # gate); real reps & rows are vertical-dominated so this stays well under ROM.
+            "_dx_cm": (round(abs(float(posxu[e] - posxu[s])) * 100, 1) if posxu is not None else 0.0),
             # concentric start/end position (m, up-positive, arbitrary origin) — the rep
             # boundaries the manual editor binds to, and the plausibility gate's anchors
             "pos_start": round(float(posu_s[s]), 3),
@@ -302,6 +363,8 @@ def trajectory_to_reps(track_traj, m_per_px, peak_min=0.12, rom_min=0.25,
         })
     # Rep plausibility BEFORE the partial/floor logic, so phantom runs (rack-in,
     # un-rack, lockout drift) don't contaminate the medians those rules use.
+    if transit_aware:
+        out = _transit_gate(out)
     if plausibility:
         out = _plausibility_gate(out)
     # Count vs measure: flag reps whose ROM is well under the set median as

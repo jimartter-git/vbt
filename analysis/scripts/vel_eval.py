@@ -34,6 +34,9 @@ GT_CLIPS = {
     "20260605-DL-2": "dataset/raw/20260605-DL-2.mov", "20260605-DL-3": "dataset/raw/20260605-DL-3.mov",
     "20260609-BN-1": "dataset/raw/20260609-BN-1.mov", "20260609-BN-2": "dataset/raw/20260609-BN-2.mov",
     "20260609-BN-3": "dataset/raw/20260609-BN-3.mov", "20260609-BN-4": "dataset/raw/20260609-BN-4.mov",
+    "20260616-BN-1": "dataset/raw/20260616-BN_1.mov", "20260616-BN-2": "dataset/raw/20260616-BN_2.mov",
+    "20260616-BN-3": "dataset/raw/20260616-BN_3.mov", "20260616-BN-4": "dataset/raw/20260616-BN_4.mov",
+    "20260616-BN-5": "dataset/raw/20260616-BN_5.mov",
 }
 
 
@@ -54,7 +57,8 @@ def loss(v, flags=None):
 
 def _estimate(sid, path, tap):
     """(rep mvs, flags, velocity_reliable) for the chosen estimator mode."""
-    clip = os.path.join(REPO, path)
+    from vbt_video.clip_store import resolve_clip   # R2 masters resolve to the local cache
+    clip = resolve_clip(path, REPO)
     if tap:
         seed = CLIPS[sid][1].get("flow")
         if seed is None:                       # untappable clip → no tap row
@@ -69,7 +73,8 @@ def _estimate(sid, path, tap):
         # the 2026-06-12 attempts (see cv-fusion postmortem): the 440px traces conflate
         # mask-fraction/mode-switch variation with true perspective. Constant rim ships.
         cfg = VideoConfig(tracker="flow", rep_gate="relative", ellipse_scale=True,
-                          plausibility_gate=True, band=band, rim_px=rim_px, rim_t=rim_t)
+                          plausibility_gate=True, transit_aware=True, band=band,
+                          rim_px=rim_px, rim_t=rim_t)
         reps, meta = VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed, seed_time=seed_time)
         rel = True                             # tap tracks are visually verified
     else:

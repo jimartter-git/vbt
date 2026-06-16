@@ -103,6 +103,12 @@ class VideoConfig:
     # clip time (s) the rim was confirmed at — the depth tier anchors the trace THERE.
     rim_px: float = None
     rim_t: float = None
+    # Use the HORIZONTAL trace to reject un/rerack transit (the merge guard + transit gate
+    # in kinematics.trajectory_to_reps). Default OFF — keeps the seed-free AUTO path and all
+    # validated paths byte-identical (a jittery auto track can read leading/trailing reps as
+    # transit and cascade). Enabled by the SEEDED/tap path, where a clean visually-verified
+    # track makes the racked lifts (06-16 bench un/rerack) exact + restores last-rep velocity.
+    transit_aware: bool = False
 
 
 # Which two landmarks bound each scale segment (their pixel distance = the metric ruler).
@@ -353,7 +359,8 @@ class VideoVelocitySource:
         reps = trajectory_to_reps(seg_traj, seg_mpp, self.cfg.peak_min, self.cfg.rom_min,
                                   rom_floor_frac=rom_floor,
                                   rep_gate=self.cfg.rep_gate,
-                                  plausibility=self.cfg.plausibility_gate)
+                                  plausibility=self.cfg.plausibility_gate,
+                                  transit_aware=self.cfg.transit_aware)
         scale_conf, scale_suspect = self._scale_confidence(track, reps, scale_meta)
         if scale_suspect:
             # Honest-velocity rule (CLAUDE.md / docs): when the px→m ruler can't be
