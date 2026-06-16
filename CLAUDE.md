@@ -376,11 +376,17 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    velocity) so the high cutoff doesn't phase-shift anchors inward and inflate MV (a naive 0.25 Hz
    pushed synthetic 0.51→0.575; decoupled stays 0.52). **decouple is OFF by default** — on this data
    it's a wash (fixes ROW-4 9→10 but over-counts the clean ROW-3 10→11), reserved for genuinely
-   drift-merged signals. **The binding constraint is DATA, not the detector: ROW-5 reads accel std
-   1.38 vs ~4.0 on peers (~⅓ amplitude) → only ~3-4 rep oscillations in the signal, unrecoverable —
-   a watch fit/position CAPTURE issue. Flag low-amplitude sets for re-capture; don't chase them in
-   the algorithm.** The 06-15 rows are now a 4-source set (Vitruve GT + watch + SmartBarbell + our CV
-   10/10 on all five videos). Harness: `analysis/scripts/_watch_0615row.py`.
+   drift-merged signals. **ROW-5 is the honest hard case: the WRIST DECOUPLED from the BAR.** Vitruve
+   shows 10 clean bar reps, but the watch wrist shows only ~5-7 strong accel events in PAIRS with
+   ~4-5s quiet gaps — and it is NOT a capture defect (clean gap-free 201 Hz; orientation-free |accel|
+   agrees, so not a projection issue) and NOT classic TnG (that's denser, not sparser). Read: a
+   fatigued pull shifts from a crisp wrist/forearm snap to elbow/shoulder/body-english, so the wrist
+   stops tracking the bar on some reps. (My first call — "degraded recording, re-capture" — was too
+   hasty; the LINE GRAPH corrected it. Always plot the velocity/position trace before concluding a
+   set is unrecoverable.) The lesson: **wrist-IMU on rows can lose reps the bar clearly shows,
+   especially fatigued → argues for sensor FUSION (watch+video/bar), not wrist-alone on rows.** The
+   06-15 rows are now a 4-source set (Vitruve GT + watch + SmartBarbell + our CV 10/10 on all five
+   videos). Harnesses: `analysis/scripts/_watch_0615row.py`, `_watch_plot.py` (the line graphs).
 
 ## ⚑ Video trigger — READ THIS
 
