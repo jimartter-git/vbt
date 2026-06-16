@@ -136,8 +136,9 @@ CLIPS = {
     # diagonal end-ish view. Vitruve GT + Apple Watch IMU. AUTO zero-tap nails the COUNT;
     # velocity is UNRELIABLE here (flow profile noise on dark iron; abs m/s hub-scale-inflated). ---
     "20260616-BN-1": ("dataset/raw/20260616-BN_1.mov", {"detect": None},
-                      "bench 225lb top set x10 (near-failure) - AUTO zero-tap 10/10 EXACT conf 1.0; "
-                      "velocity unreliable (VL 61% vs Vit 42%, count-only)", None),
+                      "bench 225lb top set x10, RPE 7.5 (NOT near-failure; VL 42% overstates RPE) - "
+                      "AUTO zero-tap 10/10 EXACT conf 1.0; velocity unreliable (VL 61% vs Vit 42%, "
+                      "count-only)", None),
     "20260616-BN-2": ("dataset/raw/20260616-BN_2.mov", {"detect": None},
                       "bench 205lb x10 - AUTO 10/10 EXACT (gate dropped the put-down; 1-tap kept 11)", None),
     "20260616-BN-3": ("dataset/raw/20260616-BN_3.mov", {"detect": None},

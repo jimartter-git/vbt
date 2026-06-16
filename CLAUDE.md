@@ -35,7 +35,7 @@ and `docs/sources-and-fusion.md`.
   06-09 bench, 06-10 squats/RDLs, 06-11 incline bench (Vitruve+SB), 06-13 deadlifts (6 sets,
   full Vitruve+SB GT, **all 6 CV counts EXACT**), 06-15 barbell rows (5 sets, Vitruve GT — set 1's
   first 2 reps dropped as leftover warmup; +5 Apple Watch IMU = the FIRST real watch data, analyzed
-  vs Vitruve; +5 row videos CV-scored EXACT), **06-16 bench (5×10, Vitruve GT + 5 Apple Watch IMU
+  vs Vitruve; +5 row videos CV-scored EXACT), **06-16 bench (5×10, RPE 7.5/6.5/7/8/9.5, Vitruve GT + 5 Apple Watch IMU
   `dataset/raw/20260616-BN-*_watch.csv` + 5 R2 videos `20260616-BN_*.mov`) — CV AUTO zero-tap COUNTS
   10/10/10 EXACT (BN-1/2/3), 11 on BN-4/5 (real put-down cycle); CV VELOCITY UNRELIABLE on this
   dark-iron diagonal end-ish view (count-only); bench watch IMU below the row bar (RMSE 0.091, r 0.59);
@@ -401,8 +401,10 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
 24. **06-16 bench (5×10; +Vitruve GT, +5 Apple Watch IMU, +5 R2 videos) — CV COUNTS the dark-iron
    bench but its VELOCITY doesn't hold on a diagonal end-ish view; bench watch IMU is below the row
    bar; and a "rotation" scare was a NON-bug (2026-06-16).** Three parts, all ingested:
-   (a) **Vitruve**: 5 sets (set 1 = 225 lb top set to near-failure VL 42.5%, sets 2-5 = 205 lb
-   back-offs), `_ingest_0616bn_vitruve.py`. (b) **CV (R2 videos)**: the AUTO zero-tap path is
+   (a) **Vitruve**: 5 sets (set 1 = 225 lb top set, sets 2-5 = 205 lb back-offs). Lifter RPEs
+   7.5/6.5/7/8/9.5 (set 5 hardest). NB: set 1's velocity-LOSS 42.5% at RPE 7.5 OVERSTATES
+   proximity-to-failure — a clean learning-#6 data point (VL alone needs personal-MVT context).
+   `_ingest_0616bn_vitruve.py`. (b) **CV (R2 videos)**: the AUTO zero-tap path is
    EXACT on BN-1/2/3 (10/10/10, conf 1.0, dark Rogue iron + blue hub, no tap) and reads 11 on
    BN-4/5 — a real put-down/rack cycle BOTH auto and one-tap see (auto mean|err| 0.4 < one-tap 0.6;
    one-tap's late auto-located hub seeds kept the put-down phantom the gate drops). **But velocity
