@@ -130,6 +130,22 @@ CLIPS = {
                        "RDL 225lb set2 - ANY-FRAME tap at the standing pause: 8/8 verified "
                        "(post-occlusion clips ROM on the 2 deepest reps). Frame-0 = body-lock "
                        "trap, see RDL-1. --gate.", None),
+    # --- 2026-06-16 bench press (5x10; set1 225lb top set, sets2-5 205lb back-offs).
+    # 1080p60 h264, iPhone frame.rotation=-90 (PyAVDecoder auto-uprights -> 1080x1920; NOT a
+    # bug, despite the DISPLAYMATRIX side-data probing as 0). Dark Rogue iron + blue hub,
+    # diagonal end-ish view. Vitruve GT + Apple Watch IMU. AUTO zero-tap nails the COUNT;
+    # velocity is UNRELIABLE here (flow profile noise on dark iron; abs m/s hub-scale-inflated). ---
+    "20260616-BN-1": ("dataset/raw/20260616-BN_1.mov", {"detect": None},
+                      "bench 225lb top set x10 (near-failure) - AUTO zero-tap 10/10 EXACT conf 1.0; "
+                      "velocity unreliable (VL 61% vs Vit 42%, count-only)", None),
+    "20260616-BN-2": ("dataset/raw/20260616-BN_2.mov", {"detect": None},
+                      "bench 205lb x10 - AUTO 10/10 EXACT (gate dropped the put-down; 1-tap kept 11)", None),
+    "20260616-BN-3": ("dataset/raw/20260616-BN_3.mov", {"detect": None},
+                      "bench 205lb x10 - AUTO 10/10 EXACT conf 1.0", None),
+    "20260616-BN-4": ("dataset/raw/20260616-BN_4.mov", {"detect": None},
+                      "bench 205lb x10 - AUTO 11 (+1): a put-down/rack cycle BOTH auto & 1-tap see", None),
+    "20260616-BN-5": ("dataset/raw/20260616-BN_5.mov", {"detect": None},
+                      "bench 205lb x10 - AUTO 11 (+1): put-down cycle, both paths", None),
 }
 
 

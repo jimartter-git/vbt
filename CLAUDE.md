@@ -31,14 +31,16 @@ and `docs/sources-and-fusion.md`.
   and seed the app's per-user prior. **Vitruve is the established ground-truth
   reference** (since 2026-06-02; `compare.py` auto-prefers it — ~392 rep rows across
   bench/squat/skull-crushers, etc.).
-- **⚑ Data ingested through 2026-06-15** (no known backlog): 06-05 BN/DL, 06-08 rows,
+- **⚑ Data ingested through 2026-06-16** (no known backlog): 06-05 BN/DL, 06-08 rows,
   06-09 bench, 06-10 squats/RDLs, 06-11 incline bench (Vitruve+SB), 06-13 deadlifts (6 sets,
-  full Vitruve+SB GT, **all 6 CV counts EXACT**), **06-15 barbell rows (5 sets, Vitruve GT** —
-  set 1's first 2 reps dropped as leftover warmup per lifter; **+5 Apple Watch IMU files
-  `dataset/raw/20260615-ROW-*_watch.csv` = the FIRST real watch data, awaiting ZUPT analysis vs
-  Vitruve; +5 row videos in R2 awaiting manifest+CV; SmartBarbell pending**). (06-10 filed as
-  set-level Vitruve averages — the app crashed before per-rep export.) Next upload → follow the
-  ingestion + video triggers below.
+  full Vitruve+SB GT, **all 6 CV counts EXACT**), 06-15 barbell rows (5 sets, Vitruve GT — set 1's
+  first 2 reps dropped as leftover warmup; +5 Apple Watch IMU = the FIRST real watch data, analyzed
+  vs Vitruve; +5 row videos CV-scored EXACT), **06-16 bench (5×10, Vitruve GT + 5 Apple Watch IMU
+  `dataset/raw/20260616-BN-*_watch.csv` + 5 R2 videos `20260616-BN_*.mov`) — CV AUTO zero-tap COUNTS
+  10/10/10 EXACT (BN-1/2/3), 11 on BN-4/5 (real put-down cycle); CV VELOCITY UNRELIABLE on this
+  dark-iron diagonal end-ish view (count-only); bench watch IMU below the row bar (RMSE 0.091, r 0.59);
+  SmartBarbell pending. See learning #24.** (06-10 filed as set-level Vitruve averages — the app
+  crashed before per-rep export.) Next upload → follow the ingestion + video triggers below.
 - **⚑ Video storage built (2026-06-15): HD masters live in Cloudflare R2** (bucket `vbt-video`),
   repo keeps only `dataset/raw/manifest.csv` pointer + `vbt_video/clip_store.py::resolve_clip()`
   (local→cache→download). **Don't commit HD video to git** — upload to R2, add a manifest row.
@@ -395,6 +397,32 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    CROSS-CORRELATE the signals AND check the clocks (uptime vs UTC); (3) velocity cross-corr IS the
    fusion time-sync — build it early.** Corrected watch×set map + per-set numbers live in the ROW
    `sets.csv` notes. Harnesses: `_watch_0615row.py`, `_watch_plot.py`, `_row5_overlay.py`, `_align_matrix.py`.
+
+24. **06-16 bench (5×10; +Vitruve GT, +5 Apple Watch IMU, +5 R2 videos) — CV COUNTS the dark-iron
+   bench but its VELOCITY doesn't hold on a diagonal end-ish view; bench watch IMU is below the row
+   bar; and a "rotation" scare was a NON-bug (2026-06-16).** Three parts, all ingested:
+   (a) **Vitruve**: 5 sets (set 1 = 225 lb top set to near-failure VL 42.5%, sets 2-5 = 205 lb
+   back-offs), `_ingest_0616bn_vitruve.py`. (b) **CV (R2 videos)**: the AUTO zero-tap path is
+   EXACT on BN-1/2/3 (10/10/10, conf 1.0, dark Rogue iron + blue hub, no tap) and reads 11 on
+   BN-4/5 — a real put-down/rack cycle BOTH auto and one-tap see (auto mean|err| 0.4 < one-tap 0.6;
+   one-tap's late auto-located hub seeds kept the put-down phantom the gate drops). **But velocity
+   is UNRELIABLE here**: velocity-LOSS pins ~61-72% regardless of the true Vitruve loss
+   (42/24/30/40/59%) — VL is scale-invariant, so this is a flow velocity PROFILE-shape problem on
+   dark iron at this angle, not just scale (abs m/s was also hub-vs-rim inflated ~3× from the small
+   hub seed). **COUNT is the deliverable; the capture ask for bench velocity is a clean SIDE-ON
+   view.** (c) **THE ROTATION NON-BUG**: these iPhone clips carry `frame.rotation=-90`, which
+   `PyAVDecoder` ALREADY honours → upright 1080×1920, bar vertical. I nearly "fixed" a non-problem:
+   a probe misread the DISPLAYMATRIX side-data as 0 and a RAW-decode optical-flow test (without
+   applying rotation) showed the bar on image-X → looked like learning #22. **Lesson: to test the
+   axis, run frames THROUGH `PyAVDecoder` (which rotates), never a raw `to_ndarray()`; and read
+   `frame.rotation`, not the side-data probe.** A started `force_rotation` override was reverted
+   (unneeded). (d) **Bench watch IMU** (`_watch_0616bn.py`): files correctly ordered this time (no
+   reversal — uptime increases BN-1→5), ROM tracks the bar well (~0.31 vs Vitruve 0.33 m), but bench
+   is SLOW/PAUSED/SUPINE so the PoC `detect_turnarounds` over-segments on the chest/lockout pauses
+   and per-rep velocity resolution is weak: bench-gated aggregate **RMSE 0.091 m/s, r 0.59** (below
+   the rows' 0.069 and the SEE<0.07 target), fatigue-decline shape muted. `gate_reps`'s row-tuned
+   absolute thresholds (mv>0.45) don't fit bench (MV 0.19-0.42) — gated inline. A detector gap, not
+   a sensor limit. Records: `clips.csv` (5), `sets.csv`/`manifest.csv` notes, `_record_0616bn_cv.py`.
 
 ## ⚑ Video trigger — READ THIS
 
