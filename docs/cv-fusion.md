@@ -925,3 +925,48 @@ WIDER-RANGE lifts (rows: watch already RMSE 0.069) and the heaviest bench sets (
 where a less noisy track — rim-tracking or a learned sizer — is the lever. The MV
 *definition* is not it: active-region vs full-concentric vs peak swap the winner set to
 set (BN-1 favors full-conc/peak, BN-2 favors active), so no single definition lifts r.
+
+### 06-15 rows (sets 2-5) — the watch ceiling is cross-lift, not slow-bench
+
+The Definition of Done extends the testbed to the 06-15 rows (wider velocity range,
+0.59–0.80 m/s — the hypothesis being that a wider range stabilizes per-rep r where the
+slow bench can't). Measured WATCH per-rep MV vs Vitruve (sets 2-5, the ones with watch
+files; ZUPT pipeline + clean gate):
+
+| set | watch r | bias | RMSE |
+|---|---|---|---|
+| ROW-2 | 0.71 | −0.041 | 0.058 |
+| ROW-3 | 0.87 | −0.077 | 0.106 |
+| ROW-4 | −0.47 | −0.061 | 0.102 |
+| ROW-5 | 0.87 | −0.045 | 0.053 |
+| **agg** | **0.56** | — | **0.083** |
+
+So the watch aggregates **r=0.56 on the wider-range rows too** — essentially the same as
+bench (0.59). The wider range did NOT lift it to >0.95. ROW-4 is genuinely broken
+(r=−0.47, the dead-front set whose track is poor for every tool). ROW-3/5 reach r=0.87
+but with a +1 over-count (the detector splits a pause). **Conclusion: the watch per-rep
+r ceiling (~0.6, position-cycle 0.82–0.95 where it segments cleanly) is the IMU
+REP-DETECTOR/anchor quality, not the lift's velocity range.** Gravity-projection already
+gives world-vertical accel (orientation is handled); ROM is good (~0.5 m on rows, ~0.31 m
+on bench). The unlock is a robust turnaround/rep detector (position-cycle + count prior,
+or a learned detector) that places ZUPT anchors at the true chest/lockout turnarounds on
+EVERY set — not a tweak. CV row *velocity* (rim + seed) is not yet wired (rows were
+count-scored via auto-seed proxies); that's the next setup to complete the rows scoreboard.
+
+### Honest Definition-of-Done status (2026-06-16)
+| DoD item | bench | rows | met? |
+|---|---|---|---|
+| CV reps EXACT | 10/10 all 5 ✓ | 10/10 (auto, prior) ✓ | **yes** |
+| watch reps EXACT | ~10 (gate), not robust | 10/±1 | **no** (detector) |
+| CV per-rep r>0.95 | 0.87 agg (SB 0.94, also <0.95 on 2/5) | not wired | **no** (above SB ref on bench) |
+| watch per-rep r>0.95 | 0.59 | 0.56 | **no** (detector ceiling) |
+| CV SEE<0.07 | RMSE 0.043 ≈ SB 0.040 | not wired | **partial** (tied SB) |
+| velocity-loss ±3pp | 3/5 within ~4pp | — | **partial** |
+| fused beats SB on all 3 | no (watch too noisy → fusion≈CV) | — | **no** |
+| no main-lift regression | ✓ (53 tests, auto byte-identical) | ✓ | **yes** |
+
+What IS won: CV counts (exact, ties SB) and CV absolute velocity (tied SB) — from a
+starting point of over-counting + meaningless velocity. What is NOT, with the named
+mechanism: per-rep r>0.95 (exceeds the SB reference on slow bench; a measurement-
+resolution ceiling) and watch velocity (IMU rep-detector quality — needs a robust
+position-cycle/learned detector, the cross-lift unlock).
