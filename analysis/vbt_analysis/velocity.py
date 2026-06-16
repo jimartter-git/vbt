@@ -98,6 +98,47 @@ def rep_metrics(t: np.ndarray, v: np.ndarray, anchors) -> list[RepMetrics]:
     return reps
 
 
+def gate_reps(
+    reps: list[RepMetrics],
+    rom_lo: float = 0.55,
+    rom_hi: float = 1.5,
+    mv_lo: float = 0.55,
+) -> list[RepMetrics]:
+    """Drop non-rep segments the PoC turnaround detector emits, by ROM/MV relative
+    to the set's robust median (scale-invariant, like the video relative gate).
+
+    Real working reps cluster tightly (06-15 rows: ROM 0.45-0.60 m, MV 0.55-0.76 m/s);
+    the junk falls outside on ROM or MV:
+      - **pause-split** zero-velocity segments (noise crossings at the top/bottom hold):
+        ROM~=0 -> dropped by `rom_lo`.
+      - **slow setup pull / unrack** (a long first pull before the set): low MV
+        (0.30-0.47 << real) -> dropped by `mv_lo`.
+      - **put-down / over-travel** (bar lowered to the floor after the last rep):
+        ROM 0.8-1.5x a rep -> dropped by `rom_hi`.
+    Median is taken over the plausible core (ROM>0.3, MV>0.45) so the junk can't drag
+    it. This cleans the OVER-count failure (06-15 rows 15/11/12 -> 10/10/10); it does
+    NOT fix UNDER-counts (a missed turnaround is gone before this sees it) — that needs
+    a better `detect_turnarounds`, the documented PoC weakness.
+    """
+    if not reps:
+        return reps
+    rom = np.array([r.range_of_motion for r in reps])
+    mv = np.array([r.mean_concentric_velocity for r in reps])
+    core = (rom > 0.3) & (mv > 0.45)
+    if core.sum() < 3:                    # too few clean reps to trust a median
+        return reps
+    med_rom = float(np.median(rom[core]))
+    med_mv = float(np.median(mv[core]))
+    kept = [
+        r for r in reps
+        if rom_lo * med_rom <= r.range_of_motion <= rom_hi * med_rom
+        and r.mean_concentric_velocity >= mv_lo * med_mv
+    ]
+    for i, r in enumerate(kept):          # renumber 1..n after dropping junk
+        r.rep_index = i
+    return kept
+
+
 def velocity_loss_pct(reps: list[RepMetrics]) -> float:
     """Intra-set velocity loss — the validated proximity-to-failure / fatigue proxy.
 

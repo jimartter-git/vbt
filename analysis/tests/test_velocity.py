@@ -17,11 +17,31 @@ import pytest
 from vbt_analysis.ingest import synthetic_set
 from vbt_analysis.rep_detect import detect_turnarounds
 from vbt_analysis.velocity import (
+    RepMetrics,
+    gate_reps,
     integrate_with_zupt,
     rep_metrics,
     velocity_loss_pct,
     vertical_acceleration,
 )
+
+
+def test_gate_reps_drops_setup_putdown_and_pause_junk():
+    # The PoC turnaround detector emits non-reps around a real set (06-15 rows):
+    # a slow setup pull (low MV), pause-split zero-ROM segments, and a put-down
+    # over-travel. gate_reps keeps only the real cluster.
+    def R(i, mv, rom):
+        return RepMetrics(i, float(i), float(i) + 0.7, mv, mv * 1.6, rom)
+    reps = [
+        R(0, 0.37, 0.71),                      # slow setup pull -> drop (low MV)
+        *[R(j, 0.70, 0.52) for j in range(1, 11)],  # 10 real reps
+        R(11, 0.01, 0.00),                     # pause-split -> drop (zero ROM)
+        R(12, 0.60, 1.52),                     # put-down over-travel -> drop (huge ROM)
+    ]
+    kept = gate_reps(reps)
+    assert len(kept) == 10
+    assert all(0.45 <= r.range_of_motion <= 0.6 for r in kept)
+    assert [r.rep_index for r in kept] == list(range(10))   # renumbered
 
 PEAK_V = 0.8
 N_REPS = 5
