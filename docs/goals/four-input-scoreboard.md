@@ -50,3 +50,12 @@ rows body-lock seed. SmartBarbell (SB) is the CV reference / floor.
 2. **Wider-range / faster lifts** → r>0.95 becomes statistically attainable.
 3. **A learned IMU rep detector** → robust watch counts + r.
 4. **Depth/3D track or a learned plate sizer** → out-of-plane + the grindy bench residual.
+
+## Corpus-wide regression validation (no main-lift regressions)
+The un/rerack fix is gated behind `VideoConfig.transit_aware` (default **OFF**), so the
+shipped AUTO path and every validated path are byte-identical to pre-change. Confirmed two
+ways: (1) `python -m pytest analysis` → **53 passed**; (2) `cv_eval.py --auto` over the
+corpus — every main lift (IB-1, SQ-1/3, DL-1/2/3, BN-1/2/3 0605, the 06-09 benches, the
+06-13 deadlifts) matches its documented baseline count exactly (0 new delta); the only
+non-zero deltas are the pre-existing documented ones (DL-1 <4-rep, SC-1 accessory, the
+dark-front rows). The transit_aware win is realized only on the seeded/tap path.
