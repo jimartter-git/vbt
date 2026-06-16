@@ -970,3 +970,26 @@ starting point of over-counting + meaningless velocity. What is NOT, with the na
 mechanism: per-rep r>0.95 (exceeds the SB reference on slow bench; a measurement-
 resolution ceiling) and watch velocity (IMU rep-detector quality — needs a robust
 position-cycle/learned detector, the cross-lift unlock).
+
+### Watch ⊕ CV fusion (2026-06-16) — fused beats the better single source on correlation
+
+With a count-primed position-cycle watch estimator (use the unanimous Vitruve=SB=CV count N
+to take the N strongest position cycles → exactly N per-rep MVs) and a noise-weighted average
+(each source weighted by 1/var of its own successive-rep diffs — no GT), the fusion's
+COMPLEMENTARY errors pay off (`_fuse_0616bn.py`):
+
+| | CV | watch | **FUSED** | SB ref |
+|---|---|---|---|---|
+| agg per-rep r | 0.873 | 0.677 | **0.904** | 0.940 |
+
+Per set the sources trade off (BN-1 watch 0.82 > CV 0.69; BN-2 CV 0.86 > watch 0.38; BN-3
+fused **0.95**), so the fused r (0.904) **beats the better single source** — the DoD's "fused
+must beat the better of the two," on correlation. It still does NOT clear r>0.95 aggregate,
+and neither does SmartBarbell (0.94): the slow-bench 0.19–0.40 m/s range caps a 10-pt r for
+any tool. A clean fused ABSOLUTE-RMSE-beats-SB claim is gated on a ROBUST watch rep count —
+the position-cycle prominence still mis-counts (9/11) on 2/5 sets, so the leakage-free
+(fixed +0.062 m/s offset, learning #4) RMSE only scores the count-matched sets. The IMU rep
+detector (a robust position-cycle / learned detector placing ZUPT anchors at true
+turnarounds on every set) is the single remaining unlock for both watch-alone and a clean
+absolute fusion. Watch orientation is already handled (gravity-projection → world-vertical);
+ROM is good (~0.31 m bench, ~0.5 m rows).
