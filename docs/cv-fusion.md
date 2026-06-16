@@ -993,3 +993,23 @@ detector (a robust position-cycle / learned detector placing ZUPT anchors at tru
 turnarounds on every set) is the single remaining unlock for both watch-alone and a clean
 absolute fusion. Watch orientation is already handled (gravity-projection → world-vertical);
 ROM is good (~0.31 m bench, ~0.5 m rows).
+
+### 06-15 rows CV velocity — diagnosed: the auto-seed body-lock, not a velocity limit
+
+Wiring CV velocity on the rows (the DoD's second testbed) exposed a SEED bug, not a
+hardware limit (the "diagnose before declaring can't" guardrail paid off):
+- `auto_seed_motion` on ROW-5 produced a clean-looking track (yspan 478 px, conf 1.0,
+  exactly 10 reps) but per-rep r=0.36. The overlay showed why: the seed sat on the
+  **lifter's HAND/forearm**, not the bar plate — the BODY-LOCK trap (learning #17). The
+  hand moves at rep cadence (→ right count) but with a different velocity profile than the
+  bar (→ low r). So r=0.36 is a mis-seed, NOT "CV can't do rows."
+- Re-seeding by the largest moving circle then failed the OTHER way: on these cluttered
+  gym clips (rack-stored plates everywhere) the largest-circle heuristic locks a STATIC
+  rack plate → yspan 3-25 px, 0 reps (learning #12). ROW-2/4/5 all did this.
+
+Conclusion: reliable row CV velocity needs the **human bar-plate tap** (the scrub→tap→
+verify loop, learning #18) — auto-seeding can't disambiguate the moving bar plate from the
+body or the rack decoys on these clips. That is a product-UX step, not an unattended batch.
+Diagonal row geometry (bar arc + perspective through the pull) may further cap per-rep r
+even with a correct seed; that's measurable only once a verified tap seed is in hand. The
+row velocity scoreboard is therefore deferred to the tap loop, not abandoned.
