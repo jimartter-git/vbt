@@ -386,9 +386,11 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    consistent ~+2 s lag; and the corrected mapping TIGHTENS the watch-vs-Vitruve aggregate (RMSE
    0.091→**0.069**, bias **−0.048** — at the project SEE<0.07 target). The file in the `_watch-5` slot
    is FOREIGN (device uptime 6549 vs ~15500 for the others = a different session; only r=0.46 to
-   video1) → **set-1's watch recording is missing**. The clincher was reading the clocks: watch `t` is
-   device UPTIME (decreasing across ROW-1..4 = reverse order); videos carry **UTC `creation_time`**
-   (increasing ROW-1..5). **Lessons: (1) the BAR (video/Vitruve) is ground truth — when the watch
+   video1) → **set-1's watch recording is missing** (lifter-confirmed: a VBT-app mix-up deleting dummy
+   extracts; only sets 2-5 captured). **FIXED: watch files RENAMED to true sets** (ROW-2/3/4/5_watch =
+   sets 2/3/4/5; no ROW-1; dummy removed) — the harnesses that assume `watch_N=set_N` are now correct.
+   The clincher was reading the clocks: watch `t` is device UPTIME (decreasing across the files =
+   reverse order); videos carry **UTC `creation_time`** (increasing). **Lessons: (1) the BAR (video/Vitruve) is ground truth — when the watch
    disagrees, suspect the FILE then the watch, never the lifter; (2) before theorizing a sensor fault,
    CROSS-CORRELATE the signals AND check the clocks (uptime vs UTC); (3) velocity cross-corr IS the
    fusion time-sync — build it early.** Corrected watch×set map + per-set numbers live in the ROW
