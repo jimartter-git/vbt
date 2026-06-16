@@ -113,3 +113,17 @@ def test_velocity_loss_is_nonnegative():
     t, _, v, anchors = _pipeline()
     reps = rep_metrics(t, v, anchors)
     assert velocity_loss_pct(reps) >= 0.0
+
+
+def test_decoupled_detector_is_velocity_safe():
+    # The decoupled mode counts at a HIGH cutoff but snaps anchors back to the true
+    # turnaround, so it must NOT inflate velocity the way a naive high cutoff does
+    # (CLAUDE.md learning: a raw 0.25 Hz cutoff pushed the synthetic mean 0.51->0.575).
+    df = synthetic_set(n_reps=N_REPS, peak_velocity=PEAK_V)
+    t = df["t"].to_numpy(); a = vertical_acceleration(df)
+    for decouple in (False, True):
+        anchors = detect_turnarounds(t, a, decouple=decouple)
+        v = integrate_with_zupt(t, a, anchors)
+        reps = rep_metrics(t, v, anchors)
+        mv = np.mean([r.mean_concentric_velocity for r in reps])
+        assert abs(mv - EXPECTED_MEAN_V) < 0.05, f"decouple={decouple}: MV {mv:.3f} off truth"

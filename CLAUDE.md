@@ -364,6 +364,24 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    `frame.rotation` (or render a frame and look) before trusting any "static track" on phone video.
    Tooling: `dataset/tools/_dl0613_proxy_cv.py` transcode now rotates upright too.
 
+23. **FIRST real Apple Watch IMU vs Vitruve (2026-06-16, 06-15 barbell rows, 5 sets) — velocity
+   is REAL, the rep DETECTOR is the gap, and one set is a DEGRADED RECORDING.** The 200 Hz
+   CMDeviceMotion CSVs (`ua_*`/`g_*`/`q_*`) drop straight into `vbt_analysis`. **Velocity signal
+   holds:** ROM lands ~0.5 m zero-calibration, per-rep MV bias ~**−0.05 m/s** (the expected constant
+   offset, learning #4) RMSE ~0.07–0.10 vs Vitruve. **Rep detection was the weak point:** the PoC
+   `detect_turnarounds` over-counted (setup pull + pause-split zero-ROM + put-down) and under-counted
+   slow sets. Two fixes: (a) **`velocity.gate_reps`** drops the junk by ROM/MV vs the robust median
+   (15/11/12/12/6 → 10/10/10/9/6); (b) **`detect_turnarounds(decouple=True)`** — COUNT at a high
+   cutoff, but SNAP anchors to the true turnaround (nearest minimum of a *gently* drift-removed
+   velocity) so the high cutoff doesn't phase-shift anchors inward and inflate MV (a naive 0.25 Hz
+   pushed synthetic 0.51→0.575; decoupled stays 0.52). **decouple is OFF by default** — on this data
+   it's a wash (fixes ROW-4 9→10 but over-counts the clean ROW-3 10→11), reserved for genuinely
+   drift-merged signals. **The binding constraint is DATA, not the detector: ROW-5 reads accel std
+   1.38 vs ~4.0 on peers (~⅓ amplitude) → only ~3-4 rep oscillations in the signal, unrecoverable —
+   a watch fit/position CAPTURE issue. Flag low-amplitude sets for re-capture; don't chase them in
+   the algorithm.** The 06-15 rows are now a 4-source set (Vitruve GT + watch + SmartBarbell + our CV
+   10/10 on all five videos). Harness: `analysis/scripts/_watch_0615row.py`.
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip
