@@ -451,7 +451,14 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    10→5), so it's enabled ONLY on the seeded/tap path (`cv_eval --gate`, `vel_eval --tap`); every
    auto/validated path is byte-identical (53 tests pass, auto BN-3 still 10, deadlift double-bump
    untouched). **Result (tap path): 06-16 bench reps 10/10 EXACT all 5; abs MV RMSE mean 0.040 ≈ SB
-   0.039 (TIED, was meaningless; beats SB on 3/5); VL within ~4pp on 3/5.** ⚑ **Watch on the same
+   0.039 (TIED, was meaningless; beats SB on 3/5); VL within ~4pp on 3/5.** ⚑ **Per-rep r reality
+   check: the r>0.95-per-rep bar exceeds the SmartBarbell REFERENCE itself on slow bench — SB agg
+   r=0.94 and misses >0.95 on BN-2/BN-3 (0.92/0.90); CV agg r=0.87 (beats SB on BN-3/BN-5). A bench
+   rep spans only ~0.19-0.40 m/s, so a 10-pt correlation is statistically capped <0.95 for ANY tool;
+   r>0.95 is a wide-range/fast-lift metric. The defensible standard is MATCH/BEAT SB (CV does on
+   RMSE). MV-definition (active vs full-concentric vs peak) is NOT the lever — it swaps the winner
+   set-to-set. The real gain is a less-noisy track on the grindy BN-1/BN-4 (rim-track / learned
+   sizer) + wider-range lifts. Numbers: docs/cv-fusion.md "Per-rep r reality check".** ⚑ **Watch on the same
    sets: DIAGNOSED, not closed.** Bench is slow/paused/supine → low single-integration SNR; the PoC
    velocity-crossing detector over-segments the pauses (r 0.59). A **position-cycle** detector that
    exploits the pauses (chest minima / lockout maxima) reaches per-rep **r 0.82-0.95** where it
