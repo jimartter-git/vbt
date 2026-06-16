@@ -26,6 +26,31 @@ def load_session(csv_path: str) -> pd.DataFrame:
     return df[COLUMNS].astype(float)
 
 
+def sample_utc(csv_path: str, t):
+    """Map sample `t` (device uptime, the CSV's `t` column) to absolute UTC epoch
+    seconds, using the `<stem>.json` metadata sidecar's clock anchor (schema v2):
+        sampleUTC = startedAt + (t − clockAnchorUptimeSeconds).
+    Returns a numpy array (or None if no sidecar / pre-v2 metadata). The watch's
+    `t` is uptime, not wall clock — this anchor is what makes cross-source (watch↔
+    video/Vitruve) fusion possible; refine the sub-second offset with velocity
+    cross-correlation (see docs/data-schema.md). See VBTCore/RecordingMetadata.
+    """
+    import json
+    import os
+    from datetime import datetime
+
+    side = os.path.splitext(csv_path)[0] + ".json"
+    if not os.path.exists(side):
+        return None
+    meta = json.load(open(side))
+    anchor = meta.get("clockAnchorUptimeSeconds")
+    started = meta.get("startedAt")
+    if anchor is None or started is None:
+        return None                                   # v1 sidecar: no usable anchor
+    start_epoch = datetime.fromisoformat(started.replace("Z", "+00:00")).timestamp()
+    return start_epoch + (np.asarray(t, dtype=float) - float(anchor))
+
+
 def synthetic_set(
     n_reps: int = 5,
     peak_velocity: float = 0.8,

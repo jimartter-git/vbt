@@ -9,10 +9,14 @@ enum SessionWriter {
         samples: [MotionSample],
         exercise: String,
         rateHint: Int,
+        startedAt: Date,
+        clockAnchorUptimeSeconds: Double,
         notes: String? = nil
     ) throws -> (csv: URL, json: URL, metadata: RecordingMetadata) {
         let device = WKInterfaceDevice.current()
         let meta = RecordingMetadata(
+            startedAt: startedAt,
+            clockAnchorUptimeSeconds: clockAnchorUptimeSeconds,
             exercise: exercise,
             sampleRateHintHz: rateHint,
             deviceModel: device.model,

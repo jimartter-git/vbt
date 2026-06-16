@@ -27,6 +27,13 @@ final class MotionRecorder: ObservableObject {
     private var firstTimestamp: Double?
     private var lastTimestamp: Double?
 
+    /// Clock anchor captured at `start()`: wall-clock UTC + the device-uptime reading
+    /// at the same instant. `ProcessInfo.systemUptime` and `CMDeviceMotion.timestamp`
+    /// share the boot epoch, so this pair maps every sample's `t` to absolute UTC
+    /// downstream (see `RecordingMetadata.clockAnchorUptimeSeconds`).
+    private(set) var startWallClock: Date?
+    private(set) var startUptimeSeconds: Double?
+
     var capturedSamples: [MotionSample] { samples }
 
     var targetRateHz: Int {
@@ -42,6 +49,10 @@ final class MotionRecorder: ObservableObject {
         measuredRateHz = 0
         firstTimestamp = nil
         lastTimestamp = nil
+        // Capture the wall-clock↔uptime anchor BEFORE updates flow (read back-to-back:
+        // both advance on the same boot clock, so the tiny gap between them is harmless).
+        startUptimeSeconds = ProcessInfo.processInfo.systemUptime
+        startWallClock = Date()
 
         if #available(watchOS 10.0, *), CMBatchedSensorManager.isDeviceMotionSupported {
             startBatched()

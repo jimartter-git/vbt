@@ -61,7 +61,11 @@ final class RecordingController: ObservableObject {
             let result = try SessionWriter.write(
                 samples: samples,
                 exercise: exercise,
-                rateHint: targetRateHz
+                rateHint: targetRateHz,
+                // The clock anchor captured at record start (uptime↔UTC); fall back
+                // to now/0 only if a recording somehow produced samples without it.
+                startedAt: recorder.startWallClock ?? Date(),
+                clockAnchorUptimeSeconds: recorder.startUptimeSeconds ?? 0
             )
             connectivity.sendFile(result.csv, metadata: ["kind": "csv", "exercise": exercise])
             connectivity.sendFile(result.json, metadata: ["kind": "json", "exercise": exercise])

@@ -27,8 +27,13 @@ t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z
 
 - `t` is `CMDeviceMotion.timestamp` (seconds since device boot). It is monotonic
   but **not** wall-clock and **not** comparable across devices — only deltas
-  within one recording are meaningful. Vitruve alignment is done by rep index,
-  not by clock (see `calibration-protocol.md`).
+  within one recording are meaningful. **To recover absolute UTC** for fusion
+  (lining the watch up against video/Vitruve), use the envelope's clock anchor:
+  `sampleUTC = startedAt + (t − clockAnchorUptimeSeconds)`. Coarse cross-source
+  sync comes free from the UTC anchor; the precise sub-second offset is then
+  refined by **velocity cross-correlation** (`analysis/scripts/_align_matrix.py`)
+  — the watch↔video clocks are independent, so signal alignment is the source of
+  truth (the 06-15 rows aligned at a consistent ~+2 s lag, r up to 0.97).
 - CSV is chosen for PoC volumes (a 45-min session at 200 Hz ≈ 540k rows ≈ tens
   of MB) because it is trivially `pandas.read_csv`-able and human-eyeballable.
   A length-prefixed binary format is the documented upgrade path once the
@@ -40,9 +45,10 @@ Each recorded set produces one CSV file plus a small JSON sidecar of metadata:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "sessionId": "UUID",
-  "startedAt": "ISO-8601 wall clock (phone, for human reference only)",
+  "startedAt": "ISO-8601 UTC at record START (the wall-clock anchor)",
+  "clockAnchorUptimeSeconds": 15463.1,
   "exercise": "deadlift",
   "sampleRateHintHz": 200,
   "deviceModel": "Watch6,18",
@@ -52,7 +58,15 @@ Each recorded set produces one CSV file plus a small JSON sidecar of metadata:
 }
 ```
 
-Filename convention: `<sessionId>.csv` and `<sessionId>.json`.
+`startedAt` + `clockAnchorUptimeSeconds` are a contemporaneous `(UTC, device-uptime)`
+pair captured at record start — the only thing that ties the uptime-based sample
+`t` to absolute time. **v2** added `clockAnchorUptimeSeconds` (v1 had `startedAt`
+only, set at *write* time → unusable as an anchor).
+
+Filename convention (v2): **`VBT_<yyyy-MM-dd_HHmmss>Z_<exercise>_<short-id>`**, e.g.
+`VBT_2026-06-15_182203Z_deadlift_CE3E8765.csv` — sortable + legible in the phone's
+session list (v1 used the bare `<sessionId>` UUID, which is unorderable and caused
+the 06-15 row files to be mislabeled).
 
 ## Derived metrics (analysis output — the cross-source contract)
 
