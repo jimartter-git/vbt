@@ -365,7 +365,7 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    Tooling: `dataset/tools/_dl0613_proxy_cv.py` transcode now rotates upright too.
 
 23. **FIRST real Apple Watch IMU vs Vitruve (2026-06-16, 06-15 barbell rows, 5 sets) — velocity
-   is REAL, the rep DETECTOR is the gap, and one set is a DEGRADED RECORDING.** The 200 Hz
+   is REAL, the rep DETECTOR is the gap, and the watch FILES were reverse-labeled.** The 200 Hz
    CMDeviceMotion CSVs (`ua_*`/`g_*`/`q_*`) drop straight into `vbt_analysis`. **Velocity signal
    holds:** ROM lands ~0.5 m zero-calibration, per-rep MV bias ~**−0.05 m/s** (the expected constant
    offset, learning #4) RMSE ~0.07–0.10 vs Vitruve. **Rep detection was the weak point:** the PoC
@@ -376,20 +376,23 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    velocity) so the high cutoff doesn't phase-shift anchors inward and inflate MV (a naive 0.25 Hz
    pushed synthetic 0.51→0.575; decoupled stays 0.52). **decouple is OFF by default** — on this data
    it's a wash (fixes ROW-4 9→10 but over-counts the clean ROW-3 10→11), reserved for genuinely
-   drift-merged signals. **ROW-5 is an UNEXPLAINED WATCH ANOMALY — quarantined, cause unknown.** The
-   VIDEO proves 10 clean evenly-paced reps (1.57 s/rep, matches the lifter + Vitruve), but the watch
-   file holds only ~5 sparse accel bursts that DON'T match the bar: envelope cross-correlation peaks
-   at just **0.36** (same-motion would be ~0.7+), the watch active window (~5–24 s) doesn't even
-   overlap the bar reps (3–17 s), and it's not a projection issue (orientation-free |accel| agrees).
-   It is NOT timestamp gaps (clean 201 Hz), NOT fit/fatigue/TnG (the video cadence is even). I was
-   WRONG three times forcing an explanation ("degraded capture" → "wrist decoupled/fatigue") — each
-   killed by going to the tape. The honest call: a watch-side capture/CMDeviceMotion anomaly for this
-   one recording (ROW-1/2/3/4 captured cleanly); excluded from the watch-vs-Vitruve aggregate; to
-   resolve, reproduce on a fresh set. **Lessons: (1) the BAR (video/Vitruve) is ground truth — when
-   the watch disagrees with it, suspect the watch, not the lifter; (2) cross-correlate the watch
-   envelope against the bar before theorizing; (3) stop narrating a cause the data doesn't support.**
-   The 06-15 rows are a 4-source set (Vitruve GT + watch[4/5 usable] + SmartBarbell + our CV 10/10 on
-   all five videos). Harnesses: `analysis/scripts/_watch_0615row.py`, `_watch_plot.py`, `_row5_overlay.py`.
+   drift-merged signals. **The "ROW-5 anomaly" was a FILE-LABEL REVERSAL, not a watch fault — caught
+   by a velocity time-aligner (2026-06-16).** Symptom: watch "ROW-5" didn't match its video (10 clean
+   even reps per video+Vitruve) — envelope xcorr 0.36, windows non-overlapping. I was WRONG FOUR times
+   forcing a watch-fault story ("degraded capture" → "wrist decoupled/fatigue" → "CMDeviceMotion
+   glitch") — each killed by going to the tape. The real cause: the watch files are **reverse-labeled,
+   `watch_N = set (6−N)`**, proven by an all-pairs velocity cross-correlation matrix (`_align_matrix.py`):
+   watch1↔video5 (r .90), watch2↔video4 (.90), watch3↔video3 (.97), watch4↔video2 (.92), all at a
+   consistent ~+2 s lag; and the corrected mapping TIGHTENS the watch-vs-Vitruve aggregate (RMSE
+   0.091→**0.069**, bias **−0.048** — at the project SEE<0.07 target). The file in the `_watch-5` slot
+   is FOREIGN (device uptime 6549 vs ~15500 for the others = a different session; only r=0.46 to
+   video1) → **set-1's watch recording is missing**. The clincher was reading the clocks: watch `t` is
+   device UPTIME (decreasing across ROW-1..4 = reverse order); videos carry **UTC `creation_time`**
+   (increasing ROW-1..5). **Lessons: (1) the BAR (video/Vitruve) is ground truth — when the watch
+   disagrees, suspect the FILE then the watch, never the lifter; (2) before theorizing a sensor fault,
+   CROSS-CORRELATE the signals AND check the clocks (uptime vs UTC); (3) velocity cross-corr IS the
+   fusion time-sync — build it early.** Corrected watch×set map + per-set numbers live in the ROW
+   `sets.csv` notes. Harnesses: `_watch_0615row.py`, `_watch_plot.py`, `_row5_overlay.py`, `_align_matrix.py`.
 
 ## ⚑ Video trigger — READ THIS
 
