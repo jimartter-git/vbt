@@ -1,7 +1,11 @@
 """Tests for cross-source agreement metrics (vbt_analysis.agreement)."""
 import math
+import sys
+from pathlib import Path
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from vbt_analysis.agreement import (
     bias, compare_panel, per_rep_rmse, theil_sen_slope, usable,
