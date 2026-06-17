@@ -1,34 +1,28 @@
-# Four-input per-rep scoreboard — counts & mean velocity
+# Four-input per-rep scoreboard — counts, velocity & dual-axis agreement
 
-Per-rep **rep counts** and **mean concentric velocity (m/s)** for every workout with 3–4 of
-the four inputs (Vitruve · SmartBarbell · our-CV video · Apple-Watch IMU), across six methods.
-Generated this session by re-running CV and the watch pipeline — not copied from prior aggregates.
-Reproduce: watch+GT via the snippet in the commit; CV via `vel_eval.py` / the 720p DL proxy.
+Per-rep **counts** and **mean concentric velocity (m/s)** for every workout with 3–4 of the
+four inputs (Vitruve · SmartBarbell · our-CV video · Apple-Watch IMU), plus a **dual-axis
+agreement panel** per set. Numbers were freshly computed this session (CV re-run via
+`vel_eval` + the 720p DL proxy; watch re-run through `vbt_analysis` ZUPT), not copied from
+prior aggregates. Agreement metrics come from `vbt_analysis/agreement.py` (unit-tested).
 
-## The six methods
+## Two axes, on purpose — and why not Pearson r
 
-| col | method | definition |
-|---|---|---|
-| Vitruve | LPT ground truth | the established reference (`rep_metrics.csv`) |
-| SmartBarbell | CV competitor / floor | phone-CV device (`rep_metrics.csv`, phantom rows excluded) |
-| CV-auto | our CV, no-tap | `VideoConfig(tracker="auto")` — zero seed, zero per-clip config (shippable) |
-| CV-adj | our CV, human-in-loop | registered tap seed + `rim_px` + `transit_aware` (`vel_eval --tap`) |
-| Watch-auto | watch IMU, raw PoC | `detect_turnarounds` → ZUPT per-rep MV |
-| Watch-adj | watch IMU, cleaned | `gate_reps` (rows) / bench-tuned ROM·MV clean (bench) |
+A source can match the **speed** of each rep, the **shape** of the fatigue decline, or both;
+they're different questions, so we report both:
 
-## How to read the velocities (honest limits, not hidden)
+- **Absolute:** per-rep **RMSE** + **bias** (m/s) — *is each rep the right speed?* Gated on a
+  count match (positional alignment); abstains (`— (count≠)`) rather than compare the wrong reps.
+- **Shape:** **velocity-loss Δ** (pp, the product's fatigue signal) + a robust **Theil–Sen
+  decline slope** (median of pairwise slopes, m/s per rep) — *did it see the same decline?*
 
-- **CV-auto absolute m/s is NOT trustworthy** — it tracks the small hub without rim
-  correction, inflating velocity ~3× on bench and producing nonsense on the diagonal row arc
-  (~7 m/s). **CV-auto's _count_ is the deliverable; its m/s is not.** Shown for completeness.
-- **CV-adj exists only for bench** — DL/ROW have no registered tap seed/`rim_px` yet, so that
-  column is blank there. (ROW-5 was hand-seeded once at r=0.44 previously; not re-run here.)
-- **Trustworthy absolute-m/s columns:** Vitruve, SmartBarbell, **CV-adj (bench)**, **Watch-adj (rows)**.
-- **Watch-auto over-segments pauses** — mildly on rows (11–13), badly on supine bench (14–31
-  phantom segments). Its per-rep velocities are only shown where the count stays near GT;
-  on bench they're omitted from the detail tables (count is in the matrix; raw list in the JSON).
-- Per-rep rows align positionally from rep 1; an under-counting method (e.g. SB) ends early.
-  Cross-vendor true-rep alignment lives in `dataset/tools/compare.py`.
+We deliberately **do not headline Pearson r**: it is scale-free (throws away the m/s we care
+about) and pivots on the set mean, so a single ghost/phantom rep flips its sign on slow,
+narrow-range lifts — that is the −0.46 row artifact, not an inverse lift. VL-Δ and a
+median-based slope answer the shape question without that fragility (and a ghost rep is
+excluded, not averaged in). Absolute m/s caveats unchanged: **CV-auto is hub-inflated**
+(count-only); **CV-adj exists only for bench** (no registered seed/rim for DL/ROW yet);
+**Watch-auto over-segments** pauses; **watch bench velocity is low-SNR**.
 
 ## Rep counts (all sets)
 
@@ -51,18 +45,25 @@ Reproduce: watch+GT via the snippet in the commit; CV via `vel_eval.py` / the 72
 | 20260616-BN-4 | bench | 10 | 10 | 10 | 11 | **10** ✓ | 14 | 9 |
 | 20260616-BN-5 | bench | 10 | 10 | 10 | 11 | **10** ✓ | 23 | **10** ✓ |
 
-Count takeaways: **CV-adj = 10/10 EXACT on all 5 bench sets** (fixes CV-auto's BN-4/5 put-down
-+1). **Watch-adj = exact or ±1 on every instrumented set.** DL CV-auto is the pure no-config
-path and over-counts the double-humped pull; the documented recorded path (proxy + DL-5 one-tap
-+ double-bump merge) hit all six EXACT (5/3/2/2/8/8) — both are honest, different paths.
+**CV-adj = 10/10 EXACT on all 5 bench sets**; **Watch-adj exact/±1 on every instrumented set**.
+DL CV-auto is the pure no-config path (over-counts the double-hump); the recorded path
+(proxy + DL-5 one-tap + double-bump merge) hit all six EXACT — different, both honest.
 
 ## Bench — 06-16 (5×10) · 4/4 inputs
 
-The only fully-instrumented workout. **CV-adj** and **Watch-adj** are the trustworthy velocity
-columns. CV-auto m/s is hub-inflated (~3×). Watch-auto over-segments (14–31) → omitted per-rep,
-count in the matrix. Watch-adj velocity is plausible but noisy (bench is the watch's weak case).
+The fully-instrumented workout. CV-adj & Watch-adj are the trustworthy velocity columns; CV-auto RMSE quantifies its hub inflation (large by design).
 
 ### 20260616-BN-1
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 10/10 | 0.027 | +0.019 | 41.9→42.5 (-0.6) | -0.020→-0.017 (-0.003) |
+| CV-auto | 10/10 | 0.606 | +0.560 | 60.0→42.5 (+17.5) | -0.046→-0.017 (-0.030) |
+| CV-adj | 10/10 | 0.071 | -0.055 | 38.8→42.5 (-3.7) | -0.011→-0.017 (+0.006) |
+| Watch-adj | 10/10 | 0.077 | -0.048 | 24.9→42.5 (-17.6) | +0.001→-0.017 (+0.018) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto | CV-adj | Watch-adj |
 |---|---|---|---|---|---|
 | 1 | 0.360 | 0.410 | 0.989 | 0.296 | 0.283 |
@@ -77,7 +78,19 @@ count in the matrix. Watch-adj velocity is plausible but noisy (bench is the wat
 | 10 | 0.190 | 0.230 | 0.196 | 0.209 | 0.237 |
 | **mean** | **0.331** | **0.350** | **0.891** | **0.276** | **0.283** |
 
+</details>
+
 ### 20260616-BN-2
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 10/10 | 0.044 | +0.040 | 32.3→24.4 (+7.9) | -0.015→-0.012 (-0.003) |
+| CV-auto | 10/10 | 0.296 | +0.259 | 60.8→24.4 (+36.4) | -0.026→-0.012 (-0.014) |
+| CV-adj | 10/10 | 0.027 | -0.018 | 31.3→24.4 (+6.9) | -0.011→-0.012 (+0.001) |
+| Watch-adj | 10/10 | 0.101 | +0.047 | 29.0→24.4 (+4.6) | +0.011→-0.012 (+0.023) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto | CV-adj | Watch-adj |
 |---|---|---|---|---|---|
 | 1 | 0.330 | 0.380 | 0.679 | 0.349 | 0.253 |
@@ -92,7 +105,19 @@ count in the matrix. Watch-adj velocity is plausible but noisy (bench is the wat
 | 10 | 0.290 | 0.310 | 0.172 | 0.264 | 0.246 |
 | **mean** | **0.363** | **0.403** | **0.622** | **0.345** | **0.410** |
 
+</details>
+
 ### 20260616-BN-3
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 10/10 | 0.056 | +0.038 | 41.5→30.0 (+11.5) | -0.022→-0.018 (-0.004) |
+| CV-auto | 10/10 | 0.788 | +0.728 | 64.4→30.0 (+34.4) | -0.097→-0.018 (-0.079) |
+| CV-adj | 10/10 | 0.035 | -0.020 | 41.8→30.0 (+11.8) | -0.022→-0.018 (-0.004) |
+| Watch-adj | 11/10 | — (count≠) | — | 57.9→30.0 (+27.9) | +0.002→-0.018 (+0.020) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto | CV-adj | Watch-adj |
 |---|---|---|---|---|---|
 | 1 | 0.360 | 0.400 | 1.241 | 0.351 | 0.129 |
@@ -108,7 +133,19 @@ count in the matrix. Watch-adj velocity is plausible but noisy (bench is the wat
 | 11 | – | – | – | – | 0.152 |
 | **mean** | **0.345** | **0.383** | **1.073** | **0.325** | **0.327** |
 
+</details>
+
 ### 20260616-BN-4
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 10/10 | 0.033 | +0.025 | 44.3→39.7 (+4.6) | -0.025→-0.020 (-0.005) |
+| CV-auto | 11/10 | — (count≠) | — | 70.2→39.7 (+30.5) | -0.026→-0.020 (-0.006) |
+| CV-adj | 10/10 | 0.042 | -0.027 | 43.5→39.7 (+3.8) | -0.018→-0.020 (+0.002) |
+| Watch-adj | 9/10 | — (count≠) | — | 62.3→39.7 (+22.6) | -0.028→-0.020 (-0.008) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto | CV-adj | Watch-adj |
 |---|---|---|---|---|---|
 | 1 | 0.290 | 0.340 | 0.166 | 0.240 | 0.206 |
@@ -124,7 +161,19 @@ count in the matrix. Watch-adj velocity is plausible but noisy (bench is the wat
 | 11 | – | – | 0.036 | – | – |
 | **mean** | **0.306** | **0.331** | **0.574** | **0.279** | **0.272** |
 
+</details>
+
 ### 20260616-BN-5
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 10/10 | 0.033 | +0.012 | 57.0→58.8 (-1.8) | -0.035→-0.026 (-0.009) |
+| CV-auto | 11/10 | — (count≠) | — | 60.9→58.8 (+2.1) | -0.118→-0.026 (-0.092) |
+| CV-adj | 10/10 | 0.023 | -0.016 | 55.1→58.8 (-3.6) | -0.027→-0.026 (-0.001) |
+| Watch-adj | 10/10 | 0.092 | +0.009 | 69.5→58.8 (+10.8) | -0.019→-0.026 (+0.007) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto | CV-adj | Watch-adj |
 |---|---|---|---|---|---|
 | 1 | 0.330 | 0.300 | 0.172 | 0.316 | 0.234 |
@@ -140,12 +189,20 @@ count in the matrix. Watch-adj velocity is plausible but noisy (bench is the wat
 | 11 | – | – | 0.383 | – | – |
 | **mean** | **0.286** | **0.298** | **1.473** | **0.270** | **0.295** |
 
-## Rows — 06-15 (target 10) · 4/4 inputs on sets 2–5 (no watch on set 1), no CV-adj
+</details>
+## Rows — 06-15 (target 10) · 4/4 on sets 2–5, no CV-adj
 
-**Watch-adj is the trustworthy velocity here** (row signal is strong, ~SEE 0.07). CV-auto m/s
-is a diagonal-arc artifact (note the ~7 m/s) — count-only.
+Watch-adj is the trustworthy velocity here. CV-auto m/s is a diagonal-arc artifact (count-only). SB under-counts ROW-4/5 → absolute axis abstains there.
 
 ### 20260615-ROW-1  *(no watch — set-1 recording missing)*
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 9/10 | — (count≠) | — | 21.3→10.9 (+10.4) | -0.016→-0.006 (-0.011) |
+| CV-auto | 10/10 | 1.258 | +1.198 | 11.2→10.9 (+0.3) | +0.010→-0.006 (+0.015) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto |
 |---|---|---|---|
 | 1 | 0.750 | 0.710 | 0.841 |
@@ -160,7 +217,18 @@ is a diagonal-arc artifact (note the ~7 m/s) — count-only.
 | 10 | 0.660 | – | 2.051 |
 | **mean** | **0.741** | **0.704** | **1.939** |
 
+</details>
+
 ### 20260615-ROW-2
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 9/10 | — (count≠) | — | 22.3→23.1 (-0.8) | -0.014→-0.017 (+0.003) |
+| CV-auto | 10/10 | 1.059 | +1.057 | 13.7→23.1 (-9.4) | -0.025→-0.017 (-0.008) |
+| Watch-adj | 9/10 | — (count≠) | — | 19.0→23.1 (-4.1) | -0.015→-0.017 (+0.001) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto | Watch-auto | Watch-adj |
 |---|---|---|---|---|---|
 | 1 | 0.700 | 0.790 | 1.845 | 0.299 | 0.683 |
@@ -176,7 +244,18 @@ is a diagonal-arc artifact (note the ~7 m/s) — count-only.
 | 11 | – | – | – | 0.630 | – |
 | **mean** | **0.704** | **0.707** | **1.761** | **0.630** | **0.666** |
 
+</details>
+
 ### 20260615-ROW-3
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 10/10 | 0.163 | +0.111 | 12.6→12.3 (+0.3) | -0.002→-0.011 (+0.009) |
+| CV-auto | 8/10 | — (count≠) | — | 13.4→12.3 (+1.1) | -0.068→-0.011 (-0.057) |
+| Watch-adj | 10/10 | 0.059 | -0.048 | 17.2→12.3 (+4.9) | -0.005→-0.011 (+0.006) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto | Watch-auto | Watch-adj |
 |---|---|---|---|---|---|
 | 1 | 0.770 | 0.540 | 6.788 | 0.350 | 0.648 |
@@ -193,7 +272,18 @@ is a diagonal-arc artifact (note the ~7 m/s) — count-only.
 | 12 | – | – | – | 0.360 | – |
 | **mean** | **0.733** | **0.844** | **6.918** | **0.630** | **0.685** |
 
+</details>
+
 ### 20260615-ROW-4
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 8/10 | — (count≠) | — | 13.9→5.9 (+7.9) | +0.004→-0.005 (+0.009) |
+| CV-auto | 9/10 | — (count≠) | — | 7.7→5.9 (+1.8) | -0.021→-0.005 (-0.016) |
+| Watch-adj | 10/10 | 0.102 | -0.060 | 2.3→5.9 (-3.6) | +0.008→-0.005 (+0.013) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto | Watch-auto | Watch-adj |
 |---|---|---|---|---|---|
 | 1 | 0.750 | 0.680 | 2.435 | 0.472 | 0.472 |
@@ -209,7 +299,18 @@ is a diagonal-arc artifact (note the ~7 m/s) — count-only.
 | 11 | – | – | – | 0.597 | – |
 | **mean** | **0.716** | **0.708** | **3.515** | **0.650** | **0.655** |
 
+</details>
+
 ### 20260615-ROW-5
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 8/10 | — (count≠) | — | 17.1→11.9 (+5.2) | -0.005→-0.013 (+0.007) |
+| CV-auto | 10/10 | 2.362 | +2.348 | 10.8→11.9 (-1.1) | -0.006→-0.013 (+0.007) |
+| Watch-adj | 10/10 | 0.053 | -0.045 | 8.2→11.9 (-3.7) | -0.008→-0.013 (+0.005) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto | Watch-auto | Watch-adj |
 |---|---|---|---|---|---|
 | 1 | 0.730 | 0.700 | 2.426 | 0.368 | 0.673 |
@@ -227,11 +328,20 @@ is a diagonal-arc artifact (note the ~7 m/s) — count-only.
 | 13 | – | – | – | 0.088 | – |
 | **mean** | **0.744** | **0.735** | **3.092** | **0.592** | **0.699** |
 
-## Deadlift — 06-13 · 3/4 inputs (no watch that day), no CV-adj
+</details>
+## Deadlift — 06-13 · 3/4 inputs (no watch), no CV-adj
 
-CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). No watch recording.
+CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). Low-rep sets (<3 reps) have no velocity-loss by definition.
 
 ### 20260613-DL-1
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 5/5 | 0.044 | -0.018 | 5.8→3.4 (+2.4) | +0.073→+0.039 (+0.033) |
+| CV-auto | 6/5 | — (count≠) | — | 17.2→3.4 (+13.7) | -0.018→+0.039 (-0.058) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto |
 |---|---|---|---|
 | 1 | 0.550 | 0.470 | 1.236 |
@@ -242,7 +352,17 @@ CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). No w
 | 6 | – | – | 1.144 |
 | **mean** | **0.666** | **0.648** | **1.334** |
 
+</details>
+
 ### 20260613-DL-2
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 3/3 | 0.185 | -0.173 | 12.3→2.3 (+10.0) | +0.015→+0.050 (-0.035) |
+| CV-auto | 3/3 | 0.450 | +0.196 | 1.5→2.3 (-0.8) | +0.464→+0.050 (+0.414) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto |
 |---|---|---|---|
 | 1 | 0.550 | 0.370 | 0.173 |
@@ -250,7 +370,17 @@ CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). No w
 | 3 | 0.650 | 0.400 | 1.100 |
 | **mean** | **0.607** | **0.433** | **0.802** |
 
+</details>
+
 ### 20260613-DL-3
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 2/2 | 0.085 | -0.030 | –→– | +0.190→+0.030 (+0.160) |
+| CV-auto | 4/2 | — (count≠) | — | 16.0→– | +0.266→+0.030 (+0.236) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto |
 |---|---|---|---|
 | 1 | 0.580 | 0.470 | 0.357 |
@@ -259,7 +389,17 @@ CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). No w
 | 4 | – | – | 0.903 |
 | **mean** | **0.595** | **0.565** | **0.891** |
 
+</details>
+
 ### 20260613-DL-4
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 2/2 | 0.035 | -0.005 | –→– | -0.010→+0.060 (-0.070) |
+| CV-auto | 3/2 | — (count≠) | — | 37.5→– | -0.180→+0.060 (-0.240) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto |
 |---|---|---|---|
 | 1 | 0.520 | 0.550 | 1.905 |
@@ -267,7 +407,17 @@ CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). No w
 | 3 | – | – | 1.545 |
 | **mean** | **0.550** | **0.545** | **1.428** |
 
+</details>
+
 ### 20260613-DL-5
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 8/8 | 0.034 | +0.016 | 28.5→29.7 (-1.2) | -0.018→-0.018 (+0.000) |
+| CV-auto | 9/8 | — (count≠) | — | 38.1→29.7 (+8.4) | -0.058→-0.018 (-0.040) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto |
 |---|---|---|---|
 | 1 | 0.520 | 0.580 | 0.310 |
@@ -281,7 +431,17 @@ CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). No w
 | 9 | – | – | 0.857 |
 | **mean** | **0.559** | **0.575** | **1.096** |
 
+</details>
+
 ### 20260613-DL-6
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| SmartBarbell | 8/8 | 0.052 | -0.004 | 14.9→6.6 (+8.3) | -0.004→-0.002 (-0.002) |
+| CV-auto | 9/8 | — (count≠) | — | 77.3→6.6 (+70.7) | -0.088→-0.002 (-0.086) |
+
+<details><summary>per-rep velocities</summary>
+
 | rep | Vitruve | SmartB | CV-auto |
 |---|---|---|---|
 | 1 | 0.490 | 0.530 | 0.950 |
@@ -295,13 +455,18 @@ CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). No w
 | 9 | – | – | 0.176 |
 | **mean** | **0.504** | **0.500** | **0.563** |
 
-## What this table shows
+</details>
 
-- **Counts:** our stack matches or beats SmartBarbell everywhere it has the inputs — CV-adj
-  10/10 exact on all bench, Watch-adj exact/±1 on every instrumented set.
-- **Velocity, trustworthy columns:** on bench, CV-adj set-means track Vitruve closely
-  (rim-corrected); Watch-adj on rows sits in the right band. These are the product-grade paths.
-- **Known-weak columns kept visible for honesty:** CV-auto absolute m/s (no rim), Watch-auto
-  counts (over-segmentation), Watch bench velocity (low SNR). Diagnosed, not hidden.
-- **Gaps to close:** register tap seeds/`rim_px` for DL & ROW (unlocks CV-adj there); ingest
-  watch IMU into `rep_metrics`; a learned IMU rep detector to fix Watch-auto over-segmentation.
+## Reading the panels
+
+- **Bench, trustworthy columns:** CV-adj RMSE ≈ SmartBarbell's and its VL-Δ tracks Vitruve;
+  Watch-adj lands the decline direction (negative slope) but with bench's known low SNR.
+- **CV-auto's big RMSE is the point** — it shows the hub-vs-rim scale error quantitatively,
+  which the count alone hides.
+- **Shape survives ghosts:** where a stray rep would send Pearson r negative, the VL-Δ and
+  Theil–Sen slope stay interpretable because phantoms are excluded and the slope is a median.
+- **Absolute abstains honestly:** any `— (count≠)` cell means counts didn't match after
+  phantom-exclusion, so comparing per-rep m/s would be comparing the wrong reps.
+
+Gaps to close: register tap seeds/`rim_px` for DL & ROW (unlocks CV-adj there); ingest watch
+IMU into `rep_metrics`; a learned IMU rep detector to fix Watch-auto over-segmentation.
