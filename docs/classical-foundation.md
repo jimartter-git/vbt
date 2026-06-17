@@ -1,5 +1,9 @@
 # Classical foundation & the anti-overfitting guardrail
 
+> **To drive this work:** paste the repeatable goal prompt in
+> [`docs/goals/classical-foundation-prompt.md`](goals/classical-foundation-prompt.md) into a
+> fresh session — it syncs, reads this doc, finds the current track, and advances it.
+
 **Status: design note / active plan (2026-06-17).** This is the foundation we build the
 deterministic (non-ML) CV and watch-IMU estimators on *before* introducing learners. It
 exists because of a specific, well-founded worry, stated by the project owner:
