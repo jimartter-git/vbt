@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from vbt_video import (ArrayFrameSource, PyAVDecoder, VideoVelocitySource,
                        VideoConfig, PlateTracker, FlowTracker, PoseTracker,
                        auto_seed_bbox)  # noqa: E402
+from vbt_video import honesty  # noqa: E402
 
 W, H, FPS, R = 240, 320, 60.0, 40           # frame + disc radius (px)
 T, N_REPS, A = 2.0, 3, 0.25                  # rep period (s), reps, amplitude (m)
@@ -691,3 +692,51 @@ def test_pyav_decoder_apply_rotation():
     assert r.shape == (6, 4, 3)                       # H/W swap
     assert np.array_equal(r, np.rot90(img, 3))        # verified mapping (k = r//90)
     assert r[0, -1, 0] == 255                          # top-left marker → top-right (clockwise)
+
+
+# --- Track C: track-honesty on REAL tracker output (no ground truth) ---
+def _horizontal_frames():
+    """A dark disc bobbing HORIZONTALLY (cx oscillates, cy fixed) — a decoy a vertical
+    lift never produces; track-honesty must flag it as not-vertical-dominant."""
+    cx0 = W / 2.0
+    imgs = []
+    for i in range(int(N_REPS * T * FPS)):
+        t = i / FPS
+        pos = -A * np.cos(2 * np.pi * t / T)
+        cx = int(round(cx0 - pos / MPP))
+        im = np.full((H, W, 3), 230, np.uint8)
+        cv2.circle(im, (cx, H // 2), R, (25, 25, 25), -1)
+        imgs.append(im)
+    return imgs
+
+
+def test_pipeline_exposes_trajectory_for_honesty():
+    reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow")).estimate(
+        ArrayFrameSource(_frames(), FPS), seed_bbox=_seed())
+    assert meta.get("trajectory") is not None
+    assert meta["trajectory"].shape[1] == 3            # (t, cx, cy)
+
+
+def test_track_honesty_passes_a_real_vertical_track():
+    reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow")).estimate(
+        ArrayFrameSource(_frames(), FPS), seed_bbox=_seed())
+    h = honesty.track_honesty(meta["trajectory"], target_px=meta["target_px"], reps=reps)
+    assert h["honest"] is True, h
+    assert h["vertical_dominance"] > 1.2 and h["periodicity"] >= 0.3
+
+
+def test_track_honesty_flags_a_real_horizontal_decoy_track():
+    frames = _horizontal_frames()
+    seed = (W // 2 - R + int(A / MPP), H // 2 - R, 2 * R, 2 * R)
+    reps, meta = VideoVelocitySource(VideoConfig(plate_m=PLATE_M, tracker="flow")).estimate(
+        ArrayFrameSource(frames, FPS), seed_bbox=seed)
+    h = honesty.track_honesty(meta["trajectory"], target_px=meta["target_px"], reps=reps)
+    assert h["honest"] is False
+    assert "not_vertical_dominant" in h["flags"]
+
+
+def test_auto_path_reports_honesty_verdict():
+    reps, meta = VideoVelocitySource(VideoConfig(tracker="auto")).estimate(
+        ArrayFrameSource(_frames(), FPS))
+    assert "track_honesty" in meta and "track_honest" in meta
+    assert "honesty_flipped_pick" in meta            # no-regression telemetry present

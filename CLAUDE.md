@@ -498,6 +498,43 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    position-cycle idea, kill the per-lift thresholds); **C** CV harden seed-free localization +
    make track-honesty a GATE. Don't headline a new number until it survives the blind guardrail.
 
+27. **⚑ The classical foundation, built (2026-06-17): the guardrail + a lift-agnostic watch
+    segmenter + a CV track-honesty gate — generalization measured BLIND, not in-sample.** Acting on
+    #26's reckoning (`docs/classical-foundation.md`). **Track A (the instrument):**
+    `vbt_analysis/validation.py` tags every eval run by INPUT PROVENANCE — `seed-free` (the only
+    generalization headline) / `simulated-tap` (a registered tap/rim — a real UI surface but
+    pre-found) / `oracle` (a manual crop band or per-clip plate/angle hint, circular) — plus
+    `leave_one_out`/`blind_in_sample_delta` (freeze params on a train split, score held-out).
+    `vbt_video/honesty.py` adds NO-ground-truth track-honesty checks that catch "right count, wrong
+    track" (the #17 body-lock trap): vertical-dominance (|Δy|≫|Δx|), trajectory periodicity,
+    motion-presence (mirrors the static-seed guard), seed-jitter stability — GLOBAL physical
+    thresholds, ONE set. The pipeline now exposes the chosen track as `meta["trajectory"]`; board =
+    `cv_eval.py --guardrail` (headlines the BLIND seed-free count, reports sim-tap/oracle separately,
+    prints the blind−in-sample delta). **Track B (watch, the clearest overfit, now killed):**
+    `vbt_analysis/wave_segment.py` replaces the velocity-zero-crossing detector + THREE per-lift
+    threshold regimes (rows/bench/RDL) with ONE config that reads the vertical-displacement WAVE —
+    reps = bottom→top up-excursions near the set's MODAL amplitude; unrack/putdown stripped
+    structurally (sub-modal terminal excursion, ENDS only, the same terminal-only philosophy as the
+    CV gates); per-rep velocity re-derived with ZUPT anchored at the true turnarounds (principled
+    drift control, the high-pass only BOOTSTRAPS locating the wave). **13/15 watch sessions EXACT,
+    mean|Δ| 0.13, blind leave-one-session-out delta +0.00 (no per-session/-lift tuning leak); bench
+    5/5 — the lift the old stack needed inline overrides for.** Per-lift velocity bias is
+    interpretable & physical: RDL −0.20 m/s = the documented wrist-vs-hip-hinge offset, bench −0.02.
+    Honest misses, NOT tuned away: ROW-3 −1 (an integration-merged turnaround) and SQ-3 +1 (a
+    fast-TnG extra excursion structurally identical to a real rep by amplitude, gap, bottom-position
+    AND eccentric depth — a gap rule would only trade it for dropping SQ-1's real paused rep, which
+    violates "never drop a full-ROM main-lift rep", #15). Wired into `analyze_session.py --wave`;
+    `scripts/wave_eval.py` (`--blind`). **Track C (CV):** the seed-free AUTO path
+    (`pipeline._estimate_auto`) now GATES candidates on track-honesty — it prefers an honest
+    candidate over a higher-scoring dishonest one, and flags `track_honest=False` / velocity
+    relative-only when none is honest, so a confident count implies a track on the bar. Conservative
+    by construction (the pick changes ONLY when a dishonest winner is replaced by an honest
+    alternative — telemetry: `meta["honesty_flipped_pick"]`/`count_pre_gate`). **Method that held:
+    measure BLIND, separate product-legitimate inputs (tap/rim) from oracle inputs (registered
+    seeds), prove no-regression by diffing the WHOLE corpus, and decline a number that only wins
+    in-sample.** Tests: `tests/test_guardrail.py` (16), `tests/test_wave_segment.py` (8), honesty
+    integration in `tests/test_video_pipeline.py`. Status checklist: `docs/classical-foundation.md`.
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip

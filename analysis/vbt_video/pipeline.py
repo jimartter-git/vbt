@@ -262,23 +262,48 @@ class VideoVelocitySource:
             t = _np.array([r.get("t", 0.0) for r in reps]); d = _np.diff(t); d = d[d > 0]
             return 1.0 / (1.0 + _np.std(d) / d.mean()) if (len(d) > 1 and d.mean() > 0) else 0.0
 
-        # CANDIDATE-GENERATION + FLOW-VERIFICATION: the motion seeder proposes several plate
-        # candidates (ellipse-sized); run flow on each and KEEP the one that holds lock with a
-        # plausible rep count + regular cadence. This localises the plate in clutter (mirror/
-        # hex/multiple plates) where a single auto-seed picks a decoy — and flow gives the
-        # smooth trajectory for velocity. Score = confidence × cadence-regularity.
-        best = None
+        # CANDIDATE-GENERATION + FLOW-VERIFICATION + TRACK-HONESTY GATE: the motion seeder
+        # proposes several plate candidates (ellipse-sized); run flow on each and KEEP the one
+        # that holds lock with a plausible rep count + regular cadence AND a track that passes
+        # the no-ground-truth honesty checks (vbt_video.honesty) — vertical-dominance,
+        # periodicity, motion-presence. The honesty gate is the Track C fix for "right count,
+        # wrong track": a decoy oscillating at rep cadence (rack plate, mirror, the #17
+        # body-lock) can score well on confidence×regularity but FAILS honesty (horizontal /
+        # aperiodic / static), so gating on it makes a passing count imply a track on the bar.
+        # Score = confidence × cadence-regularity. We prefer an HONEST candidate even over a
+        # higher-scoring dishonest one; only if NO candidate is honest do we keep the best
+        # dishonest flow track — flagged track_honest=False — rather than silently trust it.
+        from .honesty import track_honesty
+        best_honest, best_any = None, None
         for seed in seed_candidates(src):
             fr, fm = VideoVelocitySource(replace(base, tracker="flow")).estimate(src, seed_bbox=seed)
             if fm.get("static_track_suspect", False) or not (3 <= len(fr) <= 18):
                 continue
+            h = track_honesty(fm.get("trajectory"), target_px=fm.get("target_px"), reps=fr)
+            fm["track_honesty"] = h
             score = fm.get("track_confidence", 0.0) * _regularity(fr)
-            if best is None or score > best[0]:
-                best = (score, fr, fm)
+            if best_any is None or score > best_any[0]:
+                best_any = (score, fr, fm)
+            if h["honest"] and (best_honest is None or score > best_honest[0]):
+                best_honest = (score, fr, fm)
+        best = best_honest or best_any
         if best is not None:
             _, f_reps, f_meta = best
             f_meta["auto_pick"] = "flow"
-            f_meta["velocity_reliable"] = True
+            # no-regression telemetry: did the honesty gate FLIP the pick away from the
+            # best-scoring (pre-gate) candidate? (count change only happens here)
+            f_meta["honesty_flipped_pick"] = bool(
+                best_honest is not None and best_any is not None
+                and best_honest[1] is not best_any[1])
+            f_meta["count_pre_gate"] = (len(best_any[1]) if best_any is not None else None)
+            honest = bool(f_meta.get("track_honesty", {}).get("honest", False))
+            f_meta["track_honest"] = honest
+            # A dishonest flow track (no honest candidate existed) shouldn't ship a confident
+            # absolute velocity — same honest-velocity rule as the detect fallback.
+            f_meta["velocity_reliable"] = honest
+            if not honest:
+                for r in f_reps:
+                    r["velocity_relative_only"] = True
             return apply_plausibility(f_reps), f_meta
         # No candidate held lock (dark/low-texture iron, hex, etc.) -> DetectTracker for the
         # COUNT, abstaining on absolute velocity (jittery per-frame centres; honest-velocity rule).
