@@ -46,3 +46,6 @@ dataset/.clipcache/
 # Generated plate-detector dataset + training runs (regenerate via build_plate_dataset.py;
 # data.yaml carries a machine-specific absolute path, frames/weights are derived artifacts).
 dataset/cv_plate/
+# YOLO default output dir + downloaded pretrained weights (ultralytics drops these in cwd).
+runs/
+*.pt
