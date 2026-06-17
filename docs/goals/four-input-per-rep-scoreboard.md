@@ -44,8 +44,18 @@ excluded, not averaged in). Absolute m/s caveats unchanged: **CV-auto is hub-inf
 | 20260616-BN-3 | bench | 10 | 10 | 10 | **10** ✓ | **10** ✓ | 22 | 11 |
 | 20260616-BN-4 | bench | 10 | 10 | 10 | 11 | **10** ✓ | 14 | 9 |
 | 20260616-BN-5 | bench | 10 | 10 | 10 | 11 | **10** ✓ | 23 | **10** ✓ |
+| 20260617-SQ-1 | squat | 10 | 10 | – | 5 | – | 40 | **10** ✓ |
+| 20260617-SQ-2 | squat | 10 | 10 | – | **10** ✓ | – | 35 | **10** ✓ |
+| 20260617-SQ-3 | squat | 10 | 10 | – | **10** ✓ | – | 50 | 11 |
+| 20260617-SQ-4 | squat | 10 | 10 | – | **10** ✓ | – | 40 | **10** ✓ |
+| 20260617-RDL-1 | rdl | 8 | 8 | – | **8** ✓ | – | 13 | **8** ✓ |
+| 20260617-RDL-2 | rdl | 8 | 8 | – | **8** ✓ | – | 19 | **8** ✓ |
 
 **CV-adj = 10/10 EXACT on all 5 bench sets**; **Watch-adj exact/±1 on every instrumented set**.
+**06-17 squats/RDLs are 3/4 inputs (no SmartBarbell):** CV-auto is EXACT on SQ-2/3/4 + both RDLs
+(SQ-1, the 225 lb top set, undercounts 5/10 — needs a tap seed, like the early bench); Watch-adj is
+exact on every set but SQ-3 (one trailing partial phantom). The squats are the FIRST main-lift squat
+rows in this table.
 DL CV-auto is the pure no-config path (over-counts the double-hump); the recorded path
 (proxy + DL-5 one-tap + double-bump merge) hit all six EXACT — different, both honest.
 
@@ -457,6 +467,178 @@ CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). Low-
 
 </details>
 
+## Squat — 06-17 (4 sets ×10) · 3/4 inputs (no SmartBarbell), no CV-adj
+
+The **first main-lift squat data** in this table. CV is count-only here (auto counts from
+`clips.csv`; absolute m/s hub-inflated, no `rim_px` registered — the video wasn't re-run for
+velocity). **Watch-adj is the trustworthy velocity column** and the squat is a good case for it: a
+standing lift where the wrist tracks the bar on the back through a full ~0.65 m ROM. Watch-auto
+over-segments massively (35–50 segments) on the deep pause at the bottom of each rep — the known
+detector gap, count shown for reference only.
+
+Squat-only **Watch-adj aggregate vs Vitruve** (count-matched SQ-1/2/4, n=30): **bias −0.041,
+RMSE 0.093 m/s** — bench-ballpark, above the SEE<0.07 target. Per-rep **r is low (0.26)** but that's
+the narrow-range artifact (squat MV spans only ~0.43–0.65 m/s, statistically caps r — the same
+reality check as bench, learning #25), not an inverse fit; the VL-Δ and slope tell the shape story.
+
+### 20260617-SQ-1  *(225 lb top set, RPE 6.5)*
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| CV-auto | 5/10 | count-only (undercount; abs m/s hub-inflated) | — | — | — |
+| Watch-adj | 10/10 | 0.071 | -0.033 | 14.8→30.2 (-15.4) | +0.004→-0.020 (+0.024) |
+
+<details><summary>per-rep velocities</summary>
+
+| rep | Vitruve | Watch-adj |
+|---|---|---|
+| 1 | 0.520 | 0.424 |
+| 2 | 0.590 | 0.466 |
+| 3 | 0.630 | 0.564 |
+| 4 | 0.580 | 0.506 |
+| 5 | 0.560 | 0.592 |
+| 6 | 0.580 | 0.544 |
+| 7 | 0.520 | 0.476 |
+| 8 | 0.510 | 0.461 |
+| 9 | 0.450 | 0.497 |
+| 10 | 0.430 | 0.512 |
+| **mean** | **0.541** | **0.504** |
+
+</details>
+
+### 20260617-SQ-2  *(205 lb, RPE 5)*
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| CV-auto | 10/10 | count-only (abs m/s hub-inflated) | — | — | — |
+| Watch-adj | 10/10 | 0.131 | -0.091 | 30.7→14.6 (+16.1) | -0.001→-0.010 (+0.009) |
+
+<details><summary>per-rep velocities</summary>
+
+| rep | Vitruve | Watch-adj |
+|---|---|---|
+| 1 | 0.650 | 0.495 |
+| 2 | 0.610 | 0.524 |
+| 3 | 0.650 | 0.470 |
+| 4 | 0.630 | 0.614 |
+| 5 | 0.640 | 0.538 |
+| 6 | 0.620 | 0.648 |
+| 7 | 0.610 | 0.664 |
+| 8 | 0.590 | 0.328 |
+| 9 | 0.580 | 0.432 |
+| 10 | 0.530 | 0.487 |
+| **mean** | **0.611** | **0.520** |
+
+</details>
+
+### 20260617-SQ-3  *(215 lb, RPE 5.5)*
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| CV-auto | 10/10 | count-only (abs m/s hub-inflated) | — | — | — |
+| Watch-adj | 11/10 | — (count≠) | — | 13.0→19.5 (-6.5) | +0.010→-0.014 (+0.024) |
+
+<details><summary>per-rep velocities</summary>
+
+| rep | Vitruve | Watch-adj |
+|---|---|---|
+| 1 | 0.550 | 0.490 |
+| 2 | 0.610 | 0.513 |
+| 3 | 0.640 | 0.523 |
+| 4 | 0.630 | 0.531 |
+| 5 | 0.590 | 0.524 |
+| 6 | 0.580 | 0.515 |
+| 7 | 0.580 | 0.630 |
+| 8 | 0.560 | 0.535 |
+| 9 | 0.530 | 0.345 |
+| 10 | 0.500 | 0.618 |
+| 11 | – | 0.835 |
+| **mean** | **0.577** | **0.551** |
+
+</details>
+
+### 20260617-SQ-4  *(225 lb, RPE 5)*
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| CV-auto | 10/10 | count-only (abs m/s hub-inflated) | — | — | — |
+| Watch-adj | 10/10 | 0.061 | +0.001 | 13.2→19.0 (-5.9) | -0.001→-0.015 (+0.014) |
+
+<details><summary>per-rep velocities</summary>
+
+| rep | Vitruve | Watch-adj |
+|---|---|---|
+| 1 | 0.580 | 0.497 |
+| 2 | 0.630 | 0.637 |
+| 3 | 0.610 | 0.602 |
+| 4 | 0.600 | 0.546 |
+| 5 | 0.620 | 0.628 |
+| 6 | 0.590 | 0.520 |
+| 7 | 0.550 | 0.598 |
+| 8 | 0.530 | 0.553 |
+| 9 | 0.530 | 0.669 |
+| 10 | 0.490 | 0.492 |
+| **mean** | **0.573** | **0.574** |
+
+</details>
+
+## RDL — 06-17 (2 sets ×8) · 3/4 inputs, no CV-adj
+
+The honest counter-case: **CV-auto counts both sets EXACT (8/8)** and **Watch-adj counts both EXACT**,
+but **watch absolute velocity fails** — bias **−0.21 m/s**, RMSE **0.22** (aggregate n=16). This is the
+**hinge-anchor limitation**: in an RDL the wrist hangs at arm's length and the bar travels by hip
+hinge, so the wrist's linear velocity systematically *under-reads* the bar (≈0.28 watch vs ≈0.47
+Vitruve). It is NOT a detector bug — counts and ROM are right; the wrist simply isn't the bar on a
+hinge. **Velocity-LOSS survives** (VL-Δ −1.4 / −5.1 pp) because it's scale-invariant, and per-rep
+**r=0.70** — the shape tracks, the scale is offset. A per-lift anchor calibration (learning #4's
+constant offset) is the candidate fix; flagged in the set notes.
+
+### 20260617-RDL-1  *(225 lb, RPE 6.5)*
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| CV-auto | 8/8 | count-only (abs m/s hub-inflated) | — | — | — |
+| Watch-adj | 8/8 | 0.214 | -0.209 | 3.8→5.2 (-1.4) | +0.016→+0.000 (+0.016) |
+
+<details><summary>per-rep velocities</summary>
+
+| rep | Vitruve | Watch-adj |
+|---|---|---|
+| 1 | 0.410 | 0.106 |
+| 2 | 0.470 | 0.217 |
+| 3 | 0.480 | 0.266 |
+| 4 | 0.450 | 0.254 |
+| 5 | 0.460 | 0.267 |
+| 6 | 0.470 | 0.288 |
+| 7 | 0.470 | 0.279 |
+| 8 | 0.440 | 0.302 |
+| **mean** | **0.456** | **0.247** |
+
+</details>
+
+### 20260617-RDL-2  *(225 lb, RPE 6.5)*
+
+| method | n (src/ref) | RMSE | bias | VL src→ref (Δpp) | slope src→ref (Δ, m/s·rep⁻¹) |
+|---|---|---|---|---|---|
+| CV-auto | 8/8 | count-only (abs m/s hub-inflated) | — | — | — |
+| Watch-adj | 8/8 | 0.221 | -0.219 | 0.3→5.4 (-5.1) | +0.009→+0.001 (+0.008) |
+
+<details><summary>per-rep velocities</summary>
+
+| rep | Vitruve | Watch-adj |
+|---|---|---|
+| 1 | 0.510 | 0.332 |
+| 2 | 0.530 | 0.270 |
+| 3 | 0.500 | 0.278 |
+| 4 | 0.550 | 0.308 |
+| 5 | 0.560 | 0.318 |
+| 6 | 0.500 | 0.271 |
+| 7 | 0.550 | 0.341 |
+| 8 | 0.510 | 0.343 |
+| **mean** | **0.526** | **0.308** |
+
+</details>
+
 ## Reading the panels
 
 - **Bench, trustworthy columns:** CV-adj RMSE ≈ SmartBarbell's and its VL-Δ tracks Vitruve;
@@ -468,5 +650,8 @@ CV-auto on a 720p upright proxy; absolute m/s hub-inflated (count-focused). Low-
 - **Absolute abstains honestly:** any `— (count≠)` cell means counts didn't match after
   phantom-exclusion, so comparing per-rep m/s would be comparing the wrong reps.
 
-Gaps to close: register tap seeds/`rim_px` for DL & ROW (unlocks CV-adj there); ingest watch
-IMU into `rep_metrics`; a learned IMU rep detector to fix Watch-auto over-segmentation.
+Gaps to close: register tap seeds/`rim_px` for DL, ROW & the 06-17 squats/RDLs (unlocks CV-adj +
+trustworthy CV velocity there — and a tap seed would also recover the SQ-1 top-set undercount); a
+learned IMU rep detector to fix Watch-auto over-segmentation (squat pauses blow it up to 35–50
+segments); and an **RDL/hinge anchor calibration** — the wrist under-reads the bar by a near-constant
+~0.21 m/s on the hinge (counts + VL are fine; absolute velocity needs a per-lift offset, learning #4).
