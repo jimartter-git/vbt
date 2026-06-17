@@ -529,7 +529,13 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     candidate over a higher-scoring dishonest one, and flags `track_honest=False` / velocity
     relative-only when none is honest, so a confident count implies a track on the bar. Conservative
     by construction (the pick changes ONLY when a dishonest winner is replaced by an honest
-    alternative — telemetry: `meta["honesty_flipped_pick"]`/`count_pre_gate`). **Method that held:
+    alternative — telemetry: `meta["honesty_flipped_pick"]`/`count_pre_gate`). **No-regression
+    CONFIRMED** over the local corpus (`scripts/_trackc_check.py`): ZERO flips, every main-lift
+    seed-free count byte-identical to the pre-gate baseline (SQ/BN/DL flip=False, honest=True) — the
+    gate adds the honesty guarantee without moving a count. Expected caveat: a track can be honest
+    yet under-count (ROW-2-0608 dark iron rides the plate, honest=True, segmenter reads 5/10) —
+    honesty certifies the TRACK, not the count; lifting seed-free dark-iron counts toward the tap
+    path (working-plate localization priors) is the named follow-up. **Method that held:
     measure BLIND, separate product-legitimate inputs (tap/rim) from oracle inputs (registered
     seeds), prove no-regression by diffing the WHOLE corpus, and decline a number that only wins
     in-sample.** Tests: `tests/test_guardrail.py` (16), `tests/test_wave_segment.py` (8), honesty

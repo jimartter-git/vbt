@@ -24,18 +24,22 @@
   extra excursion that's structurally identical to a real rep — declined to overfit a gap threshold
   to GT, learning #15). Board: `scripts/wave_eval.py` (`--blind` = leave-one-session-out). Tests:
   `tests/test_wave_segment.py` (8). **TODO:** wire into `analyze_session.py`, mirror in Swift.
-- [~] **Track C — CV seed-free localization + track-honesty gate** (built 2026-06-17, blind board
-  capturing): the seed-free AUTO path (`pipeline._estimate_auto`) now GATES flow candidates on the
-  no-GT track-honesty checks — it prefers an HONEST candidate over a higher-scoring dishonest one,
-  and when none is honest flags `track_honest=False` + velocity relative-only, so a confident count
-  implies a track on the bar (the #17 body-lock fix). Conservative by construction: the pick changes
-  ONLY when a dishonest winner is replaced by an honest alternative (telemetry
-  `meta["honesty_flipped_pick"]` / `count_pre_gate`; `scripts/_trackc_check.py` reports every flip +
-  any regression in one pass). Registered seeds are already scored as `simulated-tap` (Track A
-  provenance), so the seed-free count is the headline. Integration-tested
-  (`tests/test_video_pipeline.py`: honesty on real tracker output, auto-path verdict). **TODO:
-  finish the full-corpus blind board (`cv_eval.py --guardrail`) for the headline seed-free number;
-  working-plate priors in candidate generation if a flip regresses.**
+- [x] **Track C — CV seed-free track-honesty gate** (landed 2026-06-17; localization-priors
+  follow-up noted): the seed-free AUTO path (`pipeline._estimate_auto`) now GATES flow candidates on
+  the no-GT track-honesty checks — it prefers an HONEST candidate over a higher-scoring dishonest
+  one, and when none is honest flags `track_honest=False` + velocity relative-only, so a confident
+  count implies a track on the bar (the #17 body-lock fix). Conservative by construction: the pick
+  changes ONLY when a dishonest winner is replaced by an honest alternative (telemetry
+  `meta["honesty_flipped_pick"]` / `count_pre_gate`). **No-regression CONFIRMED:**
+  `scripts/_trackc_check.py` over the local corpus — **ZERO flips, every main-lift seed-free count
+  byte-identical to the pre-gate baseline** (SQ/BN/DL all flip=False, honest=True), so the gate adds
+  the honesty guarantee without moving a single count. (Caveat surfaced & expected: a track can be
+  honest yet under-count — ROW-2-0608 dark iron rides the plate, honest=True, but the segmenter
+  reads 5/10; honesty certifies the TRACK, not the count, and the gate correctly doesn't worsen it.)
+  Registered seeds are scored as `simulated-tap` (Track A provenance) so the seed-free count is the
+  headline. Integration-tested (`tests/test_video_pipeline.py`). **Follow-up (not blocking):
+  working-plate localization priors in candidate generation to lift the seed-free dark-iron
+  under-counts toward the tap path; full R2 board when network permits.**
 
 Update this list (and add a CLAUDE.md learning) when a track lands. Detail below.
 
