@@ -20,6 +20,8 @@ import numpy as np
 
 from vbt_analysis.ingest import load_session, synthetic_set
 from vbt_analysis.rep_detect import detect_turnarounds
+from vbt_analysis import wave_segment as ws
+from vbt_analysis.metrics import velocity_loss_pct as _vl_canonical
 from vbt_analysis.velocity import (
     integrate_with_zupt,
     rep_metrics,
@@ -33,6 +35,10 @@ def main() -> int:
     p.add_argument("csv", nargs="?", help="session CSV path")
     p.add_argument("--demo", action="store_true", help="use a synthetic set")
     p.add_argument("--out", help="save plot to this path instead of showing")
+    p.add_argument("--wave", action="store_true",
+                   help="use the lift-agnostic position-domain WAVE segmenter "
+                        "(vbt_analysis.wave_segment — ONE config, no per-lift thresholds; "
+                        "the Track B detector) instead of the PoC velocity-crossing detector")
     args = p.parse_args()
 
     if args.demo:
@@ -46,11 +52,27 @@ def main() -> int:
 
     t = df["t"].to_numpy()
     a_vert = vertical_acceleration(df)
+    fs = 1.0 / np.median(np.diff(t)) if len(t) > 1 else float("nan")
+
+    if args.wave:
+        res = ws.segment(t, a_vert)
+        anchors, v = res.anchors if res.anchors is not None else np.array([], int), res.velocity
+        print(f"\nSample rate ~ {fs:.1f} Hz   |   WAVE segmenter (one config)")
+        print(f"Concentric reps detected: {res.count}")
+        print(f"{'rep':>3}  {'mean v':>8}  {'peak v':>8}  {'ROM (m)':>8}")
+        for r in res.reps:
+            print(f"{r.rep_index:>3}  {r.mean_concentric_velocity:>8.3f}  "
+                  f"{r.peak_concentric_velocity:>8.3f}  {r.rom:>8.3f}")
+        vl = _vl_canonical([r.mean_concentric_velocity for r in res.reps])
+        print(f"\nIntra-set velocity loss: {0.0 if vl != vl else vl:.1f}%")
+        if v is not None:
+            _plot(t, a_vert, v, anchors, args.out)
+        return 0
+
     anchors = detect_turnarounds(t, a_vert)
     v = integrate_with_zupt(t, a_vert, anchors)
     reps = rep_metrics(t, v, anchors)
 
-    fs = 1.0 / np.median(np.diff(t)) if len(t) > 1 else float("nan")
     print(f"\nSample rate ~ {fs:.1f} Hz   |   turnarounds detected: {len(anchors)}")
     print(f"Concentric reps detected: {len(reps)}")
     print(f"{'rep':>3}  {'mean v':>8}  {'peak v':>8}  {'ROM (m)':>8}")
