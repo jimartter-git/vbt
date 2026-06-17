@@ -46,3 +46,23 @@ set_id,vendor,path,kind,notes
 20260610-SQ-4,video,raw/061026-SQ4.mov,video_mov,"Squat 225lb last set, Equinox hex. GT10. our auto 10/10, SB 10. Vit set-avg 0.52."
 20260610-RDL-1,video,raw/061026-RDL1.mov,video_mov,"RDL 225lb set1, Equinox. GT8. our auto 7 (beats SB 1). Vit set-avg 0.49."
 20260610-RDL-2,video,raw/061026-RDL2.mov,video_mov,"RDL 225lb set2, Equinox. GT8. our auto 8 (beats SB 4). Vit set-avg 0.57."
+20260613-DL-1,vitruve,raw/20260613-DL_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-13 deadlift sets 1-6 (this row=Set1). Rep data already in rep_metrics.
+20260613-DL-2,vitruve,raw/20260613-DL_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-13 deadlift sets 1-6 (this row=Set2). Rep data already in rep_metrics.
+20260613-DL-3,vitruve,raw/20260613-DL_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-13 deadlift sets 1-6 (this row=Set3). Rep data already in rep_metrics.
+20260613-DL-4,vitruve,raw/20260613-DL_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-13 deadlift sets 1-6 (this row=Set4). Rep data already in rep_metrics.
+20260613-DL-5,vitruve,raw/20260613-DL_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-13 deadlift sets 1-6 (this row=Set5). Rep data already in rep_metrics.
+20260613-DL-6,vitruve,raw/20260613-DL_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-13 deadlift sets 1-6 (this row=Set6). Rep data already in rep_metrics.
+20260616-BN-1,vitruve,raw/20260616-BN_vitruve.csv,vitruve_csv,"Vitruve full export; one CSV holds 06-16 bench sets 1-5 (this row=Set1, 225lb top set). Rep data already in rep_metrics."
+20260616-BN-2,vitruve,raw/20260616-BN_vitruve.csv,vitruve_csv,"Vitruve full export; one CSV holds 06-16 bench sets 1-5 (this row=Set2, 205lb back-off). Rep data already in rep_metrics."
+20260616-BN-3,vitruve,raw/20260616-BN_vitruve.csv,vitruve_csv,"Vitruve full export; one CSV holds 06-16 bench sets 1-5 (this row=Set3, 205lb back-off). Rep data already in rep_metrics."
+20260616-BN-4,vitruve,raw/20260616-BN_vitruve.csv,vitruve_csv,"Vitruve full export; one CSV holds 06-16 bench sets 1-5 (this row=Set4, 205lb back-off). Rep data already in rep_metrics."
+20260616-BN-5,vitruve,raw/20260616-BN_vitruve.csv,vitruve_csv,"Vitruve full export; one CSV holds 06-16 bench sets 1-5 (this row=Set5, 205lb back-off). Rep data already in rep_metrics."
+20260615-ROW-2,watch_imu,raw/20260615-ROW-2_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; true set 2 (files reverse-label-fixed, learning #23; no ROW-1, set-1 watch recording missing). Schema matches data-schema.md. Not yet ingested into rep_metrics."
+20260615-ROW-3,watch_imu,raw/20260615-ROW-3_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; true set 3 (files reverse-label-fixed, learning #23; no ROW-1, set-1 watch recording missing). Schema matches data-schema.md. Not yet ingested into rep_metrics."
+20260615-ROW-4,watch_imu,raw/20260615-ROW-4_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; true set 4 (files reverse-label-fixed, learning #23; no ROW-1, set-1 watch recording missing). Schema matches data-schema.md. Not yet ingested into rep_metrics."
+20260615-ROW-5,watch_imu,raw/20260615-ROW-5_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; true set 5 (files reverse-label-fixed, learning #23; no ROW-1, set-1 watch recording missing). Schema matches data-schema.md. Not yet ingested into rep_metrics."
+20260616-BN-1,watch_imu,raw/20260616-BN-1_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; bench set 1 (correctly ordered, uptime increases BN-1->5). Schema matches data-schema.md. Not yet ingested into rep_metrics."
+20260616-BN-2,watch_imu,raw/20260616-BN-2_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; bench set 2 (correctly ordered, uptime increases BN-1->5). Schema matches data-schema.md. Not yet ingested into rep_metrics."
+20260616-BN-3,watch_imu,raw/20260616-BN-3_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; bench set 3 (correctly ordered, uptime increases BN-1->5). Schema matches data-schema.md. Not yet ingested into rep_metrics."
+20260616-BN-4,watch_imu,raw/20260616-BN-4_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; bench set 4 (correctly ordered, uptime increases BN-1->5). Schema matches data-schema.md. Not yet ingested into rep_metrics."
+20260616-BN-5,watch_imu,raw/20260616-BN-5_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; bench set 5 (correctly ordered, uptime increases BN-1->5). Schema matches data-schema.md. Not yet ingested into rep_metrics."

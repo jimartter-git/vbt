@@ -78,6 +78,7 @@ WL "lbs that's actually kg" mislabel.
 ## Tools
 
 ```bash
+# NB: tools live in dataset/tools/ — run these FROM the dataset/ directory.
 pip install -r ../analysis/requirements.txt        # pandas/scipy/numpy
 
 python tools/seed_first_record.py     # bootstrap record #1 (330x8 deadlift) — idempotent

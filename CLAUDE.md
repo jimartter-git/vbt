@@ -24,8 +24,11 @@ and `docs/sources-and-fusion.md`.
   scaffold built/signed/ran on a real Ultra unmodified, `CMBatchedSensorManager`
   sustained **~200 Hz continuously (5,317 samples ≈ 27 s)** inside an
   `HKWorkoutSession`, and the CSV transferred watch→phone intact (`transferFile` →
-  `VBTPhone` list). Validated on a SINGLE ~27 s set; multi-set thermal/battery
-  endurance and signal *accuracy* vs Vitruve are still untested (next).
+  `VBTPhone` list). Validated on a SINGLE ~27 s set. Signal *accuracy* vs Vitruve
+  now has FIRST results (learnings #23–25): rows hit the SEE<0.07 target (RMSE 0.069,
+  bias −0.05 m/s), bench is diagnosed (detector over-segments slow/paused/supine reps —
+  a segmentation gap, not a hardware limit). **Still untested: multi-set thermal/battery
+  endurance** (the next hardware gate) and a robust cross-lift rep detector.
 - **Active phase = data + calibration.** Building a personal multi-vendor
   measurement database (`dataset/`) to quantify cross-tool agreement, calibrate,
   and seed the app's per-user prior. **Vitruve is the established ground-truth
@@ -497,8 +500,8 @@ little or no context — assume it is a VBT measurement to add to `dataset/`.** 
 3. **Transcribe / import** per `dataset/INGESTION.md` (column→metric mapping, unit
    canon kg/cm, the SmartBarbell phantom-row + `true_rep` gotchas).
 4. **Add to the DB:** append the `sets.csv` row + `rep_metrics.csv` rows (or run
-   `tools/wl_import.py`), then `python tools/build_db.py` and
-   `python tools/compare.py <set_id>` to sanity-check, then commit & push.
+   `dataset/tools/wl_import.py`), then `python dataset/tools/build_db.py` and
+   `python dataset/tools/compare.py <set_id>` to sanity-check, then commit & push.
 
 Never invent metadata — ask. Never compare across vendors on `rep_index`; align on
 `true_rep`. See `dataset/INGESTION.md` for the full step-by-step.

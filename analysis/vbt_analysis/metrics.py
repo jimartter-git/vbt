@@ -3,7 +3,9 @@
 THE one velocity-loss definition for the whole project. Before this module there
 were four divergent formulas (vel_eval best→mean-last-2, dataset compare.py
 best→last-rep, vbt_analysis.velocity best→min, Swift SetSummary best→min) — so
-"loss" numbers were silently incomparable across tools. Dataset rules
+"loss" numbers were silently incomparable across tools. All four now use THIS
+definition; Swift `SetSummary` mirrors it (lock-step note below) — do NOT
+"correct" Swift back to best→min. Dataset rules
 (dataset/README.md): reference the BEST rep (not rep 1 — warm-in makes rep 2–3
 fastest), run to the TERMINAL window (never best→min: a mid-set slow rep must not
 inflate loss past the set's end), and STATE the window.
