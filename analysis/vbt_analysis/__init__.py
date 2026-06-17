@@ -11,6 +11,7 @@ algorithm (`velocity.py` / `rep_detect.py`) gets ported into the Swift
 from .ingest import load_session, synthetic_set
 from .velocity import vertical_acceleration, integrate_with_zupt, rep_metrics
 from .rep_detect import detect_turnarounds
+from .wave_segment import segment as wave_segment_reps, WaveResult, WaveRep
 
 __all__ = [
     "load_session",
@@ -19,4 +20,7 @@ __all__ = [
     "integrate_with_zupt",
     "rep_metrics",
     "detect_turnarounds",
+    "wave_segment_reps",
+    "WaveResult",
+    "WaveRep",
 ]

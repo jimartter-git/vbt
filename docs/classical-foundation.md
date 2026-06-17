@@ -6,10 +6,24 @@
 
 ## Status (source of truth — each session ticks this)
 
-- [ ] **Track A — generalization guardrail** (not started): provenance split, leave-one-out,
-  no-GT track-honesty checks.
-- [ ] **Track B — watch position-domain wave segmenter** (not started): one lift-agnostic
-  detector replacing the per-lift threshold stack.
+- [x] **Track A — generalization guardrail** (landed 2026-06-17): provenance split, leave-one-out,
+  no-GT track-honesty checks. **Instruments:** `vbt_analysis/validation.py` (`provenance()` →
+  seed-free / simulated-tap / oracle; `leave_one_out()` + `blind_in_sample_delta()`),
+  `vbt_video/honesty.py` (`track_honesty()` = vertical-dominance + periodicity + motion-presence,
+  `seed_jitter_stability()`); the pipeline now exposes the chosen track as `meta["trajectory"]`.
+  **Harness:** `cv_eval.py --guardrail` headlines the BLIND seed-free count, reports the registered
+  seed/rim run separately labeled (sim-tap/oracle), and prints a per-clip honesty pass/flag + the
+  blind−in-sample delta. Unit-tested (`tests/test_guardrail.py`, 16).
+- [~] **Track B — watch position-domain wave segmenter** (built + validated 2026-06-17, ONE config):
+  `vbt_analysis/wave_segment.py` reads the vertical-displacement WAVE — reps = bottom→top excursions
+  near the set's MODAL amplitude, terminal unrack/putdown stripped structurally — replacing the
+  per-lift threshold stack. **13/15 watch sessions EXACT, mean|Δ| 0.13, ONE config, no per-lift
+  thresholds** (bench 5/5, which the old detector needed inline overrides for). Per-lift velocity
+  bias is interpretable & physical (RDL −0.20 m/s = the documented wrist-vs-hip-hinge offset; bench
+  −0.02). Misses are honest: ROW-3 −1 (an integration-merged turnaround) and SQ-3 +1 (a fast-TnG
+  extra excursion that's structurally identical to a real rep — declined to overfit a gap threshold
+  to GT, learning #15). Board: `scripts/wave_eval.py` (`--blind` = leave-one-session-out). Tests:
+  `tests/test_wave_segment.py` (8). **TODO:** wire into `analyze_session.py`, mirror in Swift.
 - [ ] **Track C — CV seed-free localization + track-honesty gate** (not started).
 
 Update this list (and add a CLAUDE.md learning) when a track lands. Detail below.
