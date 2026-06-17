@@ -41,10 +41,22 @@ RM = os.path.join(REPO, "dataset/rep_metrics.csv")
 TARGETS = {
     **{f"20260615-ROW-{i}": ("row", 10) for i in range(2, 6)},
     **{f"20260616-BN-{i}": ("bench", 10) for i in range(1, 6)},
+    **{f"20260617-SQ-{i}": ("squat", 10) for i in range(1, 5)},
+    **{f"20260617-RDL-{i}": ("rdl", 8) for i in range(1, 3)},
 }
 
 
 def gated_reps(sid: str, lift: str):
+    """Clean the raw turnaround detector per lift. The raw detector over-segments
+    top/bottom pauses (zero-ROM noise) on every lift; the cleanup differs by the
+    lift's ROM/MV band:
+      - row/squat -> velocity.gate_reps (ROM/MV relative to the robust median; both
+        sit comfortably above its ROM>0.3, MV>0.45 core).
+      - bench     -> tighter ROM·MV clean (slow/short supine reps fall below the
+        gate's absolute MV core).
+      - rdl       -> ROM-window clean (the hinge MV ~0.3 is below gate_reps' MV core,
+        so it bails; ROM ~0.45-0.65 m cleanly isolates the 8 real reps). NB: RDL
+        watch MV reads low vs Vitruve (anchor/hinge limitation; see set notes)."""
     path = os.path.join(REPO, f"dataset/raw/{sid}_watch.csv")
     df = load_session(path)
     t = df["t"].to_numpy(float)
@@ -52,9 +64,12 @@ def gated_reps(sid: str, lift: str):
     anchors = detect_turnarounds(t, a)
     v = integrate_with_zupt(t, a, anchors)
     reps = rep_metrics(t, v, anchors)
-    if lift == "row":
+    if lift in ("row", "squat"):
         return gate_reps(reps)
-    return [r for r in reps if 0.20 <= r.range_of_motion <= 0.55
+    if lift == "rdl":
+        return [r for r in reps if 0.40 <= r.range_of_motion <= 0.70
+                and r.mean_concentric_velocity > 0.10]
+    return [r for r in reps if 0.20 <= r.range_of_motion <= 0.55      # bench
             and r.mean_concentric_velocity > 0.12]
 
 

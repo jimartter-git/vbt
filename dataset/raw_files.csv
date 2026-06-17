@@ -66,3 +66,15 @@ set_id,vendor,path,kind,notes
 20260616-BN-3,watch_imu,raw/20260616-BN-3_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; bench set 3 (correctly ordered, uptime increases BN-1->5). Schema matches data-schema.md. Ingested into rep_metrics as vendor watch_imu via dataset/tools/ingest_watch_imu.py (gated/adjusted reps)."
 20260616-BN-4,watch_imu,raw/20260616-BN-4_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; bench set 4 (correctly ordered, uptime increases BN-1->5). Schema matches data-schema.md. Ingested into rep_metrics as vendor watch_imu via dataset/tools/ingest_watch_imu.py (gated/adjusted reps)."
 20260616-BN-5,watch_imu,raw/20260616-BN-5_watch.csv,imu_csv,"Apple Watch Ultra CMDeviceMotion ~200Hz; bench set 5 (correctly ordered, uptime increases BN-1->5). Schema matches data-schema.md. Ingested into rep_metrics as vendor watch_imu via dataset/tools/ingest_watch_imu.py (gated/adjusted reps)."
+20260617-SQ-1,vitruve,raw/20260617-SQ_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-17 squat sets 1-4 (this row=Set1). Rep data in rep_metrics.
+20260617-SQ-1,watch_imu,raw/20260617-SQ-1_watch.csv,imu_csv,Apple Watch Ultra CMDeviceMotion ~200Hz; squat set 1. Ingested via ingest_watch_imu.py (gate_reps).
+20260617-SQ-2,vitruve,raw/20260617-SQ_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-17 squat sets 1-4 (this row=Set2). Rep data in rep_metrics.
+20260617-SQ-2,watch_imu,raw/20260617-SQ-2_watch.csv,imu_csv,Apple Watch Ultra CMDeviceMotion ~200Hz; squat set 2. Ingested via ingest_watch_imu.py (gate_reps).
+20260617-SQ-3,vitruve,raw/20260617-SQ_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-17 squat sets 1-4 (this row=Set3). Rep data in rep_metrics.
+20260617-SQ-3,watch_imu,raw/20260617-SQ-3_watch.csv,imu_csv,Apple Watch Ultra CMDeviceMotion ~200Hz; squat set 3. Ingested via ingest_watch_imu.py (gate_reps).
+20260617-SQ-4,vitruve,raw/20260617-SQ_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-17 squat sets 1-4 (this row=Set4). Rep data in rep_metrics.
+20260617-SQ-4,watch_imu,raw/20260617-SQ-4_watch.csv,imu_csv,Apple Watch Ultra CMDeviceMotion ~200Hz; squat set 4. Ingested via ingest_watch_imu.py (gate_reps).
+20260617-RDL-1,vitruve,raw/20260617-RDL_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-17 RDL sets 1-2 (this row=Set1). Rep data in rep_metrics.
+20260617-RDL-1,watch_imu,raw/20260617-RDL-1_watch.csv,imu_csv,Apple Watch Ultra CMDeviceMotion ~200Hz; RDL set 1. Ingested via ingest_watch_imu.py (ROM-clean; MV reads low - see set notes).
+20260617-RDL-2,vitruve,raw/20260617-RDL_vitruve.csv,vitruve_csv,Vitruve full export; one CSV holds 06-17 RDL sets 1-2 (this row=Set2). Rep data in rep_metrics.
+20260617-RDL-2,watch_imu,raw/20260617-RDL-2_watch.csv,imu_csv,Apple Watch Ultra CMDeviceMotion ~200Hz; RDL set 2. Ingested via ingest_watch_imu.py (ROM-clean; MV reads low - see set notes).
