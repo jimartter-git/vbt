@@ -85,6 +85,7 @@ and `docs/sources-and-fusion.md`.
 | `docs/vbt-reference.md` | VBT science + competitor accuracy/metrics (verified vs PDFs) |
 | `docs/generalization.md` | generalizing CV to any lift: tracker families × scale strategies (one spine, swappable front-ends; pose/equipment-free path) |
 | `docs/cv-fusion.md` | the standalone video estimator as a best-in-class SmartBarbell competitor: what's built (adaptive gating, occlusion auto-fallback, scale confidence), the `cv_eval.py` scoreboard, and the robustness roadmap |
+| `docs/classical-foundation.md` | **⚑ the anti-overfitting plan (2026-06-17):** where overfitting hides today (CV per-clip seed oracle in `cv_eval.py::CLIPS`; watch per-lift threshold regimes; no blind validation), the principles (provenance split, one param set, track-honesty, blind eval), and the three-track plan (A: generalization guardrail → B: watch position-domain wave segmenter → C: CV seed-free localization + track-honesty). Read before "improving" a number |
 | `docs/video-storage.md` | HD masters too big for git → live in Cloudflare R2 (`vbt-video`); repo keeps `dataset/raw/manifest.csv` pointer + `vbt_video/clip_store.py::resolve_clip()` (local→cache→download). Phone upload (Safari / Worker+Shortcut) + the live-app direction |
 | `dataset/` | the living multi-vendor measurement DB (+ `dataset/README.md`, `dataset/INGESTION.md`) |
 | `analysis/` | Python pipelines: `vbt_analysis/` (IMU ZUPT) + `vbt_video/` (our own CV velocity — PyAV+OpenCV, pluggable trackers, `plates.py` plate+angle→scale, outputs vendor `mevbt_cv`). Board: `scripts/cv_eval.py` (`--scale` = angle-aware). **Onboarding a new clip: `analysis/CV_ONBOARDING.md`** |
@@ -471,6 +472,31 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
    the Achermann 100Hz protocol. Watch is already at target on FASTER lifts (rows RMSE 0.069). Method:
    when a velocity is "meaningless," DUMP THE TRAJECTORY (x AND y) before blaming the sensor — both
    bugs here were visible there and nowhere else. Snapshot: `docs/cv-fusion.md` 2026-06-16.
+
+26. **⚑ The overfitting reckoning — exhaust CLASSICAL on a GENERALIZATION guardrail before ML
+   (2026-06-17). Plan: `docs/classical-foundation.md` — read it before "improving" any number.**
+   The owner flagged (correctly) that our headline wins may be overfit to individual sets. Code
+   audit confirmed three surfaces: (a) **CV's human-grade numbers ride a per-clip ORACLE** —
+   `cv_eval.py::CLIPS` carries hand-registered seeds `(x,y,w,h,t)` + per-clip rim/angle; the
+   `--gate`/`--tap` headline consumes them (a consumer app has none at first contact). The
+   seed-free `auto` path is the only honest generalization number, and it only checks
+   cadence-regularity — **nothing verifies the track rides the BAR vs a cadence-matching decoy**
+   (the #17 body-lock trap, unsolved programmatically). (b) **Watch rep detection is velocity
+   zero-crossings + THREE per-lift threshold regimes** (rows `gate_reps` 0.55×med; bench
+   0.20-0.55m; RDL 0.40-0.70m) — magnitude thresholds, not reading the vertical-position WAVE to
+   pick reps vs unrack/reposition/putdown structurally. (c) **No held-out/leave-one-out/blind
+   validation exists anywhere** — every score is in-sample; `auto_detect_count.py` even scars a
+   past *"9/14 seeder that fell apart on fresh data."* Principles now held: SEPARATE
+   product-legitimate inputs (user tap / plate-confirm — real UI) from ORACLE inputs (registered
+   known-good seed — circular); ONE param set across lifts/clips or it doesn't count; right-count
+   ≠ right-track (track-honesty: seed-jitter stability, vertical-dominance, periodicity,
+   working-plate priors); validate BLIND; interpretable > occasionally-accurate; ML judged against
+   the SAME guardrail. Three-track plan A→B→C: **A** generalization guardrail (provenance split +
+   leave-one-out + no-GT track-honesty) — the instrument, build first; **B** watch one
+   lift-agnostic position-domain wave segmenter (double-integrate to displacement, reps = the
+   set's own modal excursions, reject anomalies structurally — generalize #25's r0.82-0.95
+   position-cycle idea, kill the per-lift thresholds); **C** CV harden seed-free localization +
+   make track-honesty a GATE. Don't headline a new number until it survives the blind guardrail.
 
 ## ⚑ Video trigger — READ THIS
 
