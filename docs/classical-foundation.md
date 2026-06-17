@@ -4,6 +4,18 @@
 > [`docs/goals/classical-foundation-prompt.md`](goals/classical-foundation-prompt.md) into a
 > fresh session — it syncs, reads this doc, finds the current track, and advances it.
 
+## Status (source of truth — each session ticks this)
+
+- [ ] **Track A — generalization guardrail** (not started): provenance split, leave-one-out,
+  no-GT track-honesty checks.
+- [ ] **Track B — watch position-domain wave segmenter** (not started): one lift-agnostic
+  detector replacing the per-lift threshold stack.
+- [ ] **Track C — CV seed-free localization + track-honesty gate** (not started).
+
+Update this list (and add a CLAUDE.md learning) when a track lands. Detail below.
+
+---
+
 **Status: design note / active plan (2026-06-17).** This is the foundation we build the
 deterministic (non-ML) CV and watch-IMU estimators on *before* introducing learners. It
 exists because of a specific, well-founded worry, stated by the project owner:
