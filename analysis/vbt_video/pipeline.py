@@ -80,6 +80,11 @@ class VideoConfig:
     # learned/profile tracker (tracker='profile'): the working bumper colour for this gym/session
     # ('blue'/'red'/'green'/'yellow' or an (hsv_lo,hsv_hi) tuple). Reliable colour detect+size.
     plate_color: object = None
+    # LEARNED plate detector (tracker='learned', or the auto path's learned localization):
+    # path to a trained YOLO weights file (see scripts/build_plate_dataset.py +
+    # train_plate_detector.py). None → the classical paths only. ultralytics/torch are
+    # optional (requirements-ml.txt), imported lazily only when this is set.
+    learned_model: str = None
     # ADVISORY per-lift ROM prior band (lo_cm, hi_cm) — from dataset/priors/{lift}_rom.csv
     # (derived from Vitruve GT rows, dataset/tools/derive_rom_priors.py). Reps outside the
     # band get `rom_outlier: True` + a meta count. FLAG ONLY, never gates counts or
@@ -140,7 +145,16 @@ _TRACKERS = {
     # Profile tracker — per-gym plate colour -> reliable detect+size (beats SB abs-velocity).
     "profile": lambda cfg: ColorPlateTracker(*(PLATE_COLORS[cfg.plate_color]
                                               if isinstance(cfg.plate_color, str) else cfg.plate_color)),
+    # Learned plate detector (track-by-detection). Lazy import keeps torch optional.
+    "learned": lambda cfg: _learned_tracker(cfg.learned_model),
 }
+
+
+def _learned_tracker(model_path):
+    if not model_path:
+        raise ValueError("tracker='learned' requires VideoConfig.learned_model (a YOLO weights path)")
+    from .learned import LearnedPlateTracker      # lazy: only import ultralytics when used
+    return LearnedPlateTracker(model_path)
 
 
 class VideoVelocitySource:

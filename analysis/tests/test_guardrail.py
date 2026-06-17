@@ -157,3 +157,25 @@ def test_blind_in_sample_delta_positive_when_overfit():
     out = val.blind_in_sample_delta(items, fit, score)
     assert out["delta"] > 0
     assert out["blind_mean"] >= out["in_sample_mean"]
+
+
+# --- Track C / learned detector wiring (torch stays optional) ---
+def test_learned_tracker_requires_model_path():
+    # selecting the learned tracker without weights raises a clear error, not an import crash
+    import pytest as _pt
+    from vbt_video import VideoVelocitySource, VideoConfig
+    import numpy as _np
+    from vbt_video import ArrayFrameSource
+    frames = [_np.zeros((64, 64, 3), _np.uint8) for _ in range(20)]
+    with _pt.raises(ValueError):
+        VideoVelocitySource(VideoConfig(tracker="learned", learned_model=None)).estimate(
+            ArrayFrameSource(frames, 30.0))
+
+
+def test_base_pipeline_import_does_not_require_torch():
+    # importing the video pipeline must not drag in ultralytics/torch (lazy ML deps)
+    import importlib, sys
+    # vbt_video is already imported by the suite; assert the heavy dep wasn't pulled by it.
+    # (learned.py imports ultralytics only inside functions.)
+    import vbt_video.pipeline  # noqa: F401
+    assert "ultralytics" not in sys.modules or "vbt_video.learned" in sys.modules

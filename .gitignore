@@ -42,3 +42,7 @@ dataset/raw/*
 # HD masters live in R2 (docs/video-storage.md); resolve_clip() caches downloads
 # here (gitignored) — only the manifest pointer is committed.
 dataset/.clipcache/
+
+# Generated plate-detector training frames (regenerate via build_plate_dataset.py)
+dataset/cv_plate/images/
+dataset/cv_plate/labels/

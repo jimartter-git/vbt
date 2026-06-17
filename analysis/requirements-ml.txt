@@ -1,0 +1,15 @@
+# Optional ML dependencies for the CV plate DETECTOR (not needed for the classical
+# pipeline). Heavy (torch ~GB) and GPU-oriented — install only when training/running the
+# learned detector:  pip install -r analysis/requirements-ml.txt
+#
+# Training runs in a torch/GPU environment; this container is CPU-only (fine for a small
+# smoke train + inference, slow for a full run). Labels come from build_plate_dataset.py
+# (our verified tap-seeded tracks → YOLO-format boxes); the model is judged BLIND on
+# held-out clips via the Track A guardrail (no leave-frames-out leakage).
+ultralytics>=8.3
+torch>=2.2
+
+# NOTE: ultralytics depends on opencv-python, which CLOBBERS the opencv-contrib-python the
+# classical video pipeline needs (TrackerCSRT lives only in contrib). After installing this
+# file, restore contrib:  pip install --force-reinstall --no-deps opencv-contrib-python
+# (contrib is a superset, so it satisfies ultralytics too).
