@@ -388,6 +388,10 @@ class VideoVelocitySource:
             "m_per_px": mpp,
             "target_px": track.target_px,
             "track_confidence": track.confidence,
+            # the chosen position track (N×3 t,cx,cy px) — consumed by the no-GT
+            # track-honesty checks (vbt_video.honesty); the AUTO path forwards the
+            # winning candidate's meta, so this is always the track behind the count.
+            "trajectory": track.traj,
             "occlusion_used": used_occlusion,
             "scale_confidence": scale_conf,
             "scale_suspect": scale_suspect,

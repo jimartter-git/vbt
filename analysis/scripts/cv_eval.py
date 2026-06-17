@@ -25,6 +25,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from vbt_video import VideoConfig, VideoVelocitySource  # noqa: E402
 from vbt_video.plates import ScaleSpec  # noqa: E402
 from vbt_video.clip_store import resolve_clip  # noqa: E402
+from vbt_video import honesty as _honesty  # noqa: E402
+from vbt_analysis import validation as _prov  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REPS_CSV = os.path.join(REPO, "dataset", "rep_metrics.csv")
@@ -253,6 +255,121 @@ def run(clip, tracker, seed, adaptive, occlusion=False, band=None, scale=None, g
             meta.get("static_track_suspect", False))
 
 
+def run_full(clip, tracker, seed, gate=False, rim_px=None, scale=None, band=None):
+    """Like run(), but returns the full (reps, meta) so the guardrail can run the no-GT
+    track-honesty checks on the actual track behind the count."""
+    spec = None
+    if scale and tracker != "pose":
+        spec = ScaleSpec(top_plate=scale["plate"], kind=scale["kind"], angle=scale["angle"])
+    seed_time = None
+    if seed is not None and len(seed) == 5:
+        seed, seed_time = tuple(seed[:4]), float(seed[4])
+    rim_t = None
+    if rim_px is not None and isinstance(rim_px, (tuple, list)):
+        rim_px, rim_t = float(rim_px[0]), float(rim_px[1])
+    cfg = VideoConfig(tracker=tracker, rep_gate="relative", band=band, scale_spec=spec,
+                      plausibility_gate=gate, transit_aware=gate, rim_px=rim_px, rim_t=rim_t)
+    return VideoVelocitySource(cfg).estimate(clip, seed_bbox=seed, seed_time=seed_time)
+
+
+def _honesty_of(reps, meta):
+    """No-GT track-honesty verdict on the track meta carries (pipeline exposes
+    meta['trajectory'] = the chosen track). Returns the honesty dict or None."""
+    traj = meta.get("trajectory")
+    if traj is None:
+        return None
+    return _honesty.track_honesty(traj, target_px=meta.get("target_px"), reps=reps)
+
+
+def _guardrail_board(sets, jitter=False):
+    """The generalization guardrail (Track A). For each clip, score BOTH input
+    provenances and emit (count Δ vs GT, mean m/s, track-honesty pass/flag):
+
+      * seed-free  — the AUTO path (seed=None, no per-clip input): the BLIND headline.
+      * sim-tap    — the registered seed/rim (a real UI surface, but pre-found): the
+                     in-sample number, reported separately and labeled.
+
+    Headline = seed-free mean|err| (blind). The blind-vs-in-sample delta quantifies how
+    much the human tap/oracle is doing — a big gap is the overfit signal. A count whose
+    track FAILS honesty is marked ⚠ (right count, possibly wrong track)."""
+    import numpy as _np
+    print("\nGENERALIZATION GUARDRAIL (Track A) — provenance-split, no-GT track-honesty\n"
+          "  seed-free = BLIND headline (no per-clip input) · sim-tap = registered seed/rim\n")
+    hdr = (f"{'set':<16}{'tier':>9}{'GT':>4}  {'prov':<11}{'reps':>7}{'|e|':>4}"
+           f"{'mean':>7}  honesty")
+    print(hdr); print("-" * len(hdr))
+    blind, insample = [], []        # (err, weight)
+    for sid in sets:
+        clip_rel, trackers, note, band = CLIPS[sid][:4]
+        scale = CLIPS[sid][4] if len(CLIPS[sid]) > 4 else None
+        try:
+            clip = resolve_clip(clip_rel, REPO)
+        except Exception as e:
+            print(f"{sid:<16}  [clip unavailable: {type(e).__name__}]")
+            continue
+        refn, _, _, _ = gt_counts(sid)
+        gt = _true_gt(sid, refn)
+        tier, w = lift_weight(sid)
+        rim = RIM_PX.get(sid)
+        # seed-free (BLIND): the auto path, zero per-clip input
+        try:
+            f_reps, f_meta = run_full(clip, "auto", None)
+            n = len(f_reps); err = abs(n - gt)
+            h = _honesty_of(f_reps, f_meta)
+            mv = [r["mean_velocity"] for r in f_reps if not r.get("velocity_relative_only")]
+            mean = (sum(mv) / len(mv)) if mv else float("nan")
+            hs = ("ok" if (h and h["honest"]) else ("⚠ " + ",".join(h["flags"]) if h else "-"))
+            print(f"{sid:<16}{tier:>9}{gt:>4}  {_prov.SEED_FREE:<11}{n:>4}({n-gt:+d}){err:>4}"
+                  f"{(f'{mean:.2f}' if mean==mean else '  -'):>7}  {hs}")
+            blind.append((err, w))
+        except Exception as e:
+            print(f"{sid:<16}{tier:>9}{gt:>4}  {_prov.SEED_FREE:<11}  ERR {type(e).__name__}: {e}")
+        # sim-tap (IN-SAMPLE): the registered flow seed + rim-confirm, gate on (tap UX)
+        seed = trackers.get("flow")
+        if seed is not None:
+            prov = _prov.provenance(seed=seed, rim_px=rim, band=band, scale=scale)
+            try:
+                t_reps, t_meta = run_full(clip, "flow", seed, gate=True, rim_px=rim)
+                n = len(t_reps); err = abs(n - gt)
+                h = _honesty_of(t_reps, t_meta)
+                mv = [r["mean_velocity"] for r in t_reps if not r.get("velocity_relative_only")]
+                mean = (sum(mv) / len(mv)) if mv else float("nan")
+                hs = ("ok" if (h and h["honest"]) else ("⚠ " + ",".join(h["flags"]) if h else "-"))
+                jit = ""
+                if jitter:
+                    perts = [(dx, dy, 0.0) for dx in (-6, 0, 6) for dy in (-6, 0, 6)]
+                    sj = _honesty.seed_jitter_stability(
+                        lambda dx, dy, dt, s=seed: len(run_full(
+                            clip, "flow", _nudge(s, dx, dy), gate=True, rim_px=rim)[0]),
+                        perts, base_count=n)
+                    jit = f"  jitter={sj['agreement']:.2f}{'' if sj['stable'] else '⚠'}"
+                print(f"{'':<16}{'':>9}{'':>4}  {prov:<11}{n:>4}({n-gt:+d}){err:>4}"
+                      f"{(f'{mean:.2f}' if mean==mean else '  -'):>7}  {hs}{jit}")
+                if _prov.is_blind(prov):    # (shouldn't happen for a seed; guard anyway)
+                    blind.append((err, w))
+                else:
+                    insample.append((err, w))
+            except Exception as e:
+                print(f"{'':<16}{'':>9}{'':>4}  {prov:<11}  ERR {type(e).__name__}: {e}")
+    def _u(p): return _np.mean([e for e, _ in p]) if p else float("nan")
+    def _w(p): return (sum(e*w for e, w in p) / sum(w for _, w in p)) if p else float("nan")
+    print("\n── HEADLINE (blind = seed-free only) ──")
+    print(f"  seed-free  mean|err| = {_u(blind):.2f}   lift-weighted {_w(blind):.2f}   "
+          f"(n={len(blind)})   ← the generalization number")
+    print(f"  sim-tap    mean|err| = {_u(insample):.2f}   lift-weighted {_w(insample):.2f}   "
+          f"(n={len(insample)})   (in-sample; a real UI surface, reported NOT headlined)")
+    delta = _u(insample) - _u(blind)
+    print(f"  blind−insample delta = {(-delta):+.2f}  "
+          f"(how much the human tap closes vs blind; large = blind has headroom)")
+
+
+def _nudge(seed, dx, dy):
+    """Shift a seed bbox by (dx,dy) px, preserving an optional (x,y,w,h,t) time."""
+    s = list(seed)
+    s[0] += dx; s[1] += dy
+    return tuple(s)
+
+
 def _sb_count(sid):
     """SmartBarbell's reported rep count from the DB = its non-phantom mean_velocity rows
     (undercount-flagged reps ARE reps SB logged; phantom = a dropped rep)."""
@@ -327,7 +444,18 @@ def main():
                     help="PRODUCTION-REALISTIC eval: ignore the manual seeds and run the "
                          "automated paths only — flow with auto_seed_bbox + seed-free pose. "
                          "This is 'how well does it work with NO human tapping the plate'.")
+    ap.add_argument("--guardrail", action="store_true",
+                    help="Track A generalization guardrail: provenance-split (seed-free "
+                         "BLIND headline vs registered sim-tap) + no-GT track-honesty per "
+                         "clip + blind-vs-in-sample delta.")
+    ap.add_argument("--jitter", action="store_true",
+                    help="with --guardrail: also run seed-jitter stability on the sim-tap "
+                         "seeds (re-runs the estimator under ±6px nudges — slower).")
     args = ap.parse_args()
+
+    if args.guardrail:
+        _guardrail_board([args.only] if args.only else list(CLIPS), jitter=args.jitter)
+        return
 
     if args.auto:
         _auto_board([args.only] if args.only else list(CLIPS))
