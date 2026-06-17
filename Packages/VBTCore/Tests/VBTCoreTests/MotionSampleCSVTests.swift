@@ -8,15 +8,38 @@ final class MotionSampleCSVTests: XCTestCase {
             t: t,
             uaX: 0.01, uaY: -0.02, uaZ: 0.5,
             gX: 0, gY: 0, gZ: -1,
-            qW: 1, qX: 0, qY: 0, qZ: 0
+            qW: 1, qX: 0, qY: 0, qZ: 0,
+            rrX: 0.11, rrY: -0.22, rrZ: 0.33,
+            mfX: 12.0, mfY: -3.0, mfZ: 40.0
         )
     }
 
     func testHeaderMatchesContract() {
         XCTAssertEqual(
             MotionSampleCSV.header,
-            "t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z"
+            "t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z,rr_x,rr_y,rr_z,mf_x,mf_y,mf_z"
         )
+    }
+
+    func testRoundTripPreservesGyroAndMag() throws {
+        let decoded = try MotionSampleCSV.decode(MotionSampleCSV.encode([sample(5.0)]))
+        XCTAssertEqual(decoded.count, 1)
+        XCTAssertEqual(decoded[0].rrX, 0.11, accuracy: 1e-5)
+        XCTAssertEqual(decoded[0].rrZ, 0.33, accuracy: 1e-5)
+        XCTAssertEqual(decoded[0].mfZ, 40.0, accuracy: 1e-5)
+    }
+
+    func testDecodesLegacyElevenColumnFile() throws {
+        // A pre-gyro recording (original 11 columns) must still decode; rr_*/mf_* → 0.
+        let legacy = """
+        t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z
+        123.456000,0.010000,-0.020000,0.500000,0.000000,0.000000,-1.000000,1.000000,0.000000,0.000000,0.000000
+        """
+        let decoded = try MotionSampleCSV.decode(legacy)
+        XCTAssertEqual(decoded.count, 1)
+        XCTAssertEqual(decoded[0].uaZ, 0.5, accuracy: 1e-5)
+        XCTAssertEqual(decoded[0].rrX, 0.0, accuracy: 1e-5)   // optional, absent → 0
+        XCTAssertEqual(decoded[0].mfZ, 0.0, accuracy: 1e-5)
     }
 
     func testEncodeStartsWithHeaderAndHasRowPerSample() {

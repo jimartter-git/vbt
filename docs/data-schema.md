@@ -15,14 +15,27 @@ One row per `CMDeviceMotion` sample. Captured on watchOS via
 | `ua_x/y/z`     | g (gravity removed) | `.userAcceleration`              |
 | `g_x/y/z`      | g (unit-ish)        | `.gravity`                       |
 | `q_w/x/y/z`    | quaternion          | `.attitude.quaternion`           |
+| `rr_x/y/z` †   | rad/s               | `.rotationRate` (calibrated gyro)|
+| `mf_x/y/z` †   | µT                  | `.magneticField.field` (calibrated; accuracy varies) |
+
+† **Optional, appended later.** `rr_*` (gyro) and `mf_*` (magnetometer) were added
+after the first captures, so they are **not required**: recordings predating them
+lack the columns, and both the Swift decoder (`MotionSampleCSV`) and the Python
+loader (`ingest.load_session`, `OPTIONAL_COLUMNS`) default them to 0 when absent
+(`ingest.has_gyro()` reports whether a session carries a real gyro signal). The
+**gyro is the high-value addition** — it enables orientation fusion (a real
+Madgwick AHRS, which Apple's pre-fused `g`/`q` made untestable on the original
+schema) and is the richest feature for a future learned rep/velocity model. The
+magnetometer is logged opportunistically (its indoor/gym accuracy is often poor).
 
 ### CSV format (PoC default)
 
 Header row, then one sample per line, comma-separated, in this exact column
-order:
+order (the optional gyro/mag columns are kept **at the end** so older 11-column
+files still parse by name):
 
 ```
-t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z
+t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z,rr_x,rr_y,rr_z,mf_x,mf_y,mf_z
 ```
 
 - `t` is `CMDeviceMotion.timestamp` (seconds since device boot). It is monotonic

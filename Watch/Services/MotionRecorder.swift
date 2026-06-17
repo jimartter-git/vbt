@@ -100,12 +100,16 @@ final class MotionRecorder: ObservableObject {
 
     private func append(_ dm: CMDeviceMotion) {
         let q = dm.attitude.quaternion
+        let rr = dm.rotationRate            // calibrated gyro, rad/s
+        let mf = dm.magneticField.field     // calibrated magnetic field, µT (accuracy varies)
         samples.append(
             MotionSample(
                 t: dm.timestamp,
                 uaX: dm.userAcceleration.x, uaY: dm.userAcceleration.y, uaZ: dm.userAcceleration.z,
                 gX: dm.gravity.x, gY: dm.gravity.y, gZ: dm.gravity.z,
-                qW: q.w, qX: q.x, qY: q.y, qZ: q.z
+                qW: q.w, qX: q.x, qY: q.y, qZ: q.z,
+                rrX: rr.x, rrY: rr.y, rrZ: rr.z,
+                mfX: mf.x, mfY: mf.y, mfZ: mf.z
             )
         )
         sampleCount = samples.count

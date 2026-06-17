@@ -7,8 +7,17 @@ import Foundation
 /// it lives behind this same type so call sites don't change.
 public enum MotionSampleCSV {
 
-    /// The exact header line (and column order) of a recording CSV.
-    public static let header = "t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z"
+    /// The exact header line (and column order) of a recording CSV. The gyro
+    /// (`rr_*`) and magnetometer (`mf_*`) columns were APPENDED after the first
+    /// captures — kept at the end so older 11-column files still parse (decode
+    /// resolves by name and defaults absent columns to 0).
+    public static let header =
+        "t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z,rr_x,rr_y,rr_z,mf_x,mf_y,mf_z"
+
+    /// Columns required to decode a row; the rest (`rr_*`, `mf_*`) are optional so
+    /// pre-gyro recordings remain readable.
+    private static let requiredColumns =
+        ["t", "ua_x", "ua_y", "ua_z", "g_x", "g_y", "g_z", "q_w", "q_x", "q_y", "q_z"]
 
     /// Format one sample as a CSV row (no trailing newline).
     ///
@@ -22,6 +31,8 @@ public enum MotionSampleCSV {
             f(s.uaX), f(s.uaY), f(s.uaZ),
             f(s.gX), f(s.gY), f(s.gZ),
             f(s.qW), f(s.qX), f(s.qY), f(s.qZ),
+            f(s.rrX), f(s.rrY), f(s.rrZ),
+            f(s.mfX), f(s.mfY), f(s.mfZ),
         ].joined(separator: ",")
     }
 
@@ -54,7 +65,9 @@ public enum MotionSampleCSV {
         } else {
             for (i, name) in expected.enumerated() { indexFor[name] = i }
         }
-        for name in expected where indexFor[name] == nil {
+        // Only the original columns are required; gyro/magnetometer are optional so
+        // pre-gyro recordings still decode (their `rr_*`/`mf_*` default to 0).
+        for name in requiredColumns where indexFor[name] == nil {
             throw CSVError.missingColumn(name)
         }
 
@@ -68,11 +81,20 @@ public enum MotionSampleCSV {
                 }
                 return d
             }
+            // Optional column: 0 if the header lacks it or the row is short (old files).
+            func opt(_ name: String) -> Double {
+                guard let i = indexFor[name], i < cols.count, let d = Double(cols[i]) else {
+                    return 0
+                }
+                return d
+            }
             return MotionSample(
                 t: try val("t"),
                 uaX: try val("ua_x"), uaY: try val("ua_y"), uaZ: try val("ua_z"),
                 gX: try val("g_x"), gY: try val("g_y"), gZ: try val("g_z"),
-                qW: try val("q_w"), qX: try val("q_x"), qY: try val("q_y"), qZ: try val("q_z")
+                qW: try val("q_w"), qX: try val("q_x"), qY: try val("q_y"), qZ: try val("q_z"),
+                rrX: opt("rr_x"), rrY: opt("rr_y"), rrZ: opt("rr_z"),
+                mfX: opt("mf_x"), mfY: opt("mf_y"), mfZ: opt("mf_z")
             )
         }
     }

@@ -1,7 +1,10 @@
 """Load recorded sessions (and generate synthetic ones for testing).
 
 CSV column contract — see ../../docs/data-schema.md and VBTCore/MotionSample:
-    t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z
+    required: t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z
+    optional (appended later): rr_x,rr_y,rr_z (gyro rad/s), mf_x,mf_y,mf_z (mag µT)
+The gyro/magnetometer columns are OPTIONAL: recordings made before they were added
+lack them, so we keep them out of the required set and default them to 0 when absent.
 """
 
 from __future__ import annotations
@@ -16,14 +19,34 @@ COLUMNS = [
     "q_w", "q_x", "q_y", "q_z",
 ]
 
+# Optional columns added after the first captures (gyro + magnetometer). Present in
+# newer recordings; defaulted to 0 for older ones so the historical corpus still loads.
+OPTIONAL_COLUMNS = [
+    "rr_x", "rr_y", "rr_z",      # calibrated rotation rate (gyro), rad/s
+    "mf_x", "mf_y", "mf_z",      # calibrated magnetic field, µT (accuracy varies)
+]
+
 
 def load_session(csv_path: str) -> pd.DataFrame:
-    """Load a recorded watch session CSV into a DataFrame, validating columns."""
+    """Load a recorded watch session CSV into a DataFrame, validating columns.
+
+    Returns the required columns plus any optional (gyro/mag) columns; absent
+    optional columns are filled with 0 so older and newer recordings share a shape."""
     df = pd.read_csv(csv_path)
     missing = [c for c in COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(f"{csv_path} missing required columns: {missing}")
-    return df[COLUMNS].astype(float)
+    for c in OPTIONAL_COLUMNS:
+        if c not in df.columns:
+            df[c] = 0.0
+    return df[COLUMNS + OPTIONAL_COLUMNS].astype(float)
+
+
+def has_gyro(df: pd.DataFrame) -> bool:
+    """True if the session carries a real (non-zero) gyro signal — i.e. it was
+    recorded after the gyro columns were added. Lets analysis opt into orientation
+    fusion only when the data supports it."""
+    return bool(np.any(df[["rr_x", "rr_y", "rr_z"]].to_numpy() != 0.0))
 
 
 def sample_utc(csv_path: str, t):
@@ -97,4 +120,6 @@ def synthetic_set(
         "q_y": np.zeros(n),
         "q_z": np.zeros(n),
     })
+    for c in OPTIONAL_COLUMNS:           # keep shape in lock-step with load_session
+        df[c] = 0.0
     return df
