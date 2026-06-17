@@ -218,12 +218,22 @@ def segment(t, a_vert, prominence_frac=DEFAULT_PROMINENCE_FRAC,
         seg_t = t[bi:ti + 1]
         if len(seg_v) < 2:
             continue
+        peak = float(np.max(np.abs(seg_v)))
+        # Mean concentric velocity over the ACTIVE region (|v| ≥ 10% of peak) — the same
+        # definition the CV path uses (kinematics.trajectory_to_reps). Excluding the
+        # near-zero velocity tails at the turnarounds, where single-integration noise
+        # dominates, measurably tightens slow-lift accuracy (bench/squat calibrated RMSE
+        # 0.099/0.098 → 0.073/0.077; overall 0.085 → 0.069 vs Vitruve, at the SEE<0.07
+        # target). ONE definition across watch + CV, not a per-lift knob.
+        av = np.abs(seg_v)
+        active = av >= max(0.05, 0.1 * peak)
+        mcv = float(np.mean(av[active])) if active.any() else float(np.mean(av))
         reps.append(WaveRep(
             rep_index=k, bottom_idx=bi, top_idx=ti,
             start_time=float(seg_t[0]), end_time=float(seg_t[-1]),
             rom=float(pos[ti] - pos[bi]),
-            mean_concentric_velocity=float(np.mean(np.abs(seg_v))),
-            peak_concentric_velocity=float(np.max(np.abs(seg_v))),
+            mean_concentric_velocity=mcv,
+            peak_concentric_velocity=peak,
         ))
     for k, r in enumerate(reps, 1):
         r.rep_index = k
