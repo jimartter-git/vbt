@@ -43,6 +43,6 @@ dataset/raw/*
 # here (gitignored) — only the manifest pointer is committed.
 dataset/.clipcache/
 
-# Generated plate-detector training frames (regenerate via build_plate_dataset.py)
-dataset/cv_plate/images/
-dataset/cv_plate/labels/
+# Generated plate-detector dataset + training runs (regenerate via build_plate_dataset.py;
+# data.yaml carries a machine-specific absolute path, frames/weights are derived artifacts).
+dataset/cv_plate/
