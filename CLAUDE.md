@@ -541,6 +541,36 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     in-sample.** Tests: `tests/test_guardrail.py` (16), `tests/test_wave_segment.py` (8), honesty
     integration in `tests/test_video_pipeline.py`. Status checklist: `docs/classical-foundation.md`.
 
+28. **⚑ Watch velocity tuned to target + the watch schema enriched + the CV plate DETECTOR
+    started (2026-06-17).** Three moves after the classical foundation landed. **(a) Watch velocity
+    #1 — at target.** Measured the wave segmenter's velocity vs Vitruve (`scripts/watch_vel_board.py`:
+    per-rep RMSE/r/bias + a per-lift CONSTANT-offset-calibrated RMSE, learning #4). Error is
+    BIAS-dominated (RDL raw 0.206 → calibrated 0.036 — almost all the −0.20 wrist-vs-hip-hinge
+    offset). The lever was the MV DEFINITION, not re-anchoring (ROM/duration HURT, 0.089): mean over
+    the ACTIVE concentric region (|v|≥10% peak, excluding the noisy near-zero turnaround tails — the
+    SAME definition the CV path uses) cut overall calibrated RMSE **0.085 → 0.070, at the SEE<0.07
+    target** (bench/squat 0.099/0.098 → 0.074/0.080); counts unchanged 13/15. **(b) Watch velocity #2
+    — orientation is a NON-lever (proven, don't chase).** Projecting via the attitude quaternion gives
+    BYTE-IDENTICAL results to the gravity projection (Apple derives `g` and `q` from the same fusion),
+    and there's no raw gyro in the old CSVs to run a real Madgwick anyway. The bench/squat residual is
+    fundamental slow-lift single-integration SNR, not orientation. **(c) Watch schema enriched:** added
+    `rotationRate` (gyro) + `magneticField` to `MotionSample`/CSV/`ingest` — APPENDED + OPTIONAL so the
+    15 gyro-less sessions still load (`has_gyro()`; legacy 11-col files decode). Gyro is the unlock for
+    a REAL future Madgwick test + the richest IMU-learner feature. Swift authored, FLAG FOR FIRST BUILD
+    (no Xcode here). **(d) CV plate DETECTOR — started, scaffold + smoke-trainable.** ML timing call:
+    CV plate detection is the right FIRST learner (bounded vision, pretrained backbones, small-data
+    friendly, targets the real seed-free dark-iron gap); the IMU learner stays deferred (n=1 → memorizes,
+    the guardrail would flag it). Keystone = data-for-FREE: `scripts/build_plate_dataset.py` converts
+    our ~26 tap-verified flow tracks into YOLO plate boxes (1875 train/397 val) with NO hand-labeling —
+    SPLIT BY CLIP (leave-clips-out, never leave-frames-out leakage) and ONLY from tracks that pass the
+    no-GT honesty checks (BN-4 auto-skipped: rack-contaminated → not_vertical_dominant). `vbt_video/
+    learned.py` (LearnedPlateTracker + `learned_seed_candidates`) plugs in behind the SAME `Tracker`
+    seam (judged by the same kinematics + Track A honesty); ultralytics/torch LAZY (optional
+    `requirements-ml.txt`; note: its opencv-python clobbers opencv-contrib → reinstall contrib).
+    `scripts/train_plate_detector.py` trains YOLO + BLIND-evals seed-free rep counts on held-out clips
+    vs the heuristic. `dataset/cv_plate/` is gitignored (regenerable). Training is a torch/GPU step
+    (container is CPU-only; smoke-trains, slow). A learner earns its place only on the blind guardrail.
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip
