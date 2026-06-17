@@ -154,6 +154,16 @@ CLIPS = {
     "20260616-BN-5": ("dataset/raw/20260616-BN_5.mov", {"flow": (363, 927, 60, 60, 24.2), "detect": None},
                       "bench 205lb x10 - AUTO 10/10 EXACT (was 11); --tap+rim abs RMSE 0.023 "
                       "(beats SB 0.033), VL 55 vs 59 (4pp)", None),
+    # 06-15 barbell rows (R2 masters, resolve_clip → .clipcache; upright-portrait coords).
+    # 1-tap plate/hub seeds verified 10/10 EXACT (auto grabbed rack decoys); rim_px not yet
+    # measured, so absolute MV is scale_suspect (inflated) but the COUNT and scale-invariant
+    # velocity-LOSS are valid. ROW-3 is 4K (needs a proxy), ROW-5 auto already 10/10.
+    "20260615-ROW-1": ("dataset/raw/20260615-ROW-1.mov", {"flow": (600, 1110, 130, 130, 10.0), "detect": None},
+                       "row, 1-tap plate seed @10s: 10/10 EXACT (auto failed-decoy). rim_px TBD", None),
+    "20260615-ROW-2": ("dataset/raw/20260615-ROW-2.mov", {"flow": (525, 1140, 150, 150, 6.0), "detect": None},
+                       "row, 1-tap plate seed @6s: 10/10 EXACT (auto failed-decoy). rim_px TBD", None),
+    "20260615-ROW-4": ("dataset/raw/20260615-ROW-4.mov", {"flow": (519, 1215, 150, 150, 6.0), "detect": None},
+                       "row, 1-tap plate seed @6s: 10/10 EXACT (auto failed-decoy). rim_px TBD", None),
 }
 
 
