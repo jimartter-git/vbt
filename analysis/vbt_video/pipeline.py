@@ -299,7 +299,7 @@ class VideoVelocitySource:
                 if fm.get("static_track_suspect", False) or not (3 <= len(fr) <= 18):
                     continue
                 if len(fr) < min_count:
-                    continue                      # a blob may rescue, never reduce the count
+                    continue                      # a blob must STRICTLY exceed the Hough count
                 h = track_honesty(fm.get("trajectory"), target_px=fm.get("target_px"), reps=fr)
                 fm["track_honesty"] = h
                 score = fm.get("track_confidence", 0.0) * _regularity(fr)
@@ -318,7 +318,12 @@ class VideoVelocitySource:
         h_honest, h_any = _eval(hough)
         hough_win = h_honest or h_any
         hough_count = len(hough_win[1]) if hough_win else 0
-        b_honest, b_any = _eval(blobs, min_count=hough_count) if blobs else (None, None)
+        # blob must see STRICTLY MORE raw motion cycles than the Hough winner to override it.
+        # When raw counts TIE, the Hough (edge-located) plate is more trustworthy — the blob's
+        # equal-count track just adds plausibility-gate-evading noise (ROW-3-0601: both raw 11,
+        # but the gate drops Hough's phantom → 10 while the blob's 11th survives → over-count).
+        # Strictly-greater keeps the genuine rescues (ROW-2 5→10, BN-4 9→10) and drops the ties.
+        b_honest, b_any = _eval(blobs, min_count=hough_count + 1) if blobs else (None, None)
         # combine the two sources' winners by the same honest-preferred, higher-score rule
         cands_h = [c for c in (h_honest, b_honest) if c]
         cands_a = [c for c in (h_any, b_any) if c]

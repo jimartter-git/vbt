@@ -584,12 +584,16 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     PROPOSALS (flow-verification + the #27 track-honesty gate still decide; a bad blob can't win a
     confident count). **The key to no main-lift regression: blobs are a RECALL-ONLY source.**
     `seed_candidates(return_split=True)` returns (hough, blobs); the auto path
-    (`pipeline._estimate_auto`) lets a blob win ONLY if its count ≥ the Hough winner's — it RESCUES a
-    missed/decoy-seeded plate (higher count) but can never REDUCE a count and regress a main lift
-    (#15). The naive "always augment" won ROW-2 5→10 + BN-4 9→10 but REGRESSED BN-3 11→10 (a blob
-    under-counted and out-scored the real Hough plate); the recall rule keeps both wins AND restores
-    BN-3=11. **Validated seed-free: ROW-2 5→10 EXACT, BN-4 9→10 EXACT; SQ-1/BN-1/BN-3/ROW-3/DL-2
-    byte-identical.** Honest ceiling that REMAINS: ROW-1-0608 stays 8/10 — its dark plate is at rest
+    (`pipeline._estimate_auto`) lets a blob win ONLY if its RAW count is STRICTLY GREATER than the
+    Hough winner's — a genuine rescue (the blob sees more motion cycles), never a tie or a reduction.
+    Two failures shaped the rule: (1) naive "always augment" won ROW-2/BN-4 but REGRESSED BN-3 11→10
+    (a blob under-counted and out-scored the real Hough plate) → fixed by "blob count ≥ Hough". (2)
+    "≥" then over-counted ROW-3-0601 10→11: Hough and blob TIED at raw 11, but the plausibility gate
+    drops Hough's terminal phantom (→10) while the blob's 11th evades it; "≥" let the higher-scoring
+    blob win the tie → over-count. STRICTLY-GREATER drops ties (prefer the edge-located Hough plate)
+    and keeps only real rescues. **Validated seed-free (strict rule): ROW-2 5→10 EXACT, BN-4 9→10
+    EXACT, ROW-4-0608 10 EXACT; SQ-1/BN-1/BN-3/ROW-3-0601/DL-2 all correct (no regression).**
+    Honest ceiling that REMAINS: ROW-1-0608 stays 8/10 — its dark plate is at rest
     (no flow texture) and the motion blob finds the BODY, not the plate (the #17 body-lock shape, the
     appearance limit a learned detector is the real fix for). The recall rule structurally guarantees
     counts only RISE vs Hough-only, so the ONLY residual regression risk is an over-count on a
