@@ -93,6 +93,27 @@ velocity included) while rescuing the ones that previously defeated every tracke
 
 The validated absolute/default path is byte-for-byte unchanged behind every flag.
 
+## Seed-free blind headline (2026-06-18) — dark-iron localization closed most of the gap
+
+The **seed-free AUTO** path (no tap, no per-clip config — the only honest generalization number)
+over all 26 local clips, after the motion-blob dark-iron recall (learning #29):
+
+| metric | value |
+|---|---|
+| **mean \|err\| (unweighted)** | **0.31** |
+| mean \|err\| (lift-weighted) | **0.24** |
+| **MAIN-lift mean \|err\|** | **0.19** |
+| exact | **20/26** |
+| vs SmartBarbell | SB **2.57** |
+
+Up from the documented seed-free ~0.55 (learning #14), driven by the dark-iron recall (ROW-2
+5→10, BN-4 9→10, ROW-4-0608 →10 — all now exact). Validated with a full-corpus no-regression
+diff (zero regressions). The remaining seed-free misses are honest/known: ROW-1-0608 8/10 (at-rest
+dark plate — the learned-detector case), DL-2/DL-3-0605 11/10 (the +1 active-region over-count),
+RDL-1 7/8 (segmentation), DL-1-2024 3/2 (detect, <4 reps), SC-1 9/11 (single-DB accessory). Board:
+`cv_eval.py --guardrail` / `_trackc_check.py`. **The tap path (sim-tap) remains human-grade
+(≈0.12, learning #18); this is the zero-touch number that now also beats SmartBarbell decisively.**
+
 ## Generalized (automated) performance — honest status (2026-06-05)
 
 ⚠ **The scoreboard above uses MANUAL seeds (a human tapping the plate in frame 0).**
