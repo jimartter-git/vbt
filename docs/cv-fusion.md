@@ -95,24 +95,30 @@ The validated absolute/default path is byte-for-byte unchanged behind every flag
 
 ## Seed-free blind headline (2026-06-18) — dark-iron localization closed most of the gap
 
-The **seed-free AUTO** path (no tap, no per-clip config — the only honest generalization number)
-over all 26 local clips, after the motion-blob dark-iron recall (learning #29):
+The **seed-free AUTO** path (no tap, no per-clip config — the only honest generalization number),
+after the motion-blob dark-iron recall (learning #29), over **ALL 34 clips** (26 local + the 8 R2
+clips that needed `boto3` to fetch — the 06-16 deep-dish bench ×5 + 06-15 rows ×3, previously
+silently untested):
 
-| metric | value |
-|---|---|
-| **mean \|err\| (unweighted)** | **0.31** |
-| mean \|err\| (lift-weighted) | **0.24** |
-| **MAIN-lift mean \|err\|** | **0.19** |
-| exact | **20/26** |
-| vs SmartBarbell | SB **2.57** |
+| metric | 26 local | **all 34** |
+|---|---|---|
+| mean \|err\| (unweighted) | 0.31 | **0.32** |
+| mean \|err\| (lift-weighted) | 0.24 | **0.28** |
+| MAIN-lift mean \|err\| | 0.19 | **0.24** |
+| exact | 20/26 | **25/34** |
+| vs SmartBarbell | — | SB **2.57** |
 
-Up from the documented seed-free ~0.55 (learning #14), driven by the dark-iron recall (ROW-2
-5→10, BN-4 9→10, ROW-4-0608 →10 — all now exact). Validated with a full-corpus no-regression
-diff (zero regressions). The remaining seed-free misses are honest/known: ROW-1-0608 8/10 (at-rest
-dark plate — the learned-detector case), DL-2/DL-3-0605 11/10 (the +1 active-region over-count),
-RDL-1 7/8 (segmentation), DL-1-2024 3/2 (detect, <4 reps), SC-1 9/11 (single-DB accessory). Board:
-`cv_eval.py --guardrail` / `_trackc_check.py`. **The tap path (sim-tap) remains human-grade
-(≈0.12, learning #18); this is the zero-touch number that now also beats SmartBarbell decisively.**
+Up from the documented seed-free ~0.55 (learning #14). The recall produced TWO families of win:
+(1) dark-iron rescues ROW-2-0608 5→10, BN-4-0609 9→10, ROW-4-0608 →10; (2) **the 06-15 rows that
+the CLIPS notes said "auto failed-decoy, needs 1-tap" now seed-free EXACT (ROW-1/2-0615 10/10)** —
+same rack-decoy problem the motion blob solves. No regression: the 06-16 deep-dish benches stay
+BN-1/2/3 10/10 exact (full-corpus diff clean). The remaining 9 misses are honest/known:
+BN-4/5-0616 +1 (put-down/rack cycle — segmentation, the transit gate fixes it on the tap path),
+ROW-1-0608 8/10 + ROW-4-0615 9/10 (at-rest dark plate → blob finds the body, the learned-detector
+case), DL-2/3-0605 +1 (active-region over-count), RDL-1 7/8 (segmentation), DL-1-2024 3/2 (detect,
+<4 reps), SC-1 9/11 (single-DB accessory). Board: `cv_eval.py --guardrail` / `_trackc_check.py`.
+**The tap path (sim-tap) remains human-grade (≈0.12, learning #18); this is the zero-touch number
+that now also beats SmartBarbell decisively.**
 
 ## Generalized (automated) performance — honest status (2026-06-05)
 

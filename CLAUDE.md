@@ -597,7 +597,12 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     (no flow texture) and the motion blob finds the BODY, not the plate (the #17 body-lock shape, the
     appearance limit a learned detector is the real fix for). **No-regression CONFIRMED by a
     full-corpus seed-free diff (all 26 local clips): ZERO regressions — every non-dark clip
-    byte-matches its pre-blob baseline, the dark-iron wins hold, ROW-3-0601 fixed.** Tests:
+    byte-matches its pre-blob baseline, the dark-iron wins hold, ROW-3-0601 fixed.** Then the 8
+    R2-only clips (needed `boto3` — the 06-16 deep-dish bench ×5 + 06-15 rows ×3, silently untested
+    before) confirmed it: **06-16 BN-1/2/3 stay 10/10 (no regression on deep-dish iron), and the
+    06-15 rows the CLIPS notes called "auto failed-decoy, needs 1-tap" are now seed-free EXACT
+    (ROW-1/2-0615 10/10) — the SAME rack-decoy the blob solves.** Full 34-clip seed-free = 0.32
+    mean|err| (main 0.24, 25/34 exact), up from ~0.55 (#14). Tests:
     `tests/test_video_pipeline.py` (return_split shape, plate-sized blobs). Board:
     `scripts/_trackc_check.py` (seed-free counts + honesty + flip telemetry).
 
