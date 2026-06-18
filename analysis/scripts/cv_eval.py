@@ -184,6 +184,19 @@ CLIPS = {
                        "RDL 2026-06-17, R2 1080p — seed-free board add", None),
     "20260615-ROW-5": ("dataset/raw/20260615-ROW-5.mov", {"detect": None},
                        "row 2026-06-15, R2 1080p — seed-free board add", None),
+    # --- registered 2026-06-18 (user uploaded the missing dates to R2; register_r2.py mapped
+    # canonical set_ids). Direct-scoreable resolutions. The 4K masters (20260424-BN-1/2,
+    # 20260527-SQ-1) go through dataset/tools/transcode_proxy.py, not here. ---
+    "20260529-DL-1": ("dataset/raw/20260529-DL-1.mov", {"detect": None}, "deadlift top set, GT stance", None),
+    "20260529-DL-2": ("dataset/raw/20260529-DL-2.mov", {"detect": None}, "deadlift backoff (no GT yet)", None),
+    "20260529-DL-3": ("dataset/raw/20260529-DL-3.mov", {"detect": None}, "deadlift backoff, GT stance", None),
+    "20260529-DL-4": ("dataset/raw/20260529-DL-4.mov", {"detect": None}, "deadlift backoff (no GT yet)", None),
+    "20260602-BN-1": ("dataset/raw/20260602-BN-1.mov", {"detect": None}, "bench 1032x580 low-res, GT SB/stance", None),
+    "20260602-BN-2": ("dataset/raw/20260602-BN-2.mov", {"detect": None}, "bench 298x648 tiny, GT SB/vitruve", None),
+    "20260602-BN-3": ("dataset/raw/20260602-BN-3.mov", {"detect": None}, "bench 440x826 low-res, GT SB/vitruve", None),
+    "20260611-IB-2": ("dataset/raw/20260611-IB-2.mov", {"detect": None}, "incline 155lb, GT vitruve(+SB)", None),
+    "20260611-IB-3": ("dataset/raw/20260611-IB-3.mov", {"detect": None}, "incline 155lb, GT vitruve(+SB)", None),
+    "20260611-IB-4": ("dataset/raw/20260611-IB-4.mov", {"detect": None}, "incline 175lb RPE8, GT vitruve(+SB)", None),
 }
 
 
