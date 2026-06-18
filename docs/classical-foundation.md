@@ -6,6 +6,25 @@
 
 ## Status (source of truth — each session ticks this)
 
+> **⚑ SESSION HANDOFF (2026-06-18) — what the next chat must pick up:**
+> 1. **Finish full-corpus CV scoring + recompute the honest aggregate.** The board now covers the
+>    whole corpus (~48 clips) after registering every R2 upload, but scoring was mid-run at session
+>    end — see the `?` cells in `docs/corpus-inventory.md`. Re-run `scripts/_trackc_check.py` on the
+>    17 new non-4K clips (downloads cached), proxy+score the 4K ones (`dataset/tools/transcode_proxy.py`
+>    auto-detects them: 06-13 DL-6 + ROW-3 + the new 04-24 BN / 05-27 SQ), then regen `inventory.py`
+>    and **replace the corrected (provisional) seed-free headline in `docs/cv-fusion.md`** with the
+>    true full-corpus number (it's WORSE than the 0.31 subset figure — that's the honest finding).
+> 2. **Register + CV-score the 06-18 incline videos** (in R2, GT+watch already ingested): add to the
+>    manifest (`register_r2.py`) + `cv_eval.CLIPS`, then score.
+> 3. **Investigate the failures the full corpus exposed** (don't tune them away — diagnose): 06-17
+>    SQ-1 seed-free **5/10** (main-lift squat — decoy/mirror/rotation?), 06-13 deadlifts **+1/+2**
+>    (720px proxy vs learning #21's exact-at-1280px? or a setup rep?), 06-18 incline watch IB-1/2 **+1**.
+> 4. **Run `scripts/coverage.py` at start** — it now lists the live R2 bucket; should be clean except
+>    4K-pending + the GT-only (no video/watch) historical sets.
+> 5. **Merge this task branch → canonical** (`claude/vbt-watchos-architecture-wu6y8`): ~30 commits of
+>    CV/watch/guardrail/docs work live ONLY on `claude/classical-foundation-guardrail-iu77ma` (pushed);
+>    canonical has only the data uploads. Funnel per the branch protocol (pending owner OK).
+
 - [x] **Track A — generalization guardrail** (landed 2026-06-17): provenance split, leave-one-out,
   no-GT track-honesty checks. **Instruments:** `vbt_analysis/validation.py` (`provenance()` →
   seed-free / simulated-tap / oracle; `leave_one_out()` + `blind_in_sample_delta()`),

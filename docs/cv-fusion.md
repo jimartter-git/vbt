@@ -93,7 +93,18 @@ velocity included) while rescuing the ones that previously defeated every tracke
 
 The validated absolute/default path is byte-for-byte unchanged behind every flag.
 
-## Seed-free blind headline (2026-06-18) — dark-iron localization closed most of the gap
+## ⚠ HEADLINE CORRECTION (2026-06-18, later) — 0.31 was a SUBSET, full corpus is worse
+
+The 0.31 / 25-of-34 number below was the **registered-board subset** — it excluded clips that
+turned out to be harder, so it overstated seed-free generalization (the overfitting-by-omission
+trap, learning #30). Testing the FULL corpus (after registering every upload) surfaced real
+misses the subset hid: **06-17 SQ-1 5/10** (a main-lift squat), the **06-13 deadlifts +1/+2**
+(6/4/3/3/10 vs GT 5/3/2/2/8), **06-18 incline watch IB-1/2 +1**. So the true full-corpus seed-free
+mean|err| is HIGHER than 0.31. **A recompute over all ~48 clips was IN PROGRESS at session end —
+the next chat must finish scoring (see docs/corpus-inventory.md `?` cells) and replace the number
+below.** Do not cite 0.31 as the full-corpus result. The tap path (~0.12) is unaffected.
+
+## Seed-free blind headline (2026-06-18) — dark-iron localization closed most of the gap (SUBSET — see correction above)
 
 The **seed-free AUTO** path (no tap, no per-clip config — the only honest generalization number),
 after the motion-blob dark-iron recall (learning #29), over **ALL 34 clips** (26 local + the 8 R2
