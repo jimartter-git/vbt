@@ -34,5 +34,7 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>VBT records your lift on video to measure rep velocity and range of motion.</string>
 </dict>
 </plist>

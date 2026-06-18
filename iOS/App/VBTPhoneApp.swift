@@ -6,8 +6,13 @@ struct VBTPhoneApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(connectivity)
+            TabView {
+                CaptureView()
+                    .tabItem { Label("Capture", systemImage: "camera") }
+                ContentView()
+                    .environmentObject(connectivity)
+                    .tabItem { Label("Sessions", systemImage: "applewatch") }
+            }
         }
     }
 }

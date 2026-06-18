@@ -129,10 +129,18 @@ to mark set boundaries usefully (sync is refined post-hoc anyway, so this is for
 
 ## Build phases (each independently useful)
 
-1. **In-app HD60 camera + unified set controller + clicker.** `AVCaptureSession` (1080p/4K60,
-   HEVC, no audio) + `AVCaptureEventInteraction`; capture the UTC anchor; tie a `setId` across
-   streams; reuse the existing watch `WCSession` relay. Replaces the stock camera; gives
-   phone-clock-synced video. *The bulk of the work — Medium.*
+1. **In-app HD60 camera + unified set controller + clicker — AUTHORED (2026-06-18), pending
+   first build.** `AVCaptureSession` (1080p60 HEVC, no audio) + `AVCaptureEventInteraction`;
+   captures the UTC/uptime anchor into the same `RecordingMetadata` envelope the watch writes
+   (`Packages/VBTCore`), so the `.mov` + `<stem>.json` sidecar is cross-source alignable (#23).
+   Files: `iOS/Services/VideoRecorder.swift` (camera + HEVC + 60fps format select + sidecar),
+   `iOS/Services/CaptureEventController.swift` (clicker via `AVCaptureEventInteraction`, 17.2+),
+   `iOS/App/SetCaptureController.swift` (the hub: one identity + anchor per set, Phase 2/3 hooks
+   marked), `iOS/Views/CaptureView.swift` (preview + record button + clicker host), `Capture`
+   tab in `iOS/App/VBTPhoneApp.swift`, `NSCameraUsageDescription` in `iOS/Resources/Info.plist`.
+   **Can't compile here (no Xcode) — see the in-file FIRST-BUILD TODOs** (verify a real 1080p60
+   format, HEVC acceptance, the clicker's actual HID event, deployment target 17.0 vs the 17.2
+   API guard). `xcodegen generate` picks the new files up (the iOS target globs `iOS/`).
 2. **AirPods head-motion capture** (`CMHeadphoneMotionManager`) + **HealthKit HR read**. Small
    code; validate AirPods-motion delivery alongside the running capture session on hardware.
    *Low.*
