@@ -40,6 +40,17 @@
   headline. Integration-tested (`tests/test_video_pipeline.py`). **Follow-up (not blocking):
   working-plate localization priors in candidate generation to lift the seed-free dark-iron
   under-counts toward the tap path; full R2 board when network permits.**
+- [~] **Learned plate detector — scaffolded; proven DATA-limited, not compute-limited (2026-06-18).**
+  Free labels from verified tap-seeded tracks (`scripts/build_plate_dataset.py`: clip-split, honest-
+  gated → 1875 train / 397 val YOLO boxes), drop-in `LearnedPlateTracker`/`learned_seed_candidates`
+  (`vbt_video/learned.py`, lazy torch), train+BLIND-eval (`scripts/train_plate_detector.py`). A
+  CPU train (50 epochs requested, stopped at 15 — held-out mAP FLAT at ~0.22 while train loss fell
+  steadily, the overfit/data-limited signature) blind-evals to **DL-2 10/10 (bumper, beats the
+  heuristic), BN-2 1/10 (dark iron), SQ-4 0/10 (hex)**. Verdict: the approach works (generalizes on
+  bumpers blind), the limiter is corpus size/diversity (dark iron + hex), NOT GPU-hours — so the
+  next CV move is CLASSICAL working-plate localization + more varied clips, with the learned
+  detector revisited when the corpus is deeper. Overnight runbook:
+  `docs/goals/cv-localization-overnight-prompt.md`.
 
 Update this list (and add a CLAUDE.md learning) when a track lands. Detail below.
 
