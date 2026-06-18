@@ -740,3 +740,23 @@ def test_auto_path_reports_honesty_verdict():
         ArrayFrameSource(_frames(), FPS))
     assert "track_honesty" in meta and "track_honest" in meta
     assert "honesty_flipped_pick" in meta            # no-regression telemetry present
+
+
+# --- seed-free dark-iron recall: motion-blob proposals + return_split (learning #29) ---
+def test_seed_candidates_return_split_shape():
+    from vbt_video.track import seed_candidates
+    hough, blobs = seed_candidates(ArrayFrameSource(_frames(), FPS), return_split=True)
+    assert isinstance(hough, list) and isinstance(blobs, list)
+    # flat form == hough + blobs (the auto path consumes the split; everything else the flat list)
+    flat = seed_candidates(ArrayFrameSource(_frames(), FPS))
+    assert len(flat) == len(hough) + len(blobs)
+
+
+def test_motion_blob_seeds_are_plate_sized():
+    # the clean moving disc → any blob proposal is plate-sized and on the disc's lane,
+    # never a frame-filling body box
+    from vbt_video.track import seed_candidates
+    _, blobs = seed_candidates(ArrayFrameSource(_frames(), FPS), return_split=True)
+    for (x, y, w, h) in blobs:
+        assert 0.4 * (2 * R) < max(w, h) < 2.0 * (2 * R)      # plate-sized, not body-sized
+        assert abs((x + w / 2) - W / 2) < W * 0.3              # near the disc's x-lane

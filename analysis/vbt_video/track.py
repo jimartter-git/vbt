@@ -874,7 +874,8 @@ PLATE_COLORS = {
 }
 
 
-def seed_candidates(source, topk=5, work_w=256, stride=2, min_r_frac=0.04, max_r_frac=0.30):
+def seed_candidates(source, topk=5, work_w=256, stride=2, min_r_frac=0.04, max_r_frac=0.30,
+                    n_blob=2, return_split=False):
     """Return up to `topk` candidate plate seed-bboxes (x,y,w,h, original px), ranked by motion
     (disc×column), each SIZED to its rim ELLIPSE (not the small Hough hub — a too-small seed
     makes flow over-count). The no-tap auto path runs flow on each and keeps the one that holds
@@ -925,6 +926,74 @@ def seed_candidates(source, topk=5, work_w=256, stride=2, min_r_frac=0.04, max_r
                 break
         rad = em if em is not None else 1.1 * orr
         out.append((int(ox - rad), int(oy - rad), int(2 * rad), int(2 * rad)))
+    # DARK-IRON RECALL: AUGMENT the Hough proposals with up to `n_blob` motion-blob
+    # candidates. Hough doesn't just go STARVED on low-contrast iron — it returns the wrong
+    # circles (a stored rack plate the working plate sweeps in front of), filling topk with
+    # DECOYS so the working plate is never proposed (verified on 20260608-ROW-2: 5 Hough
+    # boxes, all on the upper stored plate, none on the bottom-hang working plate). Motion
+    # BLOBS don't need edges — the working plate is a plate-sized, compact, high-motion
+    # region. These are PROPOSALS only: flow-verification + the track-honesty gate still
+    # decide, so a bad blob can't win a confident count, and on clips where the Hough plate
+    # is already best it stays best (validated by the whole-corpus no-regression diff).
+    blobs = _motion_blob_seeds(grays, M, col, minR, maxR, early, inv, work_w,
+                               exclude=out, want=n_blob)
+    # `return_split` lets the auto path treat blobs as a RECALL-only source (a blob may
+    # rescue a missed plate → higher count, but never REDUCE the Hough count — the rule
+    # that keeps dark-iron wins without regressing a main lift, learning #15).
+    if return_split:
+        return out, blobs
+    return out + blobs
+
+
+def _motion_blob_seeds(grays, M, col, minR, maxR, early, inv, work_w, exclude, want):
+    """Propose plate-sized, compact, high-motion blobs as seed bboxes — the seed-free
+    dark-iron fallback when HoughCircles is starved. Uses EARLY-frame differencing to
+    locate the moving plate near frame 0 (where the tracker seeds), filters to plate-
+    sized + compact regions (rejecting the elongated body), and ranks by early motion ×
+    the clip's column activity at that lane. Returns up to `want` (x,y,w,h) original-px
+    boxes, ellipse-sized, deduped against `exclude`."""
+    early_g = grays[: max(3, len(grays) // 4)]
+    if len(early_g) < 2:
+        return []
+    E = np.zeros_like(grays[0], dtype=np.float32)
+    for a, b in zip(early_g, early_g[1:]):
+        E += cv2.absdiff(a, b).astype(np.float32)
+    H, W = E.shape
+    thr = float(E.mean() + 1.5 * E.std())
+    mask = (E > max(thr, 1.0)).astype(np.uint8) * 255
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    props = []
+    for c in cnts:
+        x, y, w, h = cv2.boundingRect(c)
+        r = (w + h) / 4.0
+        if not (minR <= r <= maxR):                 # plate-sized only
+            continue
+        if not (0.4 <= w / max(1, h) <= 2.5):        # compact (reject elongated body/arms)
+            continue
+        cx, cy = x + w / 2.0, y + h / 2.0
+        x0, x1 = max(0, x), min(W, x + w)
+        y0, y1 = max(0, y), min(H, y + h)
+        em = float(E[y0:y1, x0:x1].mean()) if (x1 > x0 and y1 > y0) else 0.0
+        cm = float(col[x0:x1].mean()) if x1 > x0 else 0.0
+        props.append((em * cm, cx, cy, r))
+    props.sort(reverse=True)
+    out = []
+    excl = [( (b[0] + b[2] / 2.0), (b[1] + b[3] / 2.0) ) for b in exclude]
+    for _, cx, cy, r in props:
+        ox, oy, orr = cx * inv, cy * inv, r * inv
+        if any(abs(ox - ex) < r * inv and abs(oy - ey) < r * inv for ex, ey in excl):
+            continue                                 # near an existing candidate → skip
+        em = None
+        for img in early[:4]:
+            em = _ellipse_radius(img, ox, oy, orr)
+            if em is not None:
+                break
+        rad = em if em is not None else 1.1 * orr
+        out.append((int(ox - rad), int(oy - rad), int(2 * rad), int(2 * rad)))
+        excl.append((ox, oy))
+        if len(out) >= want:
+            break
     return out
 
 

@@ -288,18 +288,42 @@ class VideoVelocitySource:
         # higher-scoring dishonest one; only if NO candidate is honest do we keep the best
         # dishonest flow track — flagged track_honest=False — rather than silently trust it.
         from .honesty import track_honesty
-        best_honest, best_any = None, None
-        for seed in seed_candidates(src):
-            fr, fm = VideoVelocitySource(replace(base, tracker="flow")).estimate(src, seed_bbox=seed)
-            if fm.get("static_track_suspect", False) or not (3 <= len(fr) <= 18):
-                continue
-            h = track_honesty(fm.get("trajectory"), target_px=fm.get("target_px"), reps=fr)
-            fm["track_honesty"] = h
-            score = fm.get("track_confidence", 0.0) * _regularity(fr)
-            if best_any is None or score > best_any[0]:
-                best_any = (score, fr, fm)
-            if h["honest"] and (best_honest is None or score > best_honest[0]):
-                best_honest = (score, fr, fm)
+
+        def _eval(seeds, min_count=0):
+            """Flow+honesty over a candidate list → (best_honest, best_any) by score.
+            `min_count` drops candidates below it — the RECALL rule for blob seeds."""
+            bh, ba = None, None
+            for seed in seeds:
+                fr, fm = VideoVelocitySource(replace(base, tracker="flow")).estimate(
+                    src, seed_bbox=seed)
+                if fm.get("static_track_suspect", False) or not (3 <= len(fr) <= 18):
+                    continue
+                if len(fr) < min_count:
+                    continue                      # a blob may rescue, never reduce the count
+                h = track_honesty(fm.get("trajectory"), target_px=fm.get("target_px"), reps=fr)
+                fm["track_honesty"] = h
+                score = fm.get("track_confidence", 0.0) * _regularity(fr)
+                if ba is None or score > ba[0]:
+                    ba = (score, fr, fm)
+                if h["honest"] and (bh is None or score > bh[0]):
+                    bh = (score, fr, fm)
+            return bh, ba
+
+        # Hough proposals first; then BLOB proposals as a RECALL-only source (dark-iron
+        # localization, learning #29): a blob may only win if its count ≥ the Hough winner's
+        # — it rescues a missed/decoy-seeded plate (ROW-2 5→10, BN-4 9→10) but can never
+        # REDUCE a count and regress a main lift (BN-3 stays 11). Hough candidates keep the
+        # validated behaviour exactly when no blob clears the bar.
+        hough, blobs = seed_candidates(src, return_split=True)
+        h_honest, h_any = _eval(hough)
+        hough_win = h_honest or h_any
+        hough_count = len(hough_win[1]) if hough_win else 0
+        b_honest, b_any = _eval(blobs, min_count=hough_count) if blobs else (None, None)
+        # combine the two sources' winners by the same honest-preferred, higher-score rule
+        cands_h = [c for c in (h_honest, b_honest) if c]
+        cands_a = [c for c in (h_any, b_any) if c]
+        best_honest = max(cands_h, key=lambda c: c[0]) if cands_h else None
+        best_any = max(cands_a, key=lambda c: c[0]) if cands_a else None
         best = best_honest or best_any
         if best is not None:
             _, f_reps, f_meta = best
