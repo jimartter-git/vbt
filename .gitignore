@@ -49,3 +49,6 @@ dataset/cv_plate/
 # YOLO default output dir + downloaded pretrained weights (ultralytics drops these in cwd).
 runs/
 *.pt
+
+# Transcoded 4K->720p proxies (regenerable via dataset/tools/transcode_proxy.py)
+dataset/raw/*_proxy.mp4

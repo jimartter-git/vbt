@@ -621,7 +621,7 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     what it flags before reporting an aggregate (a number on a curated subset is the blind spot,
     not a result). Full GT corpus today = 48 videos (26 local + 22 R2) + 15 watch sessions; CV
     board reaches 41 — the 7 remaining are 4K (06-13 deadlifts + 06-15 ROW-3) needing a proxy
-    transcode (`tools/transcode_proxy.py`).
+    transcode (`dataset/tools/transcode_proxy.py`).
 
 ## ⚑ Video trigger — READ THIS
 
@@ -636,7 +636,7 @@ dataset ingestion trigger first so the board has a GT count to beat.
 **⚑ Always REGISTER + RECONCILE (learning #30):** uploads land in R2 (`manifest.csv`) and don't
 auto-appear in the board — add every new clip to `cv_eval.CLIPS` and run `scripts/coverage.py`
 until it's clean (exit 0). 4K/120fps masters are impractical to flow directly — compress to an
-upright ~720p proxy with `tools/transcode_proxy.py` first, then register the proxy. When asked
+upright ~720p proxy with `dataset/tools/transcode_proxy.py` first, then register the proxy. When asked
 to "improve CV", score the WHOLE video corpus, not the clips already in the board.
 
 ## ⚑ Ingestion trigger — READ THIS
