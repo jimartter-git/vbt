@@ -51,6 +51,41 @@ def manifest_clips():
     return out
 
 
+def manifest_keys():
+    p = os.path.join(RAW, "manifest.csv")
+    return ({r.get("key") or r["filename"] for r in csv.DictReader(open(p))}
+            | {r["filename"] for r in csv.DictReader(open(p))}) if os.path.exists(p) else set()
+
+
+def r2_bucket_keys():
+    """LIVE listing of the R2 bucket — the only way to catch a video UPLOADED but not yet
+    in the manifest (the registry-vs-reality trap one level down). Returns set of keys or
+    None if boto3/credentials are unavailable."""
+    try:
+        import boto3
+        ak, sk = os.environ.get("R2_ACCESS_KEY_ID"), os.environ.get("R2_SECRET_ACCESS_KEY")
+        if not (ak and sk):
+            return None
+        ep = os.environ.get("R2_ENDPOINT",
+                            "https://6747d02e809e8e72687bb909e5cf302a.r2.cloudflarestorage.com")
+        bucket = os.environ.get("R2_BUCKET", "vbt-video")
+        s3 = boto3.client("s3", endpoint_url=ep, aws_access_key_id=ak, aws_secret_access_key=sk)
+        keys, tok = set(), None
+        while True:
+            kw = {"Bucket": bucket, "MaxKeys": 1000}
+            if tok:
+                kw["ContinuationToken"] = tok
+            r = s3.list_objects_v2(**kw)
+            keys |= {o["Key"] for o in r.get("Contents", [])}
+            if r.get("IsTruncated"):
+                tok = r.get("NextContinuationToken")
+            else:
+                break
+        return keys
+    except Exception:
+        return None
+
+
 def main():
     gt = gt_vendors()
     manifest = manifest_clips()
@@ -84,6 +119,20 @@ def main():
             print(f"  ⚠ {s:<18} GT={sorted(gt.get(s, []))}")
     else:
         print("  ✓ every watch session is in the watch board")
+
+    print("\n=== R2 bucket vs manifest — UPLOADED but not registered ===")
+    r2 = r2_bucket_keys()
+    if r2 is None:
+        print("  (skipped — boto3 / R2 creds unavailable)")
+    else:
+        man_keys = manifest_keys()
+        unreg = sorted(k for k in r2 if k not in man_keys)
+        if unreg:
+            gaps += len(unreg)
+            for k in unreg:
+                print(f"  ⚠ {k}  — in R2 but NOT in manifest.csv (add a row + register in the board)")
+        else:
+            print(f"  ✓ all {len(r2)} R2 objects are in the manifest")
 
     print("\n=== GT without any video OR watch capture (data filed, no signal source) ===")
     orphan = sorted(s for s in gt if s not in video_sids and s not in watch_csvs)
