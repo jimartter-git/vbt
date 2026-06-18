@@ -606,6 +606,23 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     `tests/test_video_pipeline.py` (return_split shape, plate-sized blobs). Board:
     `scripts/_trackc_check.py` (seed-free counts + honesty + flip telemetry).
 
+30. **⚑ USE THE WHOLE CORPUS — the eval boards are hand-maintained registries that silently
+    skip un-registered uploads (2026-06-18).** The CV board (`cv_eval.CLIPS`) and watch boards
+    (the `SESSIONS` dicts in `wave_eval.py`/`watch_vel_board.py`) are NOT the corpus — they are
+    subsets a human typed in. Clips uploaded to R2 / data committed to git do NOT appear in an
+    eval until someone registers them, so for a while the CV board silently omitted the 06-13
+    deadlifts (×6), 06-17 squats (×4) + RDLs (×2), and 06-15 ROW-3/5 — all with Vitruve GT. **The
+    SOURCE OF TRUTH is the data, not the registry:** video = `dataset/raw/manifest.csv` (R2
+    masters, fetched with `boto3` + `R2_ACCESS_KEY_ID/SECRET`) ∪ local `dataset/raw/*.mov|mp4`;
+    watch = all `dataset/raw/*_watch.csv`; GT = per-rep rows in `rep_metrics.csv`. **RULE: when
+    working a modality, use ALL of it — every video for CV, every watch session for watch.** The
+    guard is `scripts/coverage.py`: it reconciles the boards against the corpus and exits non-zero
+    on any gap. **Run it at the START of any CV/watch work and after every upload**, and register
+    what it flags before reporting an aggregate (a number on a curated subset is the blind spot,
+    not a result). Full GT corpus today = 48 videos (26 local + 22 R2) + 15 watch sessions; CV
+    board reaches 41 — the 7 remaining are 4K (06-13 deadlifts + 06-15 ROW-3) needing a proxy
+    transcode (`tools/transcode_proxy.py`).
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip
@@ -615,6 +632,12 @@ plate not a decoy + VERIFY the seed** (Steps 1–2, learning #12), run `cv_eval.
 the sanity gates (Step 3), pick tracker/scale (Step 4), then register the clip + record
 findings (Step 5). If a `…-VITRUVE.csv`/vendor screenshot came with it, file those via the
 dataset ingestion trigger first so the board has a GT count to beat.
+
+**⚑ Always REGISTER + RECONCILE (learning #30):** uploads land in R2 (`manifest.csv`) and don't
+auto-appear in the board — add every new clip to `cv_eval.CLIPS` and run `scripts/coverage.py`
+until it's clean (exit 0). 4K/120fps masters are impractical to flow directly — compress to an
+upright ~720p proxy with `tools/transcode_proxy.py` first, then register the proxy. When asked
+to "improve CV", score the WHOLE video corpus, not the clips already in the board.
 
 ## ⚑ Ingestion trigger — READ THIS
 
@@ -639,6 +662,11 @@ little or no context — assume it is a VBT measurement to add to `dataset/`.** 
 
 Never invent metadata — ask. Never compare across vendors on `rep_index`; align on
 `true_rep`. See `dataset/INGESTION.md` for the full step-by-step.
+
+**⚑ After ingesting, RECONCILE (learning #30):** a new GT'd set should be reachable by its
+modality's eval. Run `scripts/coverage.py` — if it flags the set as "GT without any video/watch"
+it's set-level-only (fine), but if a video/watch exists it must be wired into the board. A watch
+CSV (`<set_id>_watch.csv`) goes into the `SESSIONS` dicts; a video into `cv_eval.CLIPS`.
 
 ## IMU Signal Processing Guidance
 
