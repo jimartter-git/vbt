@@ -1,6 +1,10 @@
 # Video pipeline (analysis/vbt_video). Installs on top of requirements.txt.
 opencv-contrib-python-headless>=4.10   # vision ops + CSRT/KCF trackers; headless = no GUI/CI-friendly
 av>=12                                 # PyAV: frame-accurate, VFR-safe decode (bundled ffmpeg)
+boto3>=1.34                            # fetch HD masters from Cloudflare R2 (clip_store.resolve_clip)
+#   — needs R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY in the env; without it only LOCAL clips
+#     (dataset/raw/*.mov|mp4) + clips with a public manifest `url` are reachable. The 06-16 bench
+#     (×5) + 06-15 rows (×3) live ONLY in R2, so the full 34-clip board needs this.
 # numpy / scipy come from requirements.txt
 # Optional — only for the equipment-free PoseTracker (tracker="pose") and the anthro
 # scale source (scale="anthro"). Imported lazily, so the rest of the pipeline (and CI)
