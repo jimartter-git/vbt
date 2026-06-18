@@ -33,16 +33,23 @@
   **Harness:** `cv_eval.py --guardrail` headlines the BLIND seed-free count, reports the registered
   seed/rim run separately labeled (sim-tap/oracle), and prints a per-clip honesty pass/flag + the
   blind−in-sample delta. Unit-tested (`tests/test_guardrail.py`, 16).
-- [~] **Track B — watch position-domain wave segmenter** (built + validated 2026-06-17, ONE config):
-  `vbt_analysis/wave_segment.py` reads the vertical-displacement WAVE — reps = bottom→top excursions
-  near the set's MODAL amplitude, terminal unrack/putdown stripped structurally — replacing the
-  per-lift threshold stack. **13/15 watch sessions EXACT, mean|Δ| 0.13, ONE config, no per-lift
-  thresholds** (bench 5/5, which the old detector needed inline overrides for). Per-lift velocity
-  bias is interpretable & physical (RDL −0.20 m/s = the documented wrist-vs-hip-hinge offset; bench
-  −0.02). Misses are honest: ROW-3 −1 (an integration-merged turnaround) and SQ-3 +1 (a fast-TnG
-  extra excursion that's structurally identical to a real rep — declined to overfit a gap threshold
-  to GT, learning #15). Board: `scripts/wave_eval.py` (`--blind` = leave-one-session-out). Tests:
-  `tests/test_wave_segment.py` (8). **TODO:** wire into `analyze_session.py`, mirror in Swift.
+- [~] **Track B — watch position-domain wave segmenter** (built 2026-06-17, extended 2026-06-18, ONE
+  config): `vbt_analysis/wave_segment.py` reads the vertical-displacement WAVE — reps = bottom→top
+  excursions near the set's MODAL amplitude, terminal unrack/putdown stripped structurally —
+  replacing the per-lift threshold stack. **16/18 watch sessions EXACT, mean|Δ| 0.11, blind
+  leave-one-session-out delta +0.00, ONE config, no per-lift thresholds** (bench 5/5 + incline bench
+  3/3, the lifts the old detector needed inline overrides for). The 06-18 incline-bench over-counts
+  were the unrack/setup registering as a leading rep → fixed with a LEADING-only gap strip (learning
+  #32): the first excursion followed by a gap ≫ the set's modal rhythm is the setup-then-settle,
+  structurally distinct from a real rep 1 (a settling breath sits BEFORE rep 1) — and asymmetric
+  from the rejected TRAILING-gap rule (a paused rep vs rerack stays ambiguous). Per-lift velocity bias
+  is interpretable & physical (RDL −0.08 m/s = the wrist-vs-hip-hinge offset; bench +0.08); overall
+  calibrated RMSE 0.071 at the SEE<0.07 target, the active-region ZUPT MV definition unchanged (#28;
+  the drift-removed bootstrap velocity was measured and LOSES on aggregate). Remaining misses are
+  honest: ROW-3 −1 (integration-merged turnaround) and SQ-3 +1 (fast-TnG extra, the trailing-gap
+  ambiguity, declined to overfit per #15). Boards: `scripts/wave_eval.py` (`--blind`),
+  `scripts/watch_vel_board.py`; doc `docs/watch-imu.md`. Tests: `tests/test_wave_segment.py` (10).
+  **TODO:** wire into `analyze_session.py`, mirror in Swift.
 - [x] **Track C — CV seed-free track-honesty gate** (landed 2026-06-17; localization-priors
   follow-up noted): the seed-free AUTO path (`pipeline._estimate_auto`) now GATES flow candidates on
   the no-GT track-honesty checks — it prefers an HONEST candidate over a higher-scoring dishonest

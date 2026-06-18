@@ -623,6 +623,36 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     board reaches 41 — the 7 remaining are 4K (06-13 deadlifts + 06-15 ROW-3) needing a proxy
     transcode (`dataset/tools/transcode_proxy.py`).
 
+32. **⚑ Watch counts 16/18 via a LEADING-only gap strip — the unrack/setup is structurally
+    asymmetric from a rerack (2026-06-18).** The 06-18 incline-bench watch sessions (IB-1/IB-2)
+    OVER-counted +1: the wave segmenter saw the SETUP — the lifter presses the bar off the hooks
+    (a leading excursion), then settles — as an extra rep. The existing terminal strip is
+    AMPLITUDE-only and missed them because the unrack press is near-modal amplitude (IB-2 0.94×).
+    CLAUDE.md #27/wave_segment had already REJECTED a time-gap rule, but only for the TRAILING end,
+    where it's genuinely ambiguous (SQ-1 a real paused rep after an 8 s breath vs SQ-3 a rerack are
+    identical by gap/amplitude/bottom/eccentric depth → a trailing-gap rule dropped SQ-1's real rep,
+    a #15 violation). **The LEADING end is NOT symmetric, and a gap rule IS safe there:** a
+    setup/unrack happens BEFORE the set and is followed by an anomalously large settling gap before
+    the rep rhythm begins, whereas a real first rep is followed by a NORMAL inter-rep gap (any
+    settling breath sits BEFORE rep 1, where there is no detected excursion to mis-strip). So **"the
+    first excursion is followed by a gap ≫ the set's modal rhythm" identifies the unrack
+    unambiguously and cannot catch a real rep-1-after-a-breath.** Fix: `_strip_terminal_anomalies`
+    leading clause = sub-modal amplitude OR isolated-by-gap (`_LEADING_GAP_FRAC = 2.5`, in INDEX
+    space so no fs); trailing stays amplitude-only. **Result: 14/18 → 16/18 EXACT, mean|Δ| 0.11,
+    blind leave-one-session-out delta +0.00** (no leak — it's ONE global constant, same value all
+    sessions); zero regressions; the 2 residuals are the documented honest limits (ROW-3 −1
+    integration-merged turnaround, SQ-3 +1 fast-TnG trailing-gap ambiguity). The threshold sits in a
+    WIDE empirical gap (every real leading excursion ≤1.8× the modal gap; the two setups 3.8×/7.4×)
+    and counts hold 16/18 across the whole plateau K∈[2.0, 3.5] — robust, not knife-edge. **Velocity
+    side-benefit, NOT a re-tune:** correct IB boundaries tightened IB calibrated RMSE 0.093→0.076
+    and overall 0.074→0.071 (at the SEE<0.07 target) with the active-region ZUPT MV definition
+    UNCHANGED (#28 respected). Measured the velocity *method* too: the drift-removed bootstrap
+    velocity correlates better per-set (r 0.46 vs 0.17) but LOSES on the aggregate (calibrated RMSE
+    0.085 vs 0.074, velocity-loss error 13.6 vs 12.0pp) — so ZUPT-active is the classical ceiling,
+    not a local choice; per-rep r>0.95 stays statistically capped on slow narrow-MV lifts (#25), and
+    the ~12pp slow-lift velocity-loss residual is the honest limit (gyro Madgwick + Achermann 100Hz
+    are the named unlocks). New doc: `docs/watch-imu.md`. Tests: `tests/test_wave_segment.py` (10).
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip

@@ -81,6 +81,23 @@ def test_leading_unrack_stripped():
     assert len(ws.reps_from_wave(pos, fs, strip_terminal=True)) == 8
 
 
+def test_leading_unrack_isolated_by_gap_stripped():
+    # a NEAR-MODAL leading excursion (an unrack press off the hooks) that is then
+    # followed by a long settling gap before the set begins is stripped by the
+    # leading-gap rule even though its amplitude is full (learning #32, IB-1/IB-2).
+    pos, fs = _wave(_bob(0.5, 2.0), np.zeros(int(_FPS * 5)),
+                    *[_bob(0.5, 2.0) for _ in range(8)])
+    assert len(ws.reps_from_wave(pos, fs, strip_terminal=True)) == 8
+
+
+def test_real_first_rep_with_normal_gap_kept():
+    # the leading-gap rule keys on an anomalous gap AFTER the first excursion, NOT on
+    # being first — a full-amplitude rep 1 with a normal inter-rep gap is kept (the
+    # asymmetry guard: a settling breath sits BEFORE rep 1 with no excursion to strip).
+    pos, fs = _wave(*[_bob(0.5, 2.0) for _ in range(9)])
+    assert len(ws.reps_from_wave(pos, fs, strip_terminal=True)) == 9
+
+
 # --- full accel→velocity round trip ------------------------------------------
 def _accel_from_displacement(pos, fps=_FPS):
     return np.gradient(np.gradient(pos, 1.0 / fps), 1.0 / fps)

@@ -58,15 +58,27 @@ _ANCHOR_DRIFT_HZ = 0.05
 # first in-band rep — the same terminal-only philosophy as the CV plausibility/transit
 # gates (kinematics.py).
 #
-# An EARLIER design also stripped on an anomalous time gap (a rerack happens after a
-# pause). Rejected after measurement: a real paused rep (SQ-1: a full-amplitude rep
-# after an 8 s breath) and a rerack are INDISTINGUISHABLE by gap, amplitude, bottom
-# position, AND eccentric depth — every structural feature matches. The gap rule traded
-# one main-lift miss for another (dropped SQ-1's real rep to catch SQ-3's extra), a net
-# wash that violated "never drop a full-ROM main-lift rep" (learning #15). So we keep
-# only the amplitude rule and accept SQ-3's structurally-real-looking extra excursion as
-# an honest limit, rather than overfit a gap threshold to ground truth.
+# An EARLIER design stripped on an anomalous time gap at EITHER end (a rerack happens
+# after a pause). Rejected FOR THE TRAILING END after measurement: a real paused rep
+# (SQ-1: a full-amplitude rep after an 8 s breath) and a rerack are INDISTINGUISHABLE by
+# gap, amplitude, bottom position, AND eccentric depth — every structural feature
+# matches. A trailing gap rule traded one main-lift miss for another (dropped SQ-1's real
+# rep to catch SQ-3's extra), a net wash that violated "never drop a full-ROM main-lift
+# rep" (learning #15). So the trailing strip stays AMPLITUDE-ONLY and we accept SQ-3's
+# structurally-real-looking extra as an honest limit.
+#
+# The LEADING end is NOT symmetric, and a gap rule IS safe there (learning #32, 06-18
+# incline bench IB-1/IB-2). A setup/unrack happens BEFORE the set: the lifter presses the
+# bar off the hooks (a leading excursion), then SETTLES — so the first excursion is
+# followed by an anomalously large gap, after which the rep rhythm begins. A real first
+# rep, by contrast, is followed by a NORMAL inter-rep gap (any settling pause sits BEFORE
+# rep 1, where there is no detected excursion to mis-strip). So "first excursion followed
+# by a gap ≫ the set's modal rhythm" identifies the unrack unambiguously and cannot catch
+# a real rep-1-after-a-breath. (The residual theoretical risk — a full rep 1 then a long
+# rest-pause before rep 2 — is behaviourally unusual; documented, not chased.)
 _TERMINAL_AMP_FRAC = 0.75         # end excursion < this × modal amplitude → anomalous
+_LEADING_GAP_FRAC = 2.5           # leading excursion isolated by > this × the set's modal
+#                                   inter-rep gap → an unrack/setup-then-settle (LEADING only)
 
 
 @dataclass
@@ -124,14 +136,24 @@ def _strip_terminal_anomalies(pairs, pos):
     modal_amp = float(np.median(amps))
     if modal_amp <= 0:
         return pairs
+    # The set's modal rhythm — inter-excursion gap in INDEX space (a ratio, units cancel,
+    # so no fs needed). A robust median: a lone large setup gap can't corrupt it.
+    gaps = np.array([pairs[k + 1][0] - pairs[k][1] for k in range(len(pairs) - 1)], float)
+    modal_gap = float(np.median(gaps)) if len(gaps) else 0.0
 
     def sub_modal(i):
         return amps[i] < _TERMINAL_AMP_FRAC * modal_amp
 
+    def leading_isolated(i):
+        # excursion i is followed by a gap ≫ the set's rhythm → unrack/setup (leading only)
+        return modal_gap > 0 and (pairs[i + 1][0] - pairs[i][1]) > _LEADING_GAP_FRAC * modal_gap
+
     lo, hi = 0, len(pairs)
+    # trailing: AMPLITUDE only (a trailing gap is ambiguous — paused rep vs rerack).
     while hi - lo > 3 and sub_modal(hi - 1):
         hi -= 1
-    while hi - lo > 3 and sub_modal(lo):
+    # leading: sub-modal amplitude OR isolated-by-gap (the unrack/setup-then-settle).
+    while hi - lo > 3 and (sub_modal(lo) or leading_isolated(lo)):
         lo += 1
     return pairs[lo:hi]
 
