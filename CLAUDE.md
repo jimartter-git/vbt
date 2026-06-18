@@ -571,6 +571,32 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     vs the heuristic. `dataset/cv_plate/` is gitignored (regenerable). Training is a torch/GPU step
     (container is CPU-only; smoke-trains, slow). A learner earns its place only on the blind guardrail.
 
+29. **⚑ Seed-free dark-iron localization via motion-blob RECALL — classical, no ML (2026-06-18).**
+    The learned detector is DATA-limited (learning #28: a 50-epoch CPU train held-out mAP flat
+    ~0.22; blind DL-2 10/10 bumper but BN-2 1/10 dark iron, SQ-4 0/10 hex), so the right next CV move
+    was CLASSICAL localization. Root cause of the seed-free dark-iron under-count (ROW-2-0608 5/10,
+    BN-4-0609 9/10): HoughCircles doesn't merely starve on low-contrast iron — it returns the WRONG
+    circles (a STORED rack plate the working plate sweeps in front of), filling `topk` with DECOYS so
+    the working plate is never proposed (verified: ROW-2's 5 Hough boxes all sit on the upper stored
+    plate at y≈350-445, none on the bottom-hang working plate at y≈480). Fix: `_motion_blob_seeds`
+    (track.py) proposes plate-sized, COMPACT, high-motion blobs from early-frame differencing —
+    motion needs no edges, so it localizes dark iron Hough can't — added to the candidate pool as
+    PROPOSALS (flow-verification + the #27 track-honesty gate still decide; a bad blob can't win a
+    confident count). **The key to no main-lift regression: blobs are a RECALL-ONLY source.**
+    `seed_candidates(return_split=True)` returns (hough, blobs); the auto path
+    (`pipeline._estimate_auto`) lets a blob win ONLY if its count ≥ the Hough winner's — it RESCUES a
+    missed/decoy-seeded plate (higher count) but can never REDUCE a count and regress a main lift
+    (#15). The naive "always augment" won ROW-2 5→10 + BN-4 9→10 but REGRESSED BN-3 11→10 (a blob
+    under-counted and out-scored the real Hough plate); the recall rule keeps both wins AND restores
+    BN-3=11. **Validated seed-free: ROW-2 5→10 EXACT, BN-4 9→10 EXACT; SQ-1/BN-1/BN-3/ROW-3/DL-2
+    byte-identical.** Honest ceiling that REMAINS: ROW-1-0608 stays 8/10 — its dark plate is at rest
+    (no flow texture) and the motion blob finds the BODY, not the plate (the #17 body-lock shape, the
+    appearance limit a learned detector is the real fix for). The recall rule structurally guarantees
+    counts only RISE vs Hough-only, so the ONLY residual regression risk is an over-count on a
+    clip that was already exact — being confirmed by a full-corpus seed-free diff. Tests:
+    `tests/test_video_pipeline.py` (return_split shape, plate-sized blobs). Board:
+    `scripts/_trackc_check.py` (seed-free counts + honesty + flip telemetry).
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip
