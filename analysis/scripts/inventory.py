@@ -55,7 +55,7 @@ def _cv_auto_from_logs():
     the _trackc_check board format and the transcode_proxy 'reps=N' format (4K proxies)."""
     out = {}
     for fn in ["/tmp/strict_full.log", "/tmp/r2_check.log", "/tmp/newclips.log",
-               "/tmp/recall_full.log", "/tmp/newdirect.log"]:
+               "/tmp/recall_full.log", "/tmp/newdirect.log", "/tmp/allnew.log"]:
         if not os.path.exists(fn):
             continue
         for l in open(fn):
