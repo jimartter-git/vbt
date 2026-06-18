@@ -51,9 +51,16 @@ def _manifest_sids():
 
 
 def _cv_auto_from_logs():
-    """Parse the most recent seed-free board logs for AUTO counts (count only). Reads both
-    the _trackc_check board format and the transcode_proxy 'reps=N' format (4K proxies)."""
+    """Seed-free AUTO counts. The DURABLE source is dataset/cv_seedfree_scores.csv (survives
+    container restarts, learning #30); fresh /tmp board logs overlay it (a re-score this
+    session beats a stale committed value). Reads both the _trackc_check board format and the
+    transcode_proxy 'reps=N' format (4K proxies)."""
     out = {}
+    durable = os.path.join(REPO, "dataset", "cv_seedfree_scores.csv")
+    if os.path.exists(durable):
+        for r in csv.DictReader(open(durable)):
+            if (r.get("seed_free_count") or "").strip():
+                out[r["set_id"]] = int(r["seed_free_count"])
     for fn in ["/tmp/strict_full.log", "/tmp/r2_check.log", "/tmp/newclips.log",
                "/tmp/recall_full.log", "/tmp/newdirect.log", "/tmp/allnew.log"]:
         if not os.path.exists(fn):

@@ -197,6 +197,21 @@ CLIPS = {
     "20260611-IB-2": ("dataset/raw/20260611-IB-2.mov", {"detect": None}, "incline 155lb, GT vitruve(+SB)", None),
     "20260611-IB-3": ("dataset/raw/20260611-IB-3.mov", {"detect": None}, "incline 155lb, GT vitruve(+SB)", None),
     "20260611-IB-4": ("dataset/raw/20260611-IB-4.mov", {"detect": None}, "incline 175lb RPE8, GT vitruve(+SB)", None),
+    # --- 4K masters: scored on an upright 720p PROXY (dataset/tools/transcode_proxy.py builds
+    # <sid>_proxy.mp4; score_corpus.resolve_target prefers it). The path here is the R2 master
+    # (for resolve_clip), but the proxy is what gets flowed. ---
+    "20260613-DL-1": ("dataset/raw/20260613-DL-1.mov", {"detect": None}, "deadlift 4K (proxy), GT vitruve", None),
+    "20260613-DL-2": ("dataset/raw/20260613-DL-2.mov", {"detect": None}, "deadlift 4K (proxy), GT vitruve", None),
+    "20260613-DL-3": ("dataset/raw/20260613-DL-3.mov", {"detect": None}, "deadlift 4K (proxy), GT vitruve", None),
+    "20260613-DL-4": ("dataset/raw/20260613-DL-4.mov", {"detect": None}, "deadlift 4K (proxy), GT vitruve", None),
+    "20260613-DL-5": ("dataset/raw/20260613-DL-5.mov", {"detect": None}, "deadlift 4K (proxy), GT vitruve", None),
+    "20260613-DL-6": ("dataset/raw/20260613-DL-6.mov", {"detect": None}, "deadlift 4K portrait (proxy), GT vitruve", None),
+    "20260615-ROW-3": ("dataset/raw/20260615-ROW-3.mov", {"detect": None}, "row 4K (proxy), GT vitruve", None),
+    "20260618-IB-1": ("dataset/raw/20260618-IB-1.mov", {"detect": None}, "incline 165lb 4K (proxy), GT vitruve+watch", None),
+    "20260618-IB-2": ("dataset/raw/20260618-IB-2.mov", {"detect": None}, "incline 175lb 4K (proxy), GT vitruve+watch", None),
+    "20260618-IB-3": ("dataset/raw/20260618-IB-3.mov", {"detect": None}, "incline 185lb 4K (proxy), GT vitruve+watch", None),
+    "20260424-BN-1": ("dataset/raw/20260424-BN-1.mov", {"detect": None}, "bench 4K (proxy), GT SB/WL", None),
+    "20260527-SQ-1": ("dataset/raw/20260527-SQ-1.mov", {"detect": None}, "squat 4K (proxy), GT Metric/SB/WL", None),
 }
 
 
