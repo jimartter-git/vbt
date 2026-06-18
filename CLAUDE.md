@@ -595,9 +595,9 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     EXACT, ROW-4-0608 10 EXACT; SQ-1/BN-1/BN-3/ROW-3-0601/DL-2 all correct (no regression).**
     Honest ceiling that REMAINS: ROW-1-0608 stays 8/10 — its dark plate is at rest
     (no flow texture) and the motion blob finds the BODY, not the plate (the #17 body-lock shape, the
-    appearance limit a learned detector is the real fix for). The recall rule structurally guarantees
-    counts only RISE vs Hough-only, so the ONLY residual regression risk is an over-count on a
-    clip that was already exact — being confirmed by a full-corpus seed-free diff. Tests:
+    appearance limit a learned detector is the real fix for). **No-regression CONFIRMED by a
+    full-corpus seed-free diff (all 26 local clips): ZERO regressions — every non-dark clip
+    byte-matches its pre-blob baseline, the dark-iron wins hold, ROW-3-0601 fixed.** Tests:
     `tests/test_video_pipeline.py` (return_split shape, plate-sized blobs). Board:
     `scripts/_trackc_check.py` (seed-free counts + honesty + flip telemetry).
 

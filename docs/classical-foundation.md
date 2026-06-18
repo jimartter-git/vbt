@@ -51,6 +51,15 @@
   next CV move is CLASSICAL working-plate localization + more varied clips, with the learned
   detector revisited when the corpus is deeper. Overnight runbook:
   `docs/goals/cv-localization-overnight-prompt.md`.
+- [x] **Seed-free dark-iron localization — classical motion-blob RECALL (2026-06-18, learning #29).**
+  Root cause: HoughCircles returns DECOY circles (a stored rack plate) on low-contrast iron, filling
+  `topk` so the working plate is never proposed. Fix: `_motion_blob_seeds` proposes plate-sized
+  compact high-motion blobs (motion needs no edges) as a RECALL-only source — a blob wins only if
+  its raw count STRICTLY exceeds the Hough winner's (rescue, never tie/reduce), so a main lift can't
+  regress (#15). **Seed-free wins, full-corpus no-regression diff CLEAN: ROW-2 5→10, BN-4 9→10,
+  ROW-4-0608 →10 (all exact); every other clip byte-matches its pre-blob baseline.** Honest ceiling:
+  ROW-1-0608 stays 8 (at-rest dark plate → blob finds the body; the learned-detector case). Tooling:
+  `_trackc_check.py` (seed-free counts + honesty + flip telemetry).
 
 Update this list (and add a CLAUDE.md learning) when a track lands. Detail below.
 
