@@ -166,6 +166,24 @@ CLIPS = {
                        "row, 1-tap plate seed @6s: 10/10 EXACT (auto failed-decoy). rim_px TBD", None),
     "20260615-ROW-4": ("dataset/raw/20260615-ROW-4.mov", {"flow": (519, 1215, 150, 150, 6.0), "detect": None},
                        "row, 1-tap plate seed @6s: 10/10 EXACT (auto failed-decoy). rim_px TBD", None),
+    # --- R2 clips registered 2026-06-18 for the SEED-FREE board (Vitruve GT exists; were never
+    # CV-scored before — only watch/Vitruve). 1080p, scoreable directly. The 06-13 deadlifts (×6)
+    # + 06-15 ROW-3 are 4K and still need the proxy transcode (learning #20/#21), so not here yet.
+    # detect:None = seed-free auto only (no registered tap yet — these are GENUINELY blind). ---
+    "20260617-SQ-1": ("dataset/raw/20260617-SQ-1.mov", {"detect": None},
+                      "squat 2026-06-17, R2 1080p — seed-free board add (was watch/Vitruve only)", None),
+    "20260617-SQ-2": ("dataset/raw/20260617-SQ-2.mov", {"detect": None},
+                      "squat 2026-06-17, R2 1080p — seed-free board add", None),
+    "20260617-SQ-3": ("dataset/raw/20260617-SQ-3.mov", {"detect": None},
+                      "squat 2026-06-17, R2 1080p — seed-free board add", None),
+    "20260617-SQ-4": ("dataset/raw/20260617-SQ-4.mov", {"detect": None},
+                      "squat 2026-06-17, R2 1080p — seed-free board add", None),
+    "20260617-RDL-1": ("dataset/raw/20260617-RDL-1.mov", {"detect": None},
+                       "RDL 2026-06-17, R2 1080p — seed-free board add", None),
+    "20260617-RDL-2": ("dataset/raw/20260617-RDL-2.mov", {"detect": None},
+                       "RDL 2026-06-17, R2 1080p — seed-free board add", None),
+    "20260615-ROW-5": ("dataset/raw/20260615-ROW-5.mov", {"detect": None},
+                       "row 2026-06-15, R2 1080p — seed-free board add", None),
 }
 
 
