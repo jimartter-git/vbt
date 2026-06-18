@@ -51,15 +51,23 @@ def _manifest_sids():
 
 
 def _cv_auto_from_logs():
-    """Parse the most recent seed-free board logs for AUTO counts (count only)."""
+    """Parse the most recent seed-free board logs for AUTO counts (count only). Reads both
+    the _trackc_check board format and the transcode_proxy 'reps=N' format (4K proxies)."""
     out = {}
     for fn in ["/tmp/strict_full.log", "/tmp/r2_check.log", "/tmp/newclips.log",
-               "/tmp/recall_full.log"]:
+               "/tmp/recall_full.log", "/tmp/newdirect.log"]:
         if not os.path.exists(fn):
             continue
         for l in open(fn):
             l = re.sub(r"\x1b\[[0-9;]*m", "", l)
             m = re.match(r"\s*(\d{8}-\w+-\d+)\s+\w+\s+\d+\s+(\d+)\(", l)
+            if m:
+                out[m.group(1)] = int(m.group(2))
+    # transcode_proxy.py 4K results: "20260613-DL-1   3840x2160 ... reps=6 ..."
+    if os.path.exists("/tmp/transcode.log"):
+        for l in open("/tmp/transcode.log"):
+            l = re.sub(r"\x1b\[[0-9;]*m", "", l)
+            m = re.match(r"\s*(\d{8}-\w+-\d+)\s+\d+x\d+.*reps=(\d+)", l)
             if m:
                 out[m.group(1)] = int(m.group(2))
     return out
