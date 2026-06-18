@@ -41,6 +41,9 @@ MAPPING = [
     ("20260611-IB-1.mov", "20260611-IB-2", "155lb (video1->set IB-2; 135 set unfilmed)"),
     ("20260611-IB-2.mov", "20260611-IB-3", "155lb (video2->set IB-3)"),
     ("20260611-IB-3.mov", "20260611-IB-4", "175lb (video3->set IB-4, RPE8)"),
+    ("20260618-IB-1.mov", "20260618-IB-1", "incline 165lb; GT vitruve + watch"),
+    ("20260618-IB-2.mov", "20260618-IB-2", "incline 175lb; GT vitruve + watch"),
+    ("20260618-IB-3.mov", "20260618-IB-3", "incline 185lb; GT vitruve + watch"),
 ]
 
 EP = os.environ.get("R2_ENDPOINT", "https://6747d02e809e8e72687bb909e5cf302a.r2.cloudflarestorage.com")
