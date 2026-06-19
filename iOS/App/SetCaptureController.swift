@@ -26,8 +26,11 @@ final class SetCaptureController: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init() {
-        // One clicker press toggles the whole set.
+        // One clicker press toggles the whole set. Wire BOTH volume keys: a BT clicker
+        // may emit volume-up (→ secondary) or volume-down (→ primary), and the stock
+        // Camera app maps both to the shutter, so we mirror that — either toggles.
         clicker.onPrimary = { [weak self] in self?.toggle() }
+        clicker.onSecondary = { [weak self] in self?.toggle() }
         // Surface the video recorder's state in the UI.
         video.$state
             .receive(on: RunLoop.main)
