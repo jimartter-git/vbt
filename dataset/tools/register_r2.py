@@ -41,6 +41,16 @@ MAPPING = [
     ("20260611-IB-1.mov", "20260611-IB-2", "155lb (video1->set IB-2; 135 set unfilmed)"),
     ("20260611-IB-2.mov", "20260611-IB-3", "155lb (video2->set IB-3)"),
     ("20260611-IB-3.mov", "20260611-IB-4", "175lb (video3->set IB-4, RPE8)"),
+    ("20260618-IB-1.mov", "20260618-IB-1", "GT: vitruve/watch (3x10)"),
+    ("20260618-IB-2.mov", "20260618-IB-2", "GT: vitruve/watch"),
+    ("20260618-IB-3.mov", "20260618-IB-3", "GT: vitruve/watch"),
+    ("20260619-DL-1.mov", "20260619-DL-1", "GT: vitruve/watch (7 sets)"),
+    ("20260619-DL-2.mov", "20260619-DL-2", "GT: vitruve/watch"),
+    ("20260619-DL-3.mov", "20260619-DL-3", "GT: vitruve/watch"),
+    ("20260619-DL-4.mov", "20260619-DL-4", "GT: vitruve/watch"),
+    ("20260619-DL-5.mov", "20260619-DL-5", "GT: vitruve/watch"),
+    ("20260619-DL-6.mov", "20260619-DL-6", "GT: vitruve/watch"),
+    ("20260619-DL-7.mov", "20260619-DL-7", "GT: vitruve/watch"),
 ]
 
 EP = os.environ.get("R2_ENDPOINT", "https://6747d02e809e8e72687bb909e5cf302a.r2.cloudflarestorage.com")
