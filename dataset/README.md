@@ -15,7 +15,18 @@ YYYYMMDD[session]-LIFT-N      e.g.  20260529-DL-1   (1st deadlift set, May 29)
                                     20260601b-SQ-3  (3rd squat set, 2nd session)
 ```
 
-Lift codes: `SQ` squat · `BN` bench · `DL` deadlift (extend as needed).
+Lift codes: `SQ` squat · `BN` bench (`BP` = legacy alias, normalize to `BN`) ·
+`DL` deadlift · `RDL` Romanian deadlift · `IB` incline bench · `ROW` barbell row ·
+`SS` split squat · `SC` skull crushers (extend as needed).
+
+**Filename suffixes / markers (per-file conventions):**
+- `…_watch.csv` — Apple Watch IMU, worn on the **wrist** (default).
+- `…_watch_bar.csv` — same watch IMU but **fixed to the bar sleeve**, not the wrist
+  (a near-ground-truth mount for the bar's actual path; e.g. `20260628-DL-4_watch_bar`).
+- `…_vitruve.csv` — Vitruve LPT export (the ground-truth reference).
+- `-MM` in the set code (e.g. `20260619-SQ-MM`, `20260619-SQ-1-MM`) — a **different
+  athlete** (the owner's wife), not the primary lifter. Keep her sets distinct in any
+  per-athlete analysis or calibration; they are not the owner's prior.
 
 ## Files (source of truth = these CSVs, git-versioned)
 
