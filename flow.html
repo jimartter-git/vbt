@@ -337,12 +337,21 @@ stage.addEventListener('wheel',ev=>{
   const ns=Math.min(3,Math.max(0.3,scale*f));
   tx=mx-(mx-tx)*(ns/scale); ty=my-(my-ty)*(ns/scale); scale=ns; apply();
 },{passive:false});
-let dragging=false,sxp=0,syp=0,moved=false;
-stage.addEventListener('pointerdown',ev=>{dragging=true;moved=false;sxp=ev.clientX-tx;syp=ev.clientY-ty;stage.classList.add('grabbing');stage.setPointerCapture(ev.pointerId);});
-stage.addEventListener('pointermove',ev=>{if(!dragging)return;tx=ev.clientX-sxp;ty=ev.clientY-syp;moved=true;apply();});
-stage.addEventListener('pointerup',ev=>{dragging=false;stage.classList.remove('grabbing');});
+// NB: no setPointerCapture here — capturing the pointer on pointerdown steals the
+// click event from the node <g>, so the side panel never opens. Instead we track a
+// small movement threshold (window-level, so a drag can leave the stage) and only
+// treat the gesture as a pan once it actually moves.
+let downOn=false,downX=0,downY=0,oTx=0,oTy=0,moved=false;
+stage.addEventListener('pointerdown',ev=>{downOn=true;moved=false;downX=ev.clientX;downY=ev.clientY;oTx=tx;oTy=ty;});
+window.addEventListener('pointermove',ev=>{
+  if(!downOn)return;
+  const dx=ev.clientX-downX, dy=ev.clientY-downY;
+  if(!moved && Math.hypot(dx,dy)>4){moved=true;stage.classList.add('grabbing');}
+  if(moved){tx=oTx+dx;ty=oTy+dy;apply();}
+});
+window.addEventListener('pointerup',()=>{downOn=false;stage.classList.remove('grabbing');});
 stage.addEventListener('dblclick',fit);
-stage.addEventListener('click',ev=>{if(ev.target===stage||ev.target===svg){closePanel();}});
+stage.addEventListener('click',ev=>{if(moved)return;if(ev.target===stage||ev.target===svg){closePanel();}});
 
 /* ---------- step-through ---------- */
 let stepping=false, stepTimer=null, stepIx=0;
