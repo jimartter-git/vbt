@@ -197,6 +197,20 @@ CLIPS = {
     "20260611-IB-2": ("dataset/raw/20260611-IB-2.mov", {"detect": None}, "incline 155lb, GT vitruve(+SB)", None),
     "20260611-IB-3": ("dataset/raw/20260611-IB-3.mov", {"detect": None}, "incline 155lb, GT vitruve(+SB)", None),
     "20260611-IB-4": ("dataset/raw/20260611-IB-4.mov", {"detect": None}, "incline 175lb RPE8, GT vitruve(+SB)", None),
+    # --- registered 2026-06-29: 4K masters → upright 720p proxies (transcode_proxy.py) so they
+    # join the seed-free board. GT = vitruve (sets.csv actual_reps). 06-18 incline (3x10) +
+    # 06-19 deadlift (7 sets: a 5/3/1/1 warm-up ramp then 8/8/8 back-offs — the low-rep ramp
+    # sets are hard for seed-free auto, as expected). ---
+    "20260618-IB-1": ("dataset/raw/20260618-IB-1_proxy.mp4", {"detect": None}, "incline bench x10, 4K→720p proxy, GT vitruve+watch", None),
+    "20260618-IB-2": ("dataset/raw/20260618-IB-2_proxy.mp4", {"detect": None}, "incline bench x10, 4K→720p proxy, GT vitruve+watch", None),
+    "20260618-IB-3": ("dataset/raw/20260618-IB-3_proxy.mp4", {"detect": None}, "incline bench x10, 4K→720p proxy, GT vitruve+watch", None),
+    "20260619-DL-1": ("dataset/raw/20260619-DL-1_proxy.mp4", {"detect": None}, "deadlift ramp x5, 4K→720p proxy, GT vitruve+watch", None),
+    "20260619-DL-2": ("dataset/raw/20260619-DL-2_proxy.mp4", {"detect": None}, "deadlift ramp x3, 4K→720p proxy, GT vitruve+watch", None),
+    "20260619-DL-3": ("dataset/raw/20260619-DL-3_proxy.mp4", {"detect": None}, "deadlift ramp x1 (single), 4K→720p proxy, GT vitruve+watch", None),
+    "20260619-DL-4": ("dataset/raw/20260619-DL-4_proxy.mp4", {"detect": None}, "deadlift ramp x1 (single), 4K→720p proxy, GT vitruve+watch", None),
+    "20260619-DL-5": ("dataset/raw/20260619-DL-5_proxy.mp4", {"detect": None}, "deadlift back-off x8, 4K→720p proxy, GT vitruve+watch", None),
+    "20260619-DL-6": ("dataset/raw/20260619-DL-6_proxy.mp4", {"detect": None}, "deadlift back-off x8, 4K→720p proxy, GT vitruve+watch", None),
+    "20260619-DL-7": ("dataset/raw/20260619-DL-7_proxy.mp4", {"detect": None}, "deadlift back-off x8, 4K→720p proxy, GT vitruve+watch", None),
 }
 
 
