@@ -211,6 +211,18 @@ CLIPS = {
     "20260619-DL-5": ("dataset/raw/20260619-DL-5_proxy.mp4", {"detect": None}, "deadlift back-off x8, 4K→720p proxy, GT vitruve+watch", None),
     "20260619-DL-6": ("dataset/raw/20260619-DL-6_proxy.mp4", {"detect": None}, "deadlift back-off x8, 4K→720p proxy, GT vitruve+watch", None),
     "20260619-DL-7": ("dataset/raw/20260619-DL-7_proxy.mp4", {"detect": None}, "deadlift back-off x8, 4K→720p proxy, GT vitruve+watch", None),
+    # --- registered 2026-06-29: pre-existing 4K backlog cleared via transcode_proxy.py.
+    # 06-13 deadlifts (double-bump + rotation fixed, learnings #21/#22) + 06-15 ROW-3 +
+    # the older 04-24 bench / 05-27 squat masters. GT auto from sets.csv actual_reps. ---
+    "20260613-DL-1": ("dataset/raw/20260613-DL-1_proxy.mp4", {"detect": None}, "deadlift x5, 4K→720p proxy, GT vitruve+SB", None),
+    "20260613-DL-2": ("dataset/raw/20260613-DL-2_proxy.mp4", {"detect": None}, "deadlift x3, 4K→720p proxy, GT vitruve+SB", None),
+    "20260613-DL-3": ("dataset/raw/20260613-DL-3_proxy.mp4", {"detect": None}, "deadlift x2, 4K→720p proxy, GT vitruve+SB", None),
+    "20260613-DL-4": ("dataset/raw/20260613-DL-4_proxy.mp4", {"detect": None}, "deadlift x2, 4K→720p proxy, GT vitruve+SB", None),
+    "20260613-DL-5": ("dataset/raw/20260613-DL-5_proxy.mp4", {"detect": None}, "deadlift x8, 4K→720p proxy, GT vitruve+SB", None),
+    "20260613-DL-6": ("dataset/raw/20260613-DL-6_proxy.mp4", {"detect": None}, "deadlift x8, portrait 4K→720p proxy, GT vitruve+SB", None),
+    "20260615-ROW-3": ("dataset/raw/20260615-ROW-3_proxy.mp4", {"detect": None}, "barbell row x10, 4K→720p proxy, GT vitruve+watch", None),
+    "20260424-BN-1": ("dataset/raw/20260424-BN-1_proxy.mp4", {"detect": None}, "bench x6, 4K→720p proxy, GT SB/WL", None),
+    "20260527-SQ-1": ("dataset/raw/20260527-SQ-1_proxy.mp4", {"detect": None}, "squat x10, 4K→720p proxy, GT metric/SB/WL", None),
 }
 
 
