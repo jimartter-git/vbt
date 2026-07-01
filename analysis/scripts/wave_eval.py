@@ -84,6 +84,11 @@ SESSIONS = {
     "20260629-ROW-4": "dataset/raw/20260629-ROW-4_watch.csv",
     "20260629-ROW-5": "dataset/raw/20260629-ROW-5_watch.csv",
     "20260629-ROW-6": "dataset/raw/20260629-ROW-6_watch.csv",
+    # 06-30 bench (set 1 = bar-sleeve mount → watch_bar, excluded from the wrist board)
+    "20260630-BN-2": "dataset/raw/20260630-BN-2_watch.csv",
+    "20260630-BN-3": "dataset/raw/20260630-BN-3_watch.csv",
+    "20260630-BN-4": "dataset/raw/20260630-BN-4_watch.csv",
+    "20260630-BN-5": "dataset/raw/20260630-BN-5_watch.csv",
 }
 
 
