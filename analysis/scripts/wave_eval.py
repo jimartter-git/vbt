@@ -84,6 +84,13 @@ SESSIONS = {
     "20260629-ROW-4": "dataset/raw/20260629-ROW-4_watch.csv",
     "20260629-ROW-5": "dataset/raw/20260629-ROW-5_watch.csv",
     "20260629-ROW-6": "dataset/raw/20260629-ROW-6_watch.csv",
+    # --- 2026-06-30 bench (top set 245 lb + back-offs). Wrist mounts BN-2..5; set 1's
+    # watch was fixed to the BAR sleeve (20260630-BN-1_watch_bar.csv, vendor watch_bar) —
+    # a distinct modality, kept out of the wrist board like the earlier bar-sleeve records. ---
+    "20260630-BN-2": "dataset/raw/20260630-BN-2_watch.csv",
+    "20260630-BN-3": "dataset/raw/20260630-BN-3_watch.csv",
+    "20260630-BN-4": "dataset/raw/20260630-BN-4_watch.csv",
+    "20260630-BN-5": "dataset/raw/20260630-BN-5_watch.csv",
 }
 
 
