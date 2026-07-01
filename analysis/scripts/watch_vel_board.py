@@ -40,6 +40,8 @@ SESSIONS = {
     "20260618-IB-1": "IB", "20260618-IB-2": "IB", "20260618-IB-3": "IB",
     # 2026-06-30 bench wrist mounts (set 1 was a bar-sleeve mount -> watch_bar, not here).
     "20260630-BN-2": "BN", "20260630-BN-3": "BN", "20260630-BN-4": "BN", "20260630-BN-5": "BN",
+    # 2026-07-01 squat — only JM's wrist sets 2 & 5 (MM's were bar-sleeve -> watch_bar, not here).
+    "20260701-SQ-2": "SQ", "20260701-SQ-5": "SQ",
 }
 TARGET_R, TARGET_SEE = 0.95, 0.07
 

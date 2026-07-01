@@ -91,6 +91,12 @@ SESSIONS = {
     "20260630-BN-3": "dataset/raw/20260630-BN-3_watch.csv",
     "20260630-BN-4": "dataset/raw/20260630-BN-4_watch.csv",
     "20260630-BN-5": "dataset/raw/20260630-BN-5_watch.csv",
+    # --- 2026-07-01 SHARED squat session (owner JM + wife MM), split from one mixed Vitruve
+    # export. Only JM sets 2 & 5 have a WRIST recording (watch forgot for JM 1/3/4); both of
+    # MM's sets were BAR-sleeve mounts (SQ-MM-*_watch_bar.csv, watch_bar) -> not on this
+    # wrist board. Set_ids are per-lifter (JM SQ-5 == Vitruve source set 7). ---
+    "20260701-SQ-2": "dataset/raw/20260701-SQ-2_watch.csv",
+    "20260701-SQ-5": "dataset/raw/20260701-SQ-5_watch.csv",
 }
 
 
