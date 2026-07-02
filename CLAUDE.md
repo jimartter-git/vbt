@@ -655,6 +655,37 @@ fresh session on its own `claude/new-session-*` branch. To never lose or fork wo
     the ~12pp slow-lift velocity-loss residual is the honest limit (gyro Madgwick + Achermann 100Hz
     are the named unlocks). New doc: `docs/watch-imu.md`. Tests: `tests/test_wave_segment.py` (10).
 
+33. **⚑ The deadlift watch-velocity "2.5× overread" was the MV SUMMARY, not the sensor — mean(|v|)
+    → |mean(v)| (2026-07-01).** Ingesting the 06-19→06-30 watch corpus surfaced conventional
+    deadlifts reading MV ~0.99 m/s vs Vitruve ~0.39 (~2.5×), while rows/bench/squat matched. First
+    reflex ("wrist moves differently from the bar on a pull") was WRONG and the owner caught it: the
+    hands are clamped to the bar, so the wrist tracks the bar MORE rigidly on a deadlift than on a
+    row (elbow flexion) — and the data proved it: watch **ROM was correct** (66.9 vs 61.4 cm) and
+    **net-displacement/time velocity was correct** (0.41 vs 0.39). The bug was the summary statistic.
+    The shipped MV was `mean(|v|)` over the active region; the deadlift is the one lift with a sharp
+    break from a dead stop + a double-humped pull, so single-integration (ZUPT pinned only at rep
+    ends) makes the velocity RING — it overshoots (peak ~1.9 m/s, ~2× a real bar) and swings
+    backward **~10–20% of the concentric**. `mean(|v|)` turned those backward rings into forward
+    speed. Fix (`wave_segment.mean_concentric_velocity`, extracted + unit-tested): average the
+    **SIGNED** velocity over the active region, `|mean(v)|` — the rings cancel (as they always did in
+    the net displacement / ROM). **For a MONOTONIC concentric `|mean v| ≡ mean|v|`, so row/bench/
+    squat/incline/rdl are byte-identical — zero regression, and the fix is inert unless the signal
+    actually goes backward, so it cannot over-fit a lift.** Result: DL calibrated RMSE **0.114 →
+    0.069** (at the SEE<0.07 target), DL velocity-LOSS 5.9 → 23.1% vs Vitruve 26.7 (the fatigue
+    signal recovered); counts/segmentation untouched (byte-identical). The residual DL error is now a
+    CONSTANT positive bias (calibratable, learning #4) not a multiplicative blowup; heavy working
+    sets keep ~r 0.57 per-rep (the honest slow-lift SNR limit). **Rejected designs (both overfit):
+    a `mean|v|/net` ratio guard (flags the wife's slow squats, whose mean|v| is actually fine) and a
+    `%-backward` threshold (a squat at 9% is fine, a deadlift at 9% is broken — no clean gap).** The
+    signed-mean wins precisely because it's not a guard: it's a strictly-more-correct estimator of
+    mean *velocity* (net directed motion/time) vs *speed* (path/time). NB: the CV path (`kinematics`)
+    already masks on signed v, so it doesn't share this exact bug (its ~1.2× DL read, #22, is a
+    different active-region-vs-full-concentric definition gap — separate follow-up). Swift stores MV
+    but doesn't integrate it (PoC streams CSV to Python) → no mirror to lock-step. Same session: the
+    duplicate watch-velocity registry (`watch_vel_board.SESSIONS`) now DERIVES from
+    `wave_eval.SESSIONS` (one source of truth, kills the #30 drift). Tests:
+    `tests/test_wave_segment.py` (+2: monotonic-equivalence, ringing-cancellation).
+
 ## ⚑ Video trigger — READ THIS
 
 **If the user uploads a `.mov`/`.mp4` (especially with little context) — it's a lift clip

@@ -29,16 +29,11 @@ from vbt_analysis import wave_segment as ws              # noqa: E402
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REPS_CSV = os.path.join(REPO, "dataset", "rep_metrics.csv")
 
-SESSIONS = {
-    "20260615-ROW-2": "ROW", "20260615-ROW-3": "ROW", "20260615-ROW-4": "ROW",
-    "20260615-ROW-5": "ROW",
-    "20260616-BN-1": "BN", "20260616-BN-2": "BN", "20260616-BN-3": "BN",
-    "20260616-BN-4": "BN", "20260616-BN-5": "BN",
-    "20260617-SQ-1": "SQ", "20260617-SQ-2": "SQ", "20260617-SQ-3": "SQ",
-    "20260617-SQ-4": "SQ",
-    "20260617-RDL-1": "RDL", "20260617-RDL-2": "RDL",
-    "20260618-IB-1": "IB", "20260618-IB-2": "IB", "20260618-IB-3": "IB",
-}
+# Single source of truth for watch sessions = wave_eval.SESSIONS (learning #30: don't
+# hand-maintain a second registry that silently drifts). Lift code = the set_id's middle
+# token. New watch sessions register once, in wave_eval, and appear on both boards.
+from wave_eval import SESSIONS as _WATCH_CSVS  # noqa: E402
+SESSIONS = {sid: sid.split("-")[1] for sid in _WATCH_CSVS}
 TARGET_R, TARGET_SEE = 0.95, 0.07
 
 

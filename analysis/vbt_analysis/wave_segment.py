@@ -158,6 +158,27 @@ def _strip_terminal_anomalies(pairs, pos):
     return pairs[lo:hi]
 
 
+def mean_concentric_velocity(seg_v, active_frac=0.1, floor=0.05):
+    """Mean concentric velocity of one rep from its ZUPT velocity trace `seg_v` (m/s).
+
+    = |mean of the SIGNED velocity| over the ACTIVE region (|v| ≥ active_frac·peak), NOT
+    mean(|v|). The active mask (keyed on speed |v|) still drops the near-zero turnaround
+    tails where single-integration noise dominates — learning #28's slow-lift tightening —
+    but averaging the SIGNED velocity makes backward excursions CANCEL rather than count as
+    forward speed. For a MONOTONIC concentric the two are identical (row/bench/squat: zero
+    change); they diverge ONLY when the velocity rings backward — a deadlift's sharp
+    floor-break + double-hump swings the ZUPT velocity negative ~10-20% of the concentric,
+    and mean(|v|) turned those rings into a ~2.5× over-read. |mean v| lets them cancel (as
+    they always did in the net displacement / ROM) → DL calibrated RMSE 0.114 → 0.069 vs
+    Vitruve, at the SEE<0.07 target, with no lift-specific branch. Learning #33."""
+    seg_v = np.asarray(seg_v, dtype=float)
+    if seg_v.size == 0:
+        return 0.0
+    peak = float(np.max(np.abs(seg_v)))
+    active = np.abs(seg_v) >= max(floor, active_frac * peak)
+    return float(abs(np.mean(seg_v[active]))) if active.any() else float(abs(np.mean(seg_v)))
+
+
 def reps_from_wave(pos, fs, prominence_frac=DEFAULT_PROMINENCE_FRAC,
                    min_cadence_s=DEFAULT_MIN_CADENCE_S,
                    amp_floor_frac=DEFAULT_AMP_FLOOR_FRAC, strip_terminal=True):
@@ -241,15 +262,7 @@ def segment(t, a_vert, prominence_frac=DEFAULT_PROMINENCE_FRAC,
         if len(seg_v) < 2:
             continue
         peak = float(np.max(np.abs(seg_v)))
-        # Mean concentric velocity over the ACTIVE region (|v| ≥ 10% of peak) — the same
-        # definition the CV path uses (kinematics.trajectory_to_reps). Excluding the
-        # near-zero velocity tails at the turnarounds, where single-integration noise
-        # dominates, measurably tightens slow-lift accuracy (bench/squat calibrated RMSE
-        # 0.099/0.098 → 0.073/0.077; overall 0.085 → 0.069 vs Vitruve, at the SEE<0.07
-        # target). ONE definition across watch + CV, not a per-lift knob.
-        av = np.abs(seg_v)
-        active = av >= max(0.05, 0.1 * peak)
-        mcv = float(np.mean(av[active])) if active.any() else float(np.mean(av))
+        mcv = mean_concentric_velocity(seg_v)   # |mean signed v| over active region — #33
         reps.append(WaveRep(
             rep_index=k, bottom_idx=bi, top_idx=ti,
             start_time=float(seg_t[0]), end_time=float(seg_t[-1]),

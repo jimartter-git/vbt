@@ -116,3 +116,25 @@ def test_segment_from_accel_roundtrip():
 def test_too_short_returns_empty():
     t = np.linspace(0, 0.1, 8)
     assert ws.segment(t, np.zeros(8)).count == 0
+
+
+def test_mcv_monotonic_equals_mean_abs():
+    """On a monotonic (all-positive) concentric, |mean signed v| == mean(|v|) exactly —
+    so row/bench/squat are unchanged by the signed-mean fix (learning #33)."""
+    v = np.array([0.05, 0.2, 0.5, 0.7, 0.6, 0.3, 0.1])  # clean bump, never negative
+    peak = v.max()
+    active = v >= max(0.05, 0.1 * peak)
+    assert ws.mean_concentric_velocity(v) == np.abs(v[active]).mean()
+
+
+def test_mcv_ringing_cancels_backward_swing():
+    """A deadlift-style ring (velocity swings backward mid-rep) must NOT inflate MV: the
+    signed mean cancels the backward part; mean(|v|) would count it as forward speed."""
+    # net upward motion with a large backward overshoot in the middle (the ZUPT ring)
+    v = np.array([0.2, 0.9, 1.9, -0.6, -0.4, 1.2, 0.8, 0.3])
+    peak = np.max(np.abs(v))
+    active = np.abs(v) >= max(0.05, 0.1 * peak)
+    mean_abs = np.abs(v[active]).mean()          # the OLD, inflated definition
+    mcv = ws.mean_concentric_velocity(v)         # the fix
+    assert mcv < mean_abs                         # rings cancel -> strictly lower
+    assert mcv == abs(v[active].mean())           # == |mean signed v|
