@@ -5,6 +5,12 @@ platform. This file orients a fresh session: read it, then you can get to work
 immediately. Detailed knowledge lives in `docs/` and `dataset/` — this is the map
 and the rules.
 
+> **⚡ Trunk = `main` (the default branch). START every session by syncing it, END by
+> landing back on it — never strand work on a session branch.** This is the ONE rule that
+> keeps parallel chats from forking the dataset. Full protocol: **Branch & sync protocol**
+> below. (A `.claude` SessionStart hook re-states this and installs Python deps automatically,
+> so a fresh web chat knows it without being told.)
+
 ## What this project is
 
 Estimate rep velocity, range of motion, and per-rep/per-set fatigue from MULTIPLE
