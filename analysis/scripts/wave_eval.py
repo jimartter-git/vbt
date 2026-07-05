@@ -89,6 +89,10 @@ SESSIONS = {
     "20260630-BN-3": "dataset/raw/20260630-BN-3_watch.csv",
     "20260630-BN-4": "dataset/raw/20260630-BN-4_watch.csv",
     "20260630-BN-5": "dataset/raw/20260630-BN-5_watch.csv",
+    # 07-01 squat (shared session; only your wrist sets 2/5 have Vitruve GT. Wife's
+    # bar-mount sets SQ-1_MM/SQ-2_MM have no GT in the export → raw-only, not boarded)
+    "20260701-SQ-2": "dataset/raw/20260701-SQ-2_watch.csv",
+    "20260701-SQ-5": "dataset/raw/20260701-SQ-5_watch.csv",
 }
 
 
