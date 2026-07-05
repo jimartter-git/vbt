@@ -95,9 +95,10 @@ and `docs/sources-and-fusion.md`.
 
 ## How to work here (conventions)
 
-- **Branch:** develop on `claude/vbt-watchos-architecture-wu6y8`. Commit with clear
-  messages; **push when a unit of work is done** (the container is ephemeral —
-  unpushed work is lost). Use `git push -u origin <branch>` with retries.
+- **Branch:** `main` is the trunk and the GitHub default branch — all work is based on it
+  (see the Branch & sync protocol below). Commit with clear messages; **push when a unit of
+  work is done** (the container is ephemeral — unpushed work is lost). Use
+  `git push -u origin <branch>` with retries.
 - **Keep context clean:** 21 research PDFs live on a SEPARATE branch
   `origin/jimartter-git-pdfs` (not ours). Don't read them into your context; if
   needed, extract to `/tmp` and dispatch sub-agents (see git history of
@@ -109,21 +110,37 @@ and `docs/sources-and-fusion.md`.
 
 ## ⚑ Branch & sync protocol — prevents lost/forked work
 
-The dataset and tools are edited across many sessions; the platform may drop a
-fresh session on its own `claude/new-session-*` branch. To never lose or fork work:
+**`main` is the ONE trunk.** It is the GitHub default branch and the single place all work
+funnels to. Everything below exists to stop the repeat failure where parallel sessions each
+sit on their own `claude/<slug>` branch and silently fork the dataset (e.g. two sessions
+independently ingesting the same lift day → duplicate/divergent `sets.csv` rows).
 
-1. **One canonical branch:** `claude/vbt-watchos-architecture-wu6y8`. Everything
-   funnels here.
-2. **On START, sync first.** `git fetch origin --prune`, then fast-forward to
-   `origin/claude/vbt-watchos-architecture-wu6y8` before doing anything — build on
-   the latest, never a stale base.
-3. **On FINISH (and every good stopping point), push to canonical.** If you're on
-   an auto-created `claude/new-session-*` branch, **merge/fast-forward it back into
-   the canonical branch before you stop** — don't strand work on a side branch.
-4. **One session edits `dataset/` at a time.** `sets.csv`/`rep_metrics.csv` are
-   append-heavy; concurrent appends from two branches collide. Finish + push before
-   opening another session that touches the DB. (To truly parallelize, split by
-   concern — e.g. one session only `dataset/`, another only `Watch/` Swift.)
+**The rule of thumb: every session STARTS from `main` and ENDS back on `main`.** Concretely:
+
+1. **On START, sync `main` first — before anything else.**
+   `git fetch origin --prune` → `git checkout main` → `git pull --ff-only origin main`.
+   Build on the latest trunk, never a stale base. If the platform dropped you on an
+   auto-created `claude/<slug>` branch, rebase/reset it onto fresh `origin/main` first
+   (`git checkout -B <slug> origin/main`), or just work on `main` directly.
+2. **Prefer working on `main` directly** for routine work (data ingest, docs, small fixes) —
+   commit and `git push origin main`. Use a short-lived `session/<topic>` branch only for
+   larger or riskier changes, and **merge it back to `main` in the SAME session.**
+3. **On FINISH (and every good stopping point), land on `main`.** Fast-forward/merge your
+   branch into `main` and push `main`. **Never end a session with work stranded on a side
+   branch** — that is exactly what creates the forks. If `main` moved under you, rebase onto
+   it (`git pull --rebase origin main`) and re-verify before pushing.
+4. **One session edits `dataset/` at a time.** `sets.csv`/`rep_metrics.csv` are append-heavy;
+   concurrent appends from two branches collide. Finish + push before opening another session
+   that touches the DB. To truly parallelize, split by concern (one session only `dataset/`,
+   another only `Watch/` Swift). The ingest tools are idempotent (strip-by-`set_id` then
+   rewrite), so a re-run on the latest `main` is the safe way to reconcile a contested day.
+5. **New Claude chat / web session checklist:** point it at `main` when you launch it (or let
+   it branch from `main` and merge back). First action = the START sync (step 1); last action
+   = land on `main` (step 3). Delete the session branch once merged.
+
+*(History note: before 2026-07-05 the trunk was the awkwardly-named
+`claude/vbt-watchos-architecture-wu6y8`, and every session forked off `claude/<slug>`
+branches — which is what caused the 06-30/07-01 fork that motivated this switch to `main`.)*
 
 ## Key decisions & learnings (don't re-litigate — extend)
 
