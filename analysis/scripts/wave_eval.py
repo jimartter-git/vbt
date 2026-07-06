@@ -95,6 +95,12 @@ SESSIONS = {
     # Per-lifter set_ids (JM SQ-5 == Vitruve source set 7). ---
     "20260701-SQ-2": "dataset/raw/20260701-SQ-2_watch.csv",
     "20260701-SQ-5": "dataset/raw/20260701-SQ-5_watch.csv",
+    # --- 2026-07-06 IB ladder 175/185/185/185 (Vitruve only set 4 - AMRAP 14 reps;
+    # SmartBarbell is source of truth for sets 1-3 velocity). Wrist watch on all 4.
+    "20260706-IB-1": "dataset/raw/20260706-IB-1_watch.csv",
+    "20260706-IB-2": "dataset/raw/20260706-IB-2_watch.csv",
+    "20260706-IB-3": "dataset/raw/20260706-IB-3_watch.csv",
+    "20260706-IB-4": "dataset/raw/20260706-IB-4_watch.csv",
 }
 
 
