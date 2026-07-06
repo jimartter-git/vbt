@@ -48,6 +48,10 @@ true ~200 Hz). Tap **Start**, do a set of deadlifts, tap **Stop** — the watch
 records device motion and transfers a CSV to the phone. Open the `VBTPhone` app,
 share the CSV to your Mac, and analyze it (below).
 
+For an **agentic build/test loop** (Claude Code CLI + Xcode side-by-side,
+xcodebuild + simctl driven, staying in sync with `main`) see
+[`docs/mac-agentic-loop.md`](docs/mac-agentic-loop.md).
+
 ### First-build checklist — ✅ VALIDATED on hardware (2026-06-15, Apple Watch Ultra, watchOS 26.5)
 
 This scaffold was authored on Linux without Xcode; the first real-device build
