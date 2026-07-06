@@ -54,32 +54,87 @@ t,ua_x,ua_y,ua_z,g_x,g_y,g_z,q_w,q_x,q_y,q_z,rr_x,rr_y,rr_z,mf_x,mf_y,mf_z
 
 ## Session envelope
 
-Each recorded set produces one CSV file plus a small JSON sidecar of metadata:
+The watch produces **two kinds of files during one workout**, both carrying
+the same `workoutId` so an analysis tool can group them without touching
+HealthKit:
+
+- One `**workoutHR**` file per workout: the workout-wide 1 Hz HR stream.
+  Filename `<YYYYMMDD>-workout_hr.csv` + sidecar.
+- One `**velocitySet**` file per tagged set: the IMU sample stream for that
+  set. Filename `<YYYYMMDD>-<LIFT>-<N>_watch.csv` + sidecar (matches the
+  existing `dataset/raw/` convention).
+
+Both share this JSON sidecar shape:
 
 ```json
 {
-  "schemaVersion": 2,
-  "sessionId": "UUID",
-  "startedAt": "ISO-8601 UTC at record START (the wall-clock anchor)",
+  "schemaVersion": 3,
+  "sessionId": "UUID (unique per file)",
+  "workoutId": "UUID (shared across all files from one workout)",
+  "kind": "velocitySet | workoutHR",
+  "startedAt": "ISO-8601 UTC at record START",
+  "stoppedAt": "ISO-8601 UTC at record STOP",
   "clockAnchorUptimeSeconds": 15463.1,
-  "exercise": "deadlift",
+  "exercise": "bench | workout_hr | ...",
+  "setMetadata": {
+    "lift": "bench",
+    "customLiftCode": null,
+    "setIndex": 3,
+    "mount": "wrist",
+    "rpe": 8.0,
+    "load": 205,
+    "loadUnit": "lb",
+    "plateType": "deepDish",
+    "notes": null
+  },
   "sampleRateHintHz": 200,
   "deviceModel": "Watch6,18",
   "watchOSVersion": "10.x",
   "sampleCount": 12345,
-  "notes": "optional free text (load, set #, RPE)"
+  "notes": "optional free text"
 }
 ```
 
-`startedAt` + `clockAnchorUptimeSeconds` are a contemporaneous `(UTC, device-uptime)`
-pair captured at record start — the only thing that ties the uptime-based sample
-`t` to absolute time. **v2** added `clockAnchorUptimeSeconds` (v1 had `startedAt`
-only, set at *write* time → unusable as an anchor).
+`startedAt` + `clockAnchorUptimeSeconds` are a contemporaneous
+`(UTC, device-uptime)` pair captured at record start — the only thing that
+ties the uptime-based sample `t` to absolute time. `stoppedAt` closes the
+window so per-set HR slicing (`HRR30/60/90`, peak-in-set, session TRIMP) is a
+one-liner. `setMetadata` is present on `velocitySet` files and null on
+`workoutHR` files.
 
-Filename convention (v2): **`VBT_<yyyy-MM-dd_HHmmss>Z_<exercise>_<short-id>`**, e.g.
-`VBT_2026-06-15_182203Z_deadlift_CE3E8765.csv` — sortable + legible in the phone's
-session list (v1 used the bare `<sessionId>` UUID, which is unorderable and caused
-the 06-15 row files to be mislabeled).
+### Filename convention
+
+| kind          | stem                                | example                        |
+|---------------|-------------------------------------|--------------------------------|
+| `velocitySet` | `<YYYYMMDD>-<LIFT>-<N>_watch`       | `20260706-BN-3_watch.csv`      |
+| `workoutHR`   | `<YYYYMMDD>-workout_hr[-K]`         | `20260706-workout_hr.csv`      |
+
+`LIFT` codes: `SQ`, `BN`, `DL`, `IB`, `ROW`, `RDL`, `SC`, or a user-typed code
+when the lift is `.other`. `N` is 1-indexed **within that lift-day** — a second
+workout on the same date reusing the same lift continues the count (`20260706-
+BN-4` follows `20260706-BN-3`). A second workout the same date gets a `-K`
+suffix on the HR file (`20260706-workout_hr-2`).
+
+**Schema history**: **v1** had `startedAt` set at write time (unusable as an
+anchor). **v2** added `clockAnchorUptimeSeconds` and the sortable stem
+`VBT_<yyyy-MM-dd_HHmmss>Z_<exercise>_<short-id>`. **v3** introduced the
+two-tier record model (`workoutId`, `kind`, `stoppedAt`, `setMetadata`) and
+switched `velocitySet` files to the `<YYYYMMDD>-<LIFT>-<N>_watch` stem that
+matches the dataset convention.
+
+## Workout HR sample
+
+One row per HR reading (~1 Hz during a workout, whatever HealthKit publishes).
+
+| field | unit          | source                              |
+|-------|---------------|-------------------------------------|
+| `t`   | s (uptime)    | derived (wall-clock offset + anchor)|
+| `utc` | ISO-8601      | `HKQuantitySample.startDate`        |
+| `bpm` | beats/minute  | `.quantity` in `count/min`          |
+
+Both `t` and `utc` are stored so slicing works from either axis — `t` aligns
+natively with the IMU samples' `t`, `utc` is robust if the clock anchor is
+ever lost.
 
 ## Derived metrics (analysis output — the cross-source contract)
 
